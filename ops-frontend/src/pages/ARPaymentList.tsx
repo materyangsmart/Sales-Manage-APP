@@ -1,120 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Table, Button, Select, DatePicker, Input, message, Space, Tag } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { Table, Button, Select, DatePicker, Input, message, Space, Tag, Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { getPaymentList } from '../services/ar';
 import type { ARPayment, PaymentListParams } from '../types/ar';
 import { Amount } from '../components/Amount';
+import { Empty } from '../components/Empty';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
-
-const STORAGE_KEY = 'ar_payment_list_filters';
-
-/**
- * 获取默认日期范围（近7天）
- */
-const getDefaultDateRange = (): [string, string] => {
-  const today = dayjs().endOf('day');
-  const sevenDaysAgo = dayjs().subtract(7, 'days').startOf('day');
-  return [
-    sevenDaysAgo.format('YYYY-MM-DD'),
-    today.format('YYYY-MM-DD'),
-  ];
-};
-
-/**
- * 从localStorage或URL参数加载筛选条件
- */
-const loadFiltersFromStorage = (searchParams: URLSearchParams): PaymentListParams => {
-  // 优先从URL参数读取
-  const urlStatus = searchParams.get('status') as 'UNAPPLIED' | 'PARTIAL' | 'CLOSED' | null;
-  const urlCustomerId = searchParams.get('customer_id');
-  const urlDateFrom = searchParams.get('date_from');
-  const urlDateTo = searchParams.get('date_to');
-  const urlPage = searchParams.get('page');
-  const urlPageSize = searchParams.get('page_size');
-
-  // 如果URL有参数，使用URL参数
-  if (urlStatus || urlCustomerId || urlDateFrom || urlDateTo) {
-    return {
-      status: urlStatus || 'UNAPPLIED',
-      customer_id: urlCustomerId ? parseInt(urlCustomerId) : undefined,
-      date_from: urlDateFrom || undefined,
-      date_to: urlDateTo || undefined,
-      page: urlPage ? parseInt(urlPage) : 1,
-      page_size: urlPageSize ? parseInt(urlPageSize) : 20,
-    };
-  }
-
-  // 尝试从localStorage读取
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // 验证日期是否仍然有效（不超过30天）
-      if (parsed.date_from && parsed.date_to) {
-        const storedDate = dayjs(parsed.date_from);
-        const daysDiff = dayjs().diff(storedDate, 'days');
-        if (daysDiff <= 30) {
-          return parsed;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn('Failed to load filters from localStorage:', error);
-  }
-
-  // 默认值：近7天 + 待处理状态
-  const [dateFrom, dateTo] = getDefaultDateRange();
-  return {
-    status: 'UNAPPLIED',
-    date_from: dateFrom,
-    date_to: dateTo,
-    page: 1,
-    page_size: 20,
-  };
-};
-
-/**
- * 保存筛选条件到localStorage
- */
-const saveFiltersToStorage = (params: PaymentListParams) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(params));
-  } catch (error) {
-    console.warn('Failed to save filters to localStorage:', error);
-  }
-};
 
 /**
  * AR待处理列表页面
  */
 export const ARPaymentList: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ARPayment[]>([]);
   const [total, setTotal] = useState(0);
-  const [params, setParams] = useState<PaymentListParams>(() => 
-    loadFiltersFromStorage(searchParams)
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [params, setParams] = useState<PaymentListParams>({
+    status: 'UNAPPLIED',
+    page: 1,
+    page_size: 20,
+  });
 
   // 加载数据
   const loadData = async () => {
     setLoading(true);
+    setError(null); // 清除之前的错误
     try {
-      // 添加排序参数（默认received_at DESC）
-      const response = await getPaymentList({
-        ...params,
-        sort_by: 'received_at',
-        sort_order: 'DESC',
-      });
+      const response = await getPaymentList(params);
       setData(response.items);
       setTotal(response.total);
     } catch (error: any) {
-      message.error(error.userMessage || '加载失败');
+      // 区分不同类型的错误
+      let errorMessage = '加载失败';
+      
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        errorMessage = '请求超时，请检查网络连接后重试';
+      } else if (error.response) {
+        // 服务器返回错误
+        const status = error.response.status;
+        if (status >= 500) {
+          errorMessage = '服务器错误，请稍后重试';
+        } else if (status === 404) {
+          errorMessage = '接口不存在';
+        } else if (status === 403) {
+          errorMessage = '无权限访问';
+        } else if (status === 401) {
+          errorMessage = '未登录或登录已过期';
+        } else {
+          errorMessage = error.userMessage || error.response.data?.message || '加载失败';
+        }
+      } else if (error.request) {
+        // 网络错误
+        errorMessage = '网络连接失败，请检查网络后重试';
+      }
+      
+      setError(errorMessage);
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,17 +68,6 @@ export const ARPaymentList: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    // 保存到localStorage
-    saveFiltersToStorage(params);
-    // 更新URL参数
-    const newSearchParams = new URLSearchParams();
-    if (params.status) newSearchParams.set('status', params.status);
-    if (params.customer_id) newSearchParams.set('customer_id', params.customer_id.toString());
-    if (params.date_from) newSearchParams.set('date_from', params.date_from);
-    if (params.date_to) newSearchParams.set('date_to', params.date_to);
-    if (params.page) newSearchParams.set('page', params.page.toString());
-    if (params.page_size) newSearchParams.set('page_size', params.page_size.toString());
-    setSearchParams(newSearchParams, { replace: true });
   }, [params]);
 
   // 表格列定义
@@ -252,19 +187,80 @@ export const ARPaymentList: React.FC = () => {
 
   // 重置筛选条件
   const handleReset = () => {
-    const [dateFrom, dateTo] = getDefaultDateRange();
     setParams({
       status: 'UNAPPLIED',
-      date_from: dateFrom,
-      date_to: dateTo,
       page: 1,
       page_size: 20,
     });
   };
 
+  // 渲染内容
+  const renderContent = () => {
+    // 如果有错误，显示错误状态
+    if (error && !loading) {
+      return (
+        <Empty
+          description={error}
+          onRetry={loadData}
+          showRetry={true}
+        />
+      );
+    }
+
+    // 如果没有数据且不在加载中，显示空态
+    if (!loading && data.length === 0) {
+      return (
+        <Empty
+          description="暂无符合条件的收款记录"
+          onReset={handleReset}
+          showReset={true}
+        />
+      );
+    }
+
+    // 正常显示表格
+    return (
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        scroll={{ x: 1500 }}
+        pagination={{
+          current: params.page,
+          pageSize: params.page_size,
+          total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+          onChange: handlePageChange,
+        }}
+      />
+    );
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">AR到款待处理列表</h1>
+
+      {/* 错误提示（顶部横幅） */}
+      {error && !loading && (
+        <Alert
+          message="加载失败"
+          description={
+            <div className="flex items-center justify-between">
+              <span>{error}</span>
+              <Button size="small" onClick={loadData}>
+                重试
+              </Button>
+            </div>
+          }
+          type="error"
+          closable
+          onClose={() => setError(null)}
+          className="mb-4"
+        />
+      )}
 
       {/* 筛选条件 */}
       <div className="mb-4 p-4 bg-white rounded shadow">
@@ -321,23 +317,8 @@ export const ARPaymentList: React.FC = () => {
         </Space>
       </div>
 
-      {/* 数据表格 */}
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
-        loading={loading}
-        scroll={{ x: 1500 }}
-        pagination={{
-          current: params.page,
-          pageSize: params.page_size,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: handlePageChange,
-        }}
-      />
+      {/* 数据表格或空态 */}
+      {renderContent()}
     </div>
   );
 };
