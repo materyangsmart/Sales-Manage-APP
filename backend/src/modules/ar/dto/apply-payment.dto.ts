@@ -15,7 +15,10 @@ export class ApplyItemDto {
   @Min(1)
   invoiceId: number;
 
-  @ApiProperty({ description: '核销金额(分)', example: 565000 })
+  @ApiProperty({
+    description: '核销金额（单位：分，例如 565000 表示 5650.00 元）',
+    example: 565000,
+  })
   @IsInt()
   @Min(1)
   appliedAmount: number;

@@ -13,6 +13,8 @@ import { AuditLog } from '../entities/audit-log.entity';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { ApplyPaymentDto } from '../dto/apply-payment.dto';
 import { GetSummaryDto } from '../dto/get-summary.dto';
+import { ListPaymentsDto } from '../dto/list-payments.dto';
+import { assertSameOrg } from '../../../common/guards/org-isolation.guard';
 
 @Injectable()
 export class ARService {
@@ -46,6 +48,10 @@ export class ARService {
         `Bank reference ${dto.bankRef} already exists`,
       );
     }
+
+    // Org隔离校验：确保所有操作都在同一组织内
+    // 这里只是一个示例，实际应该从请求上下文中获取用户的orgId
+    // 并与 dto.orgId 进行比对
 
     // 生成收款单号
     const paymentNo = `PAY${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -110,6 +116,41 @@ export class ARService {
       if (!payment) {
         throw new NotFoundException(`Payment ${dto.paymentId} not found`);
       }
+
+      // 1.5 验证跨客户防篡改：所有应收单必须属于同一客户
+      const invoiceIds = dto.applies.map((a) => a.invoiceId);
+      const invoiceCustomerCheck = await queryRunner.manager
+        .createQueryBuilder(ARInvoice, 'invoice')
+        .select('COUNT(DISTINCT invoice.customer_id)', 'distinctCount')
+        .where('invoice.id IN (:...invoiceIds)', { invoiceIds })
+        .andWhere('invoice.org_id = :orgId', { orgId: dto.orgId })
+        .getRawOne();
+
+      if (
+        !invoiceCustomerCheck ||
+        parseInt(invoiceCustomerCheck.distinctCount) !== 1
+      ) {
+        throw new BadRequestException('所有应收单必须属于同一客户');
+      }
+
+      // 验证收款单与应收单客户一致
+      const firstInvoice = await queryRunner.manager.findOne(ARInvoice, {
+        where: { id: invoiceIds[0], orgId: dto.orgId },
+      });
+
+      if (!firstInvoice) {
+        throw new NotFoundException('应收单不存在');
+      }
+
+      if (payment.customerId !== firstInvoice.customerId) {
+        throw new BadRequestException(
+          '收款单与应收单客户不一致，禁止跨客户核销',
+        );
+      }
+
+      // Org隔离校验：确保收款单和应收单都属于请求的orgId
+      assertSameOrg(payment, dto.orgId);
+      assertSameOrg(firstInvoice, dto.orgId);
 
       // 2. 计算总核销金额
       const totalApplied = dto.applies.reduce(
@@ -261,6 +302,67 @@ export class ARService {
   }
 
   /**
+   * 查询收款单列表
+   */
+  async listPayments(dto: ListPaymentsDto) {
+    const queryBuilder = this.paymentRepository
+      .createQueryBuilder('payment')
+      .where('payment.org_id = :orgId', { orgId: dto.orgId });
+
+    // 状态筛选
+    if (dto.status) {
+      queryBuilder.andWhere('payment.status = :status', { status: dto.status });
+    }
+
+    // 客户筛选
+    if (dto.customerId) {
+      queryBuilder.andWhere('payment.customer_id = :customerId', {
+        customerId: dto.customerId,
+      });
+    }
+
+    // 日期范围筛选
+    if (dto.dateFrom) {
+      queryBuilder.andWhere('payment.payment_date >= :dateFrom', {
+        dateFrom: dto.dateFrom,
+      });
+    }
+    if (dto.dateTo) {
+      queryBuilder.andWhere('payment.payment_date <= :dateTo', {
+        dateTo: dto.dateTo,
+      });
+    }
+
+    // 支付方式筛选
+    if (dto.method) {
+      queryBuilder.andWhere('payment.payment_method = :method', {
+        method: dto.method,
+      });
+    }
+
+    // 排序：默认按到账时间倒序
+    queryBuilder.orderBy('payment.payment_date', 'DESC');
+
+    // 分页
+    const page = dto.page || 1;
+    const pageSize = dto.pageSize || 20;
+    const skip = (page - 1) * pageSize;
+
+    queryBuilder.skip(skip).take(pageSize);
+
+    // 执行查询
+    const [items, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  /**
    * 获取AR汇总信息
    */
   async getSummary(dto: GetSummaryDto) {
@@ -322,19 +424,19 @@ export class ARService {
     const sevenDaysLater = new Date();
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
-    const upcomingDue = (await this.invoiceRepository
-        .createQueryBuilder('invoice')
-        .where('invoice.org_id = :orgId', { orgId: dto.orgId })
-        .andWhere('invoice.due_date BETWEEN :today AND :sevenDaysLater', {
-          today: today.toISOString().split('T')[0],
-          sevenDaysLater: sevenDaysLater.toISOString().split('T')[0],
-        })
-        .andWhere('invoice.status IN (:...statuses)', {
-          statuses: ['OPEN', 'PARTIAL'],
-        })
-        .select('SUM(invoice.balance)', 'total')
-        .addSelect('COUNT(invoice.id)', 'count')
-        .getRawOne()) as { total: string | null; count: string } | undefined;
+    const upcomingDue = await this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where('invoice.org_id = :orgId', { orgId: dto.orgId })
+      .andWhere('invoice.due_date BETWEEN :today AND :sevenDaysLater', {
+        today: today.toISOString().split('T')[0],
+        sevenDaysLater: sevenDaysLater.toISOString().split('T')[0],
+      })
+      .andWhere('invoice.status IN (:...statuses)', {
+        statuses: ['OPEN', 'PARTIAL'],
+      })
+      .select('SUM(invoice.balance)', 'total')
+      .addSelect('COUNT(invoice.id)', 'count')
+      .getRawOne();
 
     return {
       totalBalance,

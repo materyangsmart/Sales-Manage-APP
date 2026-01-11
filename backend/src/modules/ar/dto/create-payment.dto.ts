@@ -24,12 +24,18 @@ export class CreatePaymentDto {
   @MaxLength(100)
   bankRef: string;
 
-  @ApiProperty({ description: '收款金额(分)', example: 1130000 })
+  @ApiProperty({
+    description: '收款金额（单位：分，例如 1130000 表示 11300.00 元）',
+    example: 1130000,
+  })
   @IsInt()
   @Min(1)
   amount: number;
 
-  @ApiProperty({ description: '收款日期 (YYYY-MM-DD)', example: '2024-01-11' })
+  @ApiProperty({
+    description: '收款日期（ISO8601格式，UTC时区，YYYY-MM-DD）',
+    example: '2024-01-11',
+  })
   @IsDateString()
   paymentDate: string;
 

@@ -22,6 +22,7 @@ describe('ARService', () => {
   let queryRunner: QueryRunner;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     // Mock QueryRunner
     queryRunner = {
       connect: jest.fn(),
@@ -34,6 +35,7 @@ describe('ARService', () => {
         create: jest.fn(),
         save: jest.fn(),
         update: jest.fn(),
+        createQueryBuilder: jest.fn(),
       },
     } as any;
 
@@ -164,6 +166,8 @@ describe('ARService', () => {
 
       const payment = {
         id: 1,
+        orgId: 2,
+        customerId: 123,
         paymentNo: 'PAY1704960000000ABC1',
         unappliedAmount: 1130000,
         status: 'UNAPPLIED',
@@ -172,15 +176,26 @@ describe('ARService', () => {
 
       const invoice = {
         id: 789,
+        orgId: 2,
+        customerId: 123,
         invoiceNo: 'INV202401001',
         balance: 1130000,
         status: 'OPEN',
         version: 0,
       };
 
+      // Mock跨客户校验查询
+      jest.spyOn(queryRunner.manager, 'createQueryBuilder').mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ distinctCount: '1' }),
+      } as any);
+
       jest
         .spyOn(queryRunner.manager, 'findOne')
         .mockResolvedValueOnce(payment)
+        .mockResolvedValueOnce(invoice) // firstInvoice for customer check
         .mockResolvedValueOnce(null) // existingApply
         .mockResolvedValueOnce(invoice);
 
@@ -227,11 +242,30 @@ describe('ARService', () => {
 
       const payment = {
         id: 1,
+        orgId: 2,
+        customerId: 123,
         unappliedAmount: 1130000,
         version: 0,
       };
 
-      jest.spyOn(queryRunner.manager, 'findOne').mockResolvedValue(payment);
+      const invoice = {
+        id: 789,
+        orgId: 2,
+        customerId: 123,
+      };
+
+      // Mock跨客户校验查询
+      jest.spyOn(queryRunner.manager, 'createQueryBuilder').mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ distinctCount: '1' }),
+      } as any);
+
+      jest
+        .spyOn(queryRunner.manager, 'findOne')
+        .mockResolvedValueOnce(payment)
+        .mockResolvedValueOnce(invoice);
 
       await expect(service.applyPayment(dto)).rejects.toThrow(
         BadRequestException,
@@ -249,13 +283,30 @@ describe('ARService', () => {
 
       const payment = {
         id: 1,
+        orgId: 2,
+        customerId: 123,
         unappliedAmount: 1130000,
         version: 0,
       };
 
+      const invoice = {
+        id: 789,
+        orgId: 2,
+        customerId: 123,
+      };
+
+      // Mock跨客户校验查询
+      jest.spyOn(queryRunner.manager, 'createQueryBuilder').mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ distinctCount: '1' }),
+      } as any);
+
       jest
         .spyOn(queryRunner.manager, 'findOne')
         .mockResolvedValueOnce(payment)
+        .mockResolvedValueOnce(invoice) // firstInvoice
         .mockResolvedValueOnce({ id: 1 }); // existingApply
 
       await expect(service.applyPayment(dto)).rejects.toThrow(
@@ -274,20 +325,33 @@ describe('ARService', () => {
 
       const payment = {
         id: 1,
+        orgId: 2,
+        customerId: 123,
         unappliedAmount: 1130000,
         version: 0,
       };
 
       const invoice = {
         id: 789,
+        orgId: 2,
+        customerId: 123,
         balance: 1130000,
         version: 0,
       };
 
+      // Mock跨客户校验查询
+      jest.spyOn(queryRunner.manager, 'createQueryBuilder').mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ distinctCount: '1' }),
+      } as any);
+
       jest
         .spyOn(queryRunner.manager, 'findOne')
         .mockResolvedValueOnce(payment)
-        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(invoice) // firstInvoice
+        .mockResolvedValueOnce(null) // existingApply
         .mockResolvedValueOnce(invoice);
 
       jest.spyOn(queryRunner.manager, 'create').mockReturnValue({} as any);
