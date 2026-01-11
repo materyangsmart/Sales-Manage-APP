@@ -1,9 +1,34 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ARModule } from './modules/ar/ar.module';
 
 @Module({
-  imports: [],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 3306),
+        username: configService.get('DB_USERNAME', 'root'),
+        password: configService.get('DB_PASSWORD', ''),
+        database: configService.get('DB_DATABASE', 'qianzhang_sales'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+        synchronize: false,
+        logging: configService.get('DB_LOGGING', 'false') === 'true',
+      }),
+      inject: [ConfigService],
+    }),
+    ARModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
