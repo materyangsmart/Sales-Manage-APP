@@ -37,10 +37,8 @@ export interface ApplyItem {
 }
 
 export interface ApplyPaymentRequest {
-  orgId: number;
   paymentId: number;
   applies: ApplyItem[];
-  operatorId: number;
   remark?: string;
 }
 
@@ -59,14 +57,13 @@ export interface ApplyPaymentResponse {
 }
 
 export interface PaymentListParams {
-  orgId: number;
   status?: 'UNAPPLIED' | 'PARTIAL' | 'CLOSED';
-  customerId?: number;
-  dateFrom?: string;
-  dateTo?: string;
+  customer_id?: number;
+  date_from?: string;
+  date_to?: string;
   method?: string;
   page?: number;
-  pageSize?: number;
+  page_size?: number;
 }
 
 export interface PaymentListResponse {

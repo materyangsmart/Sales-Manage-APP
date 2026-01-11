@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { ARPaymentList } from './pages/ARPaymentList';
+import { ARApplyDetailWrapper } from './pages/ARApplyDetailWrapper';
 import './index.css';
 
 function App() {
@@ -13,7 +14,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/ar/payments" replace />} />
             <Route path="/ar/payments" element={<ARPaymentList />} />
-            {/* TODO: 添加核销详情页路由 */}
+            <Route path="/ar/apply/:paymentId" element={<ARApplyDetailWrapper />} />
           </Routes>
         </div>
       </BrowserRouter>

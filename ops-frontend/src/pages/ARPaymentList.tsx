@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Select, DatePicker, Input, message, Space, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -13,14 +14,14 @@ const { Option } = Select;
  * AR待处理列表页面
  */
 export const ARPaymentList: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ARPayment[]>([]);
   const [total, setTotal] = useState(0);
   const [params, setParams] = useState<PaymentListParams>({
-    orgId: 2, // TODO: 从登录态获取
     status: 'UNAPPLIED',
     page: 1,
-    pageSize: 20,
+    page_size: 20,
   });
 
   // 加载数据
@@ -136,8 +137,7 @@ export const ARPaymentList: React.FC = () => {
 
   // 处理核销
   const handleApply = (payment: ARPayment) => {
-    // TODO: 跳转到核销详情页
-    message.info(`跳转到核销页面: ${payment.paymentNo}`);
+    navigate(`/ar/apply/${payment.id}`);
   };
 
   // 处理筛选变更
@@ -154,7 +154,7 @@ export const ARPaymentList: React.FC = () => {
     setParams((prev) => ({
       ...prev,
       page,
-      pageSize,
+      page_size: pageSize,
     }));
   };
 
@@ -182,8 +182,8 @@ export const ARPaymentList: React.FC = () => {
           <div>
             <span className="mr-2">客户ID:</span>
             <Input
-              value={params.customerId}
-              onChange={(e) => handleFilterChange('customerId', e.target.value ? parseInt(e.target.value) : undefined)}
+              value={params.customer_id}
+              onChange={(e) => handleFilterChange('customer_id', e.target.value ? parseInt(e.target.value) : undefined)}
               placeholder="请输入客户ID"
               style={{ width: 150 }}
             />
@@ -193,17 +193,17 @@ export const ARPaymentList: React.FC = () => {
             <span className="mr-2">收款日期:</span>
             <RangePicker
               value={
-                params.dateFrom && params.dateTo
-                  ? [dayjs(params.dateFrom), dayjs(params.dateTo)]
+                params.date_from && params.date_to
+                  ? [dayjs(params.date_from), dayjs(params.date_to)]
                   : null
               }
               onChange={(dates) => {
                 if (dates) {
-                  handleFilterChange('dateFrom', dates[0]?.format('YYYY-MM-DD'));
-                  handleFilterChange('dateTo', dates[1]?.format('YYYY-MM-DD'));
+                  handleFilterChange('date_from', dates[0]?.format('YYYY-MM-DD'));
+                  handleFilterChange('date_to', dates[1]?.format('YYYY-MM-DD'));
                 } else {
-                  handleFilterChange('dateFrom', undefined);
-                  handleFilterChange('dateTo', undefined);
+                  handleFilterChange('date_from', undefined);
+                  handleFilterChange('date_to', undefined);
                 }
               }}
             />
@@ -224,7 +224,7 @@ export const ARPaymentList: React.FC = () => {
         scroll={{ x: 1500 }}
         pagination={{
           current: params.page,
-          pageSize: params.pageSize,
+          pageSize: params.page_size,
           total,
           showSizeChanger: true,
           showQuickJumper: true,

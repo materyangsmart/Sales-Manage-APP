@@ -105,10 +105,8 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
           }));
 
           await applyPayment({
-            orgId: payment.orgId,
             paymentId: payment.id,
             applies,
-            operatorId: 888, // TODO: 从登录态获取
           });
 
           message.success('核销成功');
