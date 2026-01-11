@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import { applyPayment } from '../services/ar';
 import type { ARPayment, ARInvoice, ApplyItem } from '../types/ar';
 import { Amount, AmountInput } from '../components/Amount';
-import { trackEvent } from '../utils/analytics';
+import { ARAnalytics } from '../utils/analytics';
 
 interface ARApplyDetailProps {
   payment: ARPayment;
@@ -53,12 +53,13 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
   };
 
   // 提交核销
-  const handleSubmit = async () => {
-    // 埋点：核销提交
-    trackEvent('apply_submit', {
-      paymentNo: payment.paymentNo,
-      totalApplied,
-      invoiceCount: applyRows.filter((r) => r.appliedAmount > 0).length,
+  const handleSubmit = () => {
+    // 埋点：提交核销
+    ARAnalytics.applySubmit({
+      payment_id: payment.id,
+      customer_id: payment.customerId,
+      amount_fen: totalApplied,
+      invoice_count: applyRows.filter((r) => r.appliedAmount > 0).length,
     });
 
     // 验证
@@ -112,19 +113,31 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
           message.success('核销成功');
 
           // 埋点：核销成功
-          trackEvent('apply_success', {
-            paymentNo: payment.paymentNo,
-            totalApplied,
-            settled: canSettle,
+          ARAnalytics.applySuccess({
+            payment_id: payment.id,
+            customer_id: payment.customerId,
+            amount_fen: totalApplied,
+            invoice_count: validApplies.length,
           });
 
           onSuccess?.();
         } catch (error: any) {
-          // 埋点：核销冲突
+          // 埋点：核销冲突或错误
           if (error.response?.status === 409) {
-            trackEvent('apply_conflict', {
-              paymentNo: payment.paymentNo,
-              errorMessage: error.userMessage,
+            ARAnalytics.applyConflict({
+              payment_id: payment.id,
+              customer_id: payment.customerId,
+              amount_fen: totalApplied,
+              invoice_count: validApplies.length,
+            });
+          } else {
+            ARAnalytics.applyError({
+              payment_id: payment.id,
+              customer_id: payment.customerId,
+              amount_fen: totalApplied,
+              invoice_count: validApplies.length,
+              error_code: error.response?.status,
+              error_message: error.userMessage || error.message,
             });
           }
 
@@ -148,119 +161,108 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
       title: '应收金额',
       dataIndex: 'amount',
       key: 'amount',
-      width: 120,
-      render: (value: number) => <Amount value={value} />,
+      width: 150,
+      render: (amount: number) => <Amount value={amount} />,
     },
     {
-      title: '余额',
+      title: '剩余余额',
       dataIndex: 'balance',
       key: 'balance',
-      width: 120,
-      render: (value: number) => <Amount value={value} />,
+      width: 150,
+      render: (balance: number) => <Amount value={balance} />,
     },
     {
-      title: '到期日',
+      title: '到期日期',
       dataIndex: 'dueDate',
       key: 'dueDate',
       width: 120,
-      render: (date: string) => {
-        const isOverdue = dayjs(date).isBefore(dayjs(), 'day');
-        return (
-          <span className={isOverdue ? 'text-red-600 font-semibold' : ''}>
-            {dayjs(date).format('YYYY-MM-DD')}
-            {isOverdue && ' (逾期)'}
-          </span>
-        );
-      },
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
       title: '核销金额',
       key: 'appliedAmount',
       width: 200,
-      render: (_: any, record: ApplyRow) => (
-        <AmountInput
-          value={record.appliedAmount}
-          onChange={(value) => handleAmountChange(record.id, value)}
-          max={Math.min(remainingAmount + record.appliedAmount, record.balance)}
-          disabled={loading}
-        />
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 100,
-      render: (_: any, record: ApplyRow) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => handleQuickFill(record)}
-          disabled={loading || remainingAmount === 0}
-        >
-          快速填充
-        </Button>
+      render: (_, record) => (
+        <Space>
+          <AmountInput
+            value={record.appliedAmount}
+            onChange={(value) => handleAmountChange(record.id, value)}
+            max={Math.min(remainingAmount + record.appliedAmount, record.balance)}
+            placeholder="请输入核销金额"
+          />
+          <Button
+            size="small"
+            onClick={() => handleQuickFill(record)}
+            disabled={remainingAmount === 0}
+          >
+            快速填充
+          </Button>
+        </Space>
       ),
     },
   ];
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">AR核销</h1>
-
-      {/* 收款单信息 */}
-      <Card title="收款单信息" className="mb-4">
-        <Descriptions column={3}>
+      <Card title="核销收款单" className="mb-4">
+        <Descriptions column={2} bordered>
           <Descriptions.Item label="收款单号">{payment.paymentNo}</Descriptions.Item>
           <Descriptions.Item label="客户ID">{payment.customerId}</Descriptions.Item>
-          <Descriptions.Item label="收款日期">
-            {dayjs(payment.paymentDate).format('YYYY-MM-DD')}
-          </Descriptions.Item>
           <Descriptions.Item label="收款金额">
             <Amount value={payment.amount} />
           </Descriptions.Item>
           <Descriptions.Item label="未分配金额">
-            <Amount value={payment.unappliedAmount} className="text-blue-600 font-semibold" />
+            <Amount value={payment.unappliedAmount} className="text-orange-600 font-semibold" />
           </Descriptions.Item>
-          <Descriptions.Item label="支付方式">{payment.paymentMethod}</Descriptions.Item>
-          <Descriptions.Item label="银行流水号">{payment.bankRef}</Descriptions.Item>
+          <Descriptions.Item label="收款日期">
+            {dayjs(payment.paymentDate).format('YYYY-MM-DD')}
+          </Descriptions.Item>
+          <Descriptions.Item label="收款方式">{payment.paymentMethod}</Descriptions.Item>
         </Descriptions>
       </Card>
 
-      {/* 核销汇总 */}
-      <Alert
-        message={
-          <div className="flex justify-between items-center">
-            <span>
-              本次核销：<Amount value={totalApplied} className="font-semibold text-blue-600" />
-            </span>
-            <span>
-              剩余可分配：
-              <Amount
-                value={remainingAmount}
-                className={`font-semibold ${canSettle ? 'text-green-600' : ''}`}
-              />
-              {canSettle && <span className="ml-2 text-green-600">✓ 可结清</span>}
-            </span>
-          </div>
-        }
-        type={canSettle ? 'success' : 'info'}
-        className="mb-4"
-      />
+      {remainingAmount < 0 && (
+        <Alert
+          message="警告"
+          description="核销金额超出未分配金额，请调整"
+          type="error"
+          showIcon
+          className="mb-4"
+        />
+      )}
 
-      {/* 应收单列表 */}
-      <Card title="选择应收单进行核销">
+      {canSettle && totalApplied > 0 && (
+        <Alert
+          message="提示"
+          description="本次核销后将结清该收款单"
+          type="success"
+          showIcon
+          className="mb-4"
+        />
+      )}
+
+      <Card
+        title="待核销应收单"
+        extra={
+          <Space>
+            <span>
+              本次核销：<Amount value={totalApplied} className="text-blue-600 font-semibold" />
+            </span>
+            <span>
+              剩余可分配：<Amount value={remainingAmount} className="text-orange-600 font-semibold" />
+            </span>
+          </Space>
+        }
+      >
         <Table
           columns={columns}
           dataSource={applyRows}
           rowKey="id"
           pagination={false}
-          scroll={{ x: 900 }}
+          scroll={{ x: 800 }}
         />
-      </Card>
 
-      {/* 操作按钮 */}
-      <div className="mt-6 flex justify-end">
-        <Space>
+        <div className="mt-4 flex justify-end space-x-2">
           <Button onClick={onCancel} disabled={loading}>
             取消
           </Button>
@@ -272,8 +274,8 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
           >
             确认核销
           </Button>
-        </Space>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 };
