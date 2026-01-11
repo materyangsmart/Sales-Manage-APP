@@ -64,6 +64,8 @@ export interface PaymentListParams {
   method?: string;
   page?: number;
   page_size?: number;
+  sort_by?: string;
+  sort_order?: 'ASC' | 'DESC';
 }
 
 export interface PaymentListResponse {
