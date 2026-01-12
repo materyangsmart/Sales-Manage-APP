@@ -11,7 +11,6 @@ import {
 @Entity('ar_payments')
 @Index(['orgId', 'customerId'])
 @Index(['orgId', 'paymentDate'])
-@Index(['bankRef'], { unique: true })
 export class ARPayment {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
