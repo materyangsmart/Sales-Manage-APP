@@ -54,11 +54,15 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
 
   // 提交核销
   const handleSubmit = async () => {
+    const invoiceCount = applyRows.filter((r) => r.appliedAmount > 0).length;
+    const remainFenAfter = payment.unappliedAmount - totalApplied;
+
     // 埋点：核销提交
     trackEvent('apply_submit', {
-      paymentNo: payment.paymentNo,
-      totalApplied,
-      invoiceCount: applyRows.filter((r) => r.appliedAmount > 0).length,
+      payment_id: payment.id,
+      applied_total_fen: totalApplied,
+      remain_fen_after: remainFenAfter,
+      invoice_count: invoiceCount,
     });
 
     // 验证
@@ -113,8 +117,10 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
 
           // 埋点：核销成功
           trackEvent('apply_success', {
-            paymentNo: payment.paymentNo,
-            totalApplied,
+            payment_id: payment.id,
+            applied_total_fen: totalApplied,
+            remain_fen_after: remainFenAfter,
+            invoice_count: invoiceCount,
             settled: canSettle,
           });
 
@@ -123,8 +129,11 @@ export const ARApplyDetail: React.FC<ARApplyDetailProps> = ({
           // 埋点：核销冲突
           if (error.response?.status === 409) {
             trackEvent('apply_conflict', {
-              paymentNo: payment.paymentNo,
-              errorMessage: error.userMessage,
+              payment_id: payment.id,
+              applied_total_fen: totalApplied,
+              remain_fen_after: remainFenAfter,
+              invoice_count: invoiceCount,
+              error_message: error.userMessage,
             });
           }
 
