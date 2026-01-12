@@ -22,7 +22,7 @@ import { ARModule } from './modules/ar/ar.module';
         database: configService.get('DB_DATABASE', 'qianzhang_sales'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        synchronize: false,
+        synchronize: configService.get('DB_SYNC', 'false') === 'true',
         logging: configService.get('DB_LOGGING', 'false') === 'true',
       }),
       inject: [ConfigService],
