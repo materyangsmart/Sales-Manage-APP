@@ -1,98 +1,328 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 千张销售管理系统 - 后端服务
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+基于 [NestJS](https://github.com/nestjs/nest) 框架的 TypeScript 后端服务。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📋 目录
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [项目设置](#项目设置)
+- [数据库设置](#数据库设置)
+- [运行项目](#运行项目)
+- [测试](#测试)
+- [环境变量](#环境变量)
+- [API文档](#api文档)
 
-## Project setup
+---
+
+## 🚀 项目设置
+
+### 1. 安装依赖
 
 ```bash
-$ npm install
+npm install
+# 或
+pnpm install
 ```
 
-## Compile and run the project
+### 2. 配置环境变量
+
+复制 `.env.example` 为 `.env` 并修改配置：
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
 ```
 
-## Run tests
+编辑 `.env` 文件，设置数据库连接信息：
+
+```env
+# 服务端口
+PORT=3000
+
+# 数据库配置
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=your_password_here
+DB_DATABASE=qianzhang_sales
+DB_LOGGING=false
+DB_SYNC=false
+
+# Redis配置
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+```
+
+---
+
+## 🗄️ 数据库设置
+
+### 快速开始（推荐）
+
+#### 步骤1: 创建数据库
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+mysql -u root -p -e "CREATE DATABASE qianzhang_sales CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+#### 步骤2: 运行自动建表脚本
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run db:sync
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**期望输出**:
 
-## Resources
+```
+🚀 Starting database synchronization...
+✅ Database connected successfully!
+🔄 Synchronizing database schema...
+✅ Database schema synchronized successfully!
 
-Check out a few resources that may come in handy when working with NestJS:
+📊 Created tables:
+   ✓ ar_payments
+   ✓ ar_invoices
+   ✓ ar_apply
+   ✓ audit_logs
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+🎉 Database synchronization completed successfully!
+```
 
-## Support
+#### 步骤3: 验证表创建
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+mysql -u root -p qianzhang_sales -e "SHOW TABLES;"
+```
 
-## Stay in touch
+**期望输出**:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```
++----------------------------+
+| Tables_in_qianzhang_sales  |
++----------------------------+
+| ar_apply                   |
+| ar_invoices                |
+| ar_payments                |
+| audit_logs                 |
++----------------------------+
+```
 
-## License
+### 详细文档
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+查看 [DATABASE_SETUP.md](./DATABASE_SETUP.md) 获取完整的数据库设置指南，包括：
+- 多种建表方法
+- 表结构说明
+- 常见问题解决
+- 安全建议
+
+---
+
+## 🏃 运行项目
+
+### 开发模式（推荐）
+
+```bash
+npm run start:dev
+```
+
+服务将在 `http://localhost:3000` 启动，支持热重载。
+
+### 生产模式
+
+```bash
+npm run build
+npm run start:prod
+```
+
+### 调试模式
+
+```bash
+npm run start:debug
+```
+
+---
+
+## 🧪 测试
+
+### 单元测试
+
+```bash
+npm run test
+```
+
+### E2E测试
+
+```bash
+npm run test:e2e
+```
+
+### 测试覆盖率
+
+```bash
+npm run test:cov
+```
+
+### 冒烟测试
+
+```bash
+cd scripts
+bash smoke-test-improved.sh
+```
+
+---
+
+## 🔧 环境变量
+
+| 变量 | 说明 | 默认值 | 必需 |
+|------|------|--------|------|
+| `PORT` | 服务端口 | 3000 | 否 |
+| `DB_HOST` | 数据库主机 | localhost | 是 |
+| `DB_PORT` | 数据库端口 | 3306 | 否 |
+| `DB_USERNAME` | 数据库用户名 | root | 是 |
+| `DB_PASSWORD` | 数据库密码 | - | 是 |
+| `DB_DATABASE` | 数据库名称 | qianzhang_sales | 是 |
+| `DB_LOGGING` | 启用SQL日志 | false | 否 |
+| `DB_SYNC` | 自动同步表结构 | false | 否 |
+| `REDIS_HOST` | Redis主机 | localhost | 否 |
+| `REDIS_PORT` | Redis端口 | 6379 | 否 |
+| `REDIS_PASSWORD` | Redis密码 | - | 否 |
+
+### ⚠️ DB_SYNC 说明
+
+- `DB_SYNC=true`: 应用启动时自动创建/更新表结构
+- `DB_SYNC=false`: 不自动同步表结构（推荐）
+
+**警告**: 
+- ✅ 开发环境可以使用 `DB_SYNC=true`
+- ❌ **生产环境禁止使用** `DB_SYNC=true`
+
+---
+
+## 📚 API文档
+
+### Swagger文档
+
+启动服务后访问：http://localhost:3000/api
+
+### 主要API端点
+
+#### AR管理
+
+- `GET /ar/payments` - 获取收款单列表
+- `POST /ar/payments` - 创建收款单
+- `GET /ar/payments/:id` - 获取收款单详情
+- `POST /ar/apply` - 执行核销
+- `GET /ar/summary` - 获取汇总数据
+
+---
+
+## 📦 可用脚本
+
+| 脚本 | 说明 |
+|------|------|
+| `npm run start` | 启动应用 |
+| `npm run start:dev` | 开发模式（热重载） |
+| `npm run start:debug` | 调试模式 |
+| `npm run start:prod` | 生产模式 |
+| `npm run build` | 构建应用 |
+| `npm run lint` | 代码检查 |
+| `npm run format` | 代码格式化 |
+| `npm run test` | 运行单元测试 |
+| `npm run test:e2e` | 运行E2E测试 |
+| `npm run test:cov` | 测试覆盖率 |
+| `npm run db:sync` | 自动创建数据库表 |
+
+---
+
+## 🔍 验证安装
+
+### 1. 启动服务
+
+```bash
+npm run start:dev
+```
+
+### 2. 测试API
+
+```bash
+curl "http://localhost:3000/ar/payments?orgId=2&status=UNAPPLIED&page=1&pageSize=20"
+```
+
+**期望响应** (200 OK):
+
+```json
+{
+  "items": [],
+  "total": 0,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+---
+
+## 🐛 常见问题
+
+### 1. `GET /ar/payments` 返回 500 错误
+
+**原因**: 数据库表未创建
+
+**解决方案**:
+```bash
+npm run db:sync
+```
+
+### 2. 无法连接到数据库
+
+**原因**: MySQL未启动或配置错误
+
+**解决方案**:
+1. 检查MySQL是否运行
+2. 验证 `.env` 中的数据库配置
+3. 查看 [DATABASE_SETUP.md](./DATABASE_SETUP.md) 的"常见问题"部分
+
+### 3. `SHOW TABLES` 为空
+
+**原因**: 表未创建
+
+**解决方案**:
+```bash
+npm run db:sync
+```
+
+---
+
+## 📖 技术栈
+
+- **框架**: NestJS 11.x
+- **语言**: TypeScript 5.x
+- **ORM**: TypeORM 0.3.x
+- **数据库**: MySQL 8.x
+- **缓存**: Redis 5.x
+- **验证**: class-validator
+- **文档**: Swagger/OpenAPI
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📄 许可证
+
+[MIT licensed](LICENSE)
+
+---
+
+## 🆘 获取帮助
+
+- 查看 [DATABASE_SETUP.md](./DATABASE_SETUP.md)
+- 查看 [Swagger API文档](http://localhost:3000/api)
+- 提交 Issue 到项目仓库
+
+---
+
+**最后更新**: 2026-01-12
