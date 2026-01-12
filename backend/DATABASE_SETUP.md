@@ -4,6 +4,121 @@
 
 ---
 
+## ⚠️ 环境一致性检查（必读！）
+
+### 为什么需要环境一致性检查？
+
+为了确保您使用的代码与项目仓库一致，避免以下问题：
+- 非 git 目录（zip 下载、拷贝目录）导致的版本偏差
+- 代码与文档不匹配
+- 难以复现问题
+- 测试结果不一致
+
+### 必须使用 git clone
+
+⚠️ **重要：必须使用 `git clone` 获取代码，不要使用 zip 下载或目录拷贝！**
+
+```bash
+# 正确方法：clone 仓库
+git clone https://github.com/materyangsmart/Sales-Manage-APP.git
+cd Sales-Manage-APP
+
+# 切换到指定分支（如果需要）
+git checkout main
+# 或
+git checkout fix/backend-typeorm-entities
+```
+
+### 版本一致性检查
+
+在开始工作前，请运行以下命令检查代码版本：
+
+```bash
+# 检查当前 commit
+git rev-parse --short HEAD
+
+# 检查当前分支
+git branch --show-current
+
+# 检查远程仓库
+git remote -v
+```
+
+**将输出结果记录到测试报告中**，例如：
+```
+Commit: f395867
+Branch: fix/backend-typeorm-entities
+Remote: origin	https://github.com/materyangsmart/Sales-Manage-APP.git (fetch)
+```
+
+### 检查是否有未提交的修改
+
+```bash
+# 检查工作目录状态
+git status
+
+# 应该显示：
+nothing to commit, working tree clean
+```
+
+如果有未提交的修改，请先提交或还原。
+
+### 同步最新代码
+
+```bash
+# 拉取最新代码
+git pull origin main
+
+# 或拉取指定分支
+git pull origin fix/backend-typeorm-entities
+```
+
+### 如果你已经使用了 zip 下载或目录拷贝
+
+请重新使用 `git clone` 获取代码：
+
+**Windows**:
+```powershell
+# 1. 备份你的 .env 文件
+copy backend\.env %USERPROFILE%\backup.env
+
+# 2. 删除旧目录
+rmdir /s /q Sales-Manage-APP
+
+# 3. 重新 clone
+git clone https://github.com/materyangsmart/Sales-Manage-APP.git
+cd Sales-Manage-APP
+
+# 4. 恢复 .env 文件
+copy %USERPROFILE%\backup.env backend\.env
+
+# 5. 重新安装依赖
+cd backend
+npm install
+```
+
+**Linux/macOS**:
+```bash
+# 1. 备份你的 .env 文件
+cp backend/.env ~/backup.env
+
+# 2. 删除旧目录
+rm -rf Sales-Manage-APP
+
+# 3. 重新 clone
+git clone https://github.com/materyangsmart/Sales-Manage-APP.git
+cd Sales-Manage-APP
+
+# 4. 恢复 .env 文件
+cp ~/backup.env backend/.env
+
+# 5. 重新安装依赖
+cd backend
+npm install
+```
+
+---
+
 ## 📋 前置要求
 
 ### 1. 安装MySQL

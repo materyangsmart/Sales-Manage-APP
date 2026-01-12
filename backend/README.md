@@ -10,6 +10,7 @@
 - [数据库设置](#数据库设置)
 - [运行项目](#运行项目)
 - [测试](#测试)
+- [冒烟测试](#冒烟测试)
 - [环境变量](#环境变量)
 - [API文档](#api文档)
 
@@ -290,6 +291,142 @@ npm run db:sync
 ```bash
 npm run db:sync
 ```
+
+---
+
+## 💨 冒烟测试
+
+### 什么是冒烟测试？
+
+冒烟测试是一种快速验证系统核心功能的测试方法。本项目提供了自动化的AR模块冒烟测试脚本，可以5分钟内完成全面验证。
+
+### 快速开始
+
+#### Linux/macOS
+
+```bash
+# 确保后端服务已启动
+npm run start:dev
+
+# 在另一个终端运行冒烟测试
+npm run smoke:ar
+```
+
+#### Windows
+
+```powershell
+# 确保后端服务已启动
+npm run start:dev
+
+# 在另一个 PowerShell 窗口运行冒烟测试
+npm run smoke:ar:win
+```
+
+### 测试覆盖范围
+
+冒烟测试会验证以下功能：
+
+1. **环境检查**
+   - 环境变量加载
+   - MySQL连接
+   - 数据库表存在性
+
+2. **服务检查**
+   - 后端服务启动
+   - 端口可访问性
+
+3. **API基础测试**
+   - GET / (根路径)
+   - GET /ar/payments (查询收款单)
+   - GET /ar/summary (AR汇总)
+
+4. **数据写入测试** (可选)
+   - 插入测试数据
+   - 回读验证
+   - 自动清理
+
+### 高级用法
+
+#### 跳过数据写入测试
+
+**Linux/macOS**:
+```bash
+SKIP_DATA_TEST=true npm run smoke:ar
+```
+
+**Windows**:
+```powershell
+npm run smoke:ar:win -SkipDataTest
+```
+
+#### 手动运行脚本
+
+**Linux/macOS**:
+```bash
+bash scripts/smoke-ar.sh
+```
+
+**Windows**:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\smoke-ar.ps1
+```
+
+### 测试结果解读
+
+测试脚本会输出详细的执行日志，包括：
+
+- ✅ **绿色勾号**: 测试通过
+- ❌ **红色叉号**: 测试失败
+- ⚠️ **黄色警告**: 警告信息
+- ℹ️ **蓝色信息**: 一般信息
+
+最终会显示测试结果汇总：
+```
+总测试数: 8
+通过: 8
+失败: 0
+
+✅ 所有测试通过！ 🎉
+```
+
+### 常见问题
+
+#### 1. “后端服务未运行”
+
+**解决方案**: 在运行冒烟测试前，确保后端服务已启动
+```bash
+npm run start:dev
+```
+
+#### 2. “表不存在”
+
+**解决方案**: 运行 db:sync 创建表
+```bash
+npm run db:sync
+```
+
+#### 3. “MySQL连接失败”
+
+**解决方案**: 
+1. 检查MySQL服务是否运行
+2. 验证 `.env` 中的数据库配置
+3. 查看 [DATABASE_SETUP.md](./DATABASE_SETUP.md)
+
+### 最佳实践
+
+1. **在提交代码前运行冒烟测试**
+   - 确保代码修改没有破坏核心功能
+
+2. **在CI/CD流程中集成**
+   - 自动化验证每次部署
+
+3. **定期运行**
+   - 每天/每周运行一次
+   - 及时发现环境问题
+
+4. **保存测试结果**
+   - 记录测试日志
+   - 便于问题排查
 
 ---
 
