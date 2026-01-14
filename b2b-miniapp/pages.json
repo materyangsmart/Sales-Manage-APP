@@ -1,0 +1,31 @@
+{
+  "pages": [
+    {
+      "path": "pages/ledger/index",
+      "style": {
+        "navigationBarTitleText": "我的账本",
+        "enablePullDownRefresh": true
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "千张销售",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#3cc51f",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/ledger/index",
+        "iconPath": "static/ledger.png",
+        "selectedIconPath": "static/ledger-active.png",
+        "text": "账本"
+      }
+    ]
+  }
+}

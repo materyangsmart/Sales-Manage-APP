@@ -1,0 +1,28 @@
+{
+  "name": "qianzhang-b2b-miniapp",
+  "version": "1.0.0",
+  "description": "千张销售B2B客户小程序",
+  "main": "main.js",
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "dev:h5": "uni -p h5",
+    "build:h5": "uni build -p h5"
+  },
+  "keywords": [
+    "uni-app",
+    "miniapp",
+    "b2b"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@dcloudio/uni-cli-shared": "^3.0.0",
+    "@dcloudio/uni-mp-weixin": "^3.0.0",
+    "@dcloudio/uni-h5": "^3.0.0",
+    "@dcloudio/vite-plugin-uni": "^3.0.0",
+    "vite": "^4.0.0",
+    "vue": "^3.2.0"
+  }
+}
