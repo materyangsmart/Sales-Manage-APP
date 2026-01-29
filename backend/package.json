@@ -18,6 +18,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "smoke:ar": "bash scripts/smoke-ar.sh",
+    "perf:audit": "bash scripts/perf-test-audit.sh",
+    "generate:audit-logs": "ts-node -r tsconfig-paths/register scripts/generate-audit-logs.ts",
     "db:sync": "ts-node -r tsconfig-paths/register scripts/db-sync.ts"
   },
   "dependencies": {
