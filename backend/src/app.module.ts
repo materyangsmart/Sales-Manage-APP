@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ARModule } from './modules/ar/ar.module';
+import { OrderModule } from './modules/order/order.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ARModule } from './modules/ar/ar.module';
       inject: [ConfigService],
     }),
     ARModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
