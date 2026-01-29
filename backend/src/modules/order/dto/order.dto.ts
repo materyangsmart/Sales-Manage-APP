@@ -50,8 +50,7 @@ export class CreateOrderDto {
   @IsString()
   remark?: string;
 
-  @IsInt()
-  createdBy: number;
+  // createdBy 从 JWT token 中注入，不允许客户端传入
 }
 
 export class ReviewOrderDto {
@@ -66,8 +65,7 @@ export class ReviewOrderDto {
   @IsString()
   comment?: string;
 
-  @IsInt()
-  reviewedBy: number;
+  // reviewedBy 从 JWT token 中注入，不允许客户端传入
 }
 
 export class QueryOrdersDto {

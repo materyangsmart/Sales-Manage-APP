@@ -1,43 +1,58 @@
-import { Controller, Get, Post, Body, Param, Query, Request, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { OrderService } from '../services/order.service';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles, Role } from '../../../common/decorators/roles.decorator';
 
-@Controller('orders')
+@Controller('api/internal/orders')
+@UseGuards(RolesGuard)
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   /**
    * 创建订单（内部用）
-   * POST /orders
+   * POST /api/internal/orders
+   * 权限：ADMIN, OPERATOR
    */
   @Post()
-  async createOrder(@Body() dto: CreateOrderDto) {
-    return this.orderService.createOrder(dto);
+  @Roles(Role.ADMIN, Role.OPERATOR)
+  async createOrder(@Body() dto: CreateOrderDto, @Request() req) {
+    // 从token中获取createdBy，而不是从DTO中获取
+    const userId = req.user?.id || 1; // TODO: 从JWT token中获取
+    return this.orderService.createOrder({ ...dto, createdBy: userId });
   }
 
   /**
    * 审核订单（approve/reject）
-   * POST /orders/review
+   * POST /api/internal/orders/review
+   * 权限：ADMIN, OPERATOR
    */
   @Post('review')
-  async reviewOrder(@Body() dto: ReviewOrderDto) {
-    return this.orderService.reviewOrder(dto);
+  @Roles(Role.ADMIN, Role.OPERATOR)
+  async reviewOrder(@Body() dto: ReviewOrderDto, @Request() req) {
+    // 从token中获取reviewedBy，而不是从DTO中获取
+    const userId = req.user?.id || 1; // TODO: 从JWT token中获取
+    return this.orderService.reviewOrder({ ...dto, reviewedBy: userId });
   }
 
   /**
    * 查询订单（分页、过滤）
-   * GET /orders?orgId=2&status=PENDING_REVIEW&page=1&pageSize=20
+   * GET /api/internal/orders?orgId=2&status=PENDING_REVIEW&page=1&pageSize=20
+   * 权限：ADMIN, OPERATOR, AUDITOR（只读）
    */
   @Get()
+  @Roles(Role.ADMIN, Role.OPERATOR, Role.AUDITOR)
   async queryOrders(@Query() dto: QueryOrdersDto) {
     return this.orderService.queryOrders(dto);
   }
 
   /**
    * 获取订单详情
-   * GET /orders/:id
+   * GET /api/internal/orders/:id
+   * 权限：ADMIN, OPERATOR, AUDITOR（只读）
    */
   @Get(':id')
+  @Roles(Role.ADMIN, Role.OPERATOR, Role.AUDITOR)
   async getOrderById(@Param('id') id: number) {
     return this.orderService.getOrderById(id);
   }
