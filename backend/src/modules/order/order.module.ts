@@ -8,7 +8,7 @@ import { OrderItem } from './entities/order-item.entity';
 import { Customer } from './entities/customer.entity';
 import { Product } from './entities/product.entity';
 import { ARInvoice } from '../ar/entities/ar-invoice.entity';
-import { AuditLog } from '../../common/entities/audit-log.entity';
+import { AuditLog } from '../ar/entities/audit-log.entity';
 
 @Module({
   imports: [

@@ -46,7 +46,15 @@ export class OrderService {
 
     // 验证产品并计算总金额
     let totalAmount = 0;
-    const orderItemsData = [];
+    const orderItemsData: Array<{
+      productId: number;
+      productName: string;
+      sku: string;
+      unitPrice: number;
+      quantity: number;
+      subtotal: number;
+      remark?: string;
+    }> = [];
 
     for (const item of dto.items) {
       const product = await this.productRepository.findOne({
@@ -144,9 +152,9 @@ export class OrderService {
 
     // 更新订单状态
     order.status = dto.action;
-    order.reviewedBy = dto.reviewedBy;
+    order.reviewedBy = dto.reviewedBy ?? null;
     order.reviewedAt = new Date();
-    order.reviewComment = dto.comment;
+    order.reviewComment = dto.comment ?? null;
 
     await this.orderRepository.save(order);
 
@@ -258,12 +266,12 @@ export class OrderService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== 'APPROVED') {
-      throw new BadRequestException('Only approved orders can be fulfilled');
-    }
-
     if (order.status === 'FULFILLED') {
       throw new BadRequestException('Order has already been fulfilled');
+    }
+
+    if (order.status !== 'APPROVED') {
+      throw new BadRequestException('Only approved orders can be fulfilled');
     }
 
     // 使用事务：更新订单状态 + 生成发票 + 写审计日志

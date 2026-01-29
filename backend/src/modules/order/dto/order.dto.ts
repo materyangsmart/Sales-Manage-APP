@@ -51,6 +51,7 @@ export class CreateOrderDto {
   remark?: string;
 
   // createdBy 从 JWT token 中注入，不允许客户端传入
+  createdBy?: number;
 }
 
 export class ReviewOrderDto {
@@ -66,6 +67,7 @@ export class ReviewOrderDto {
   comment?: string;
 
   // reviewedBy 从 JWT token 中注入，不允许客户端传入
+  reviewedBy?: number;
 }
 
 export class QueryOrdersDto {

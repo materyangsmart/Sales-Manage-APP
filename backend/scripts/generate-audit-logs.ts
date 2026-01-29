@@ -28,7 +28,15 @@ async function generateAuditLogs() {
   const userIds = Array.from({ length: 100 }, (_, i) => i + 1);
 
   for (let batch = 0; batch < batches; batch++) {
-    const logs = [];
+    const logs: Array<{
+      userId: number;
+      action: string;
+      resourceType: string;
+      resourceId: string;
+      oldValue: string;
+      newValue: string;
+      createdAt: Date;
+    }> = [];
 
     for (let i = 0; i < batchSize; i++) {
       const userId = userIds[Math.floor(Math.random() * userIds.length)];
@@ -54,7 +62,7 @@ async function generateAuditLogs() {
       });
     }
 
-    await auditLogRepository.insert(logs);
+    await auditLogRepository.insert(logs as any);
 
     console.log(`已生成 ${(batch + 1) * batchSize} / ${totalRecords} 条记录`);
   }
