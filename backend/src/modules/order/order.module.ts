@@ -6,10 +6,12 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Customer } from './entities/customer.entity';
 import { Product } from './entities/product.entity';
+import { ARInvoice } from '../ar/entities/ar-invoice.entity';
+import { AuditLog } from '../../common/entities/audit-log.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order, OrderItem, Customer, Product]),
+    TypeOrmModule.forFeature([Order, OrderItem, Customer, Product, ARInvoice, AuditLog]),
   ],
   controllers: [OrderController],
   providers: [OrderService],

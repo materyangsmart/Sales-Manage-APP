@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request } from '@nestjs/common';
 import { OrderService } from '../services/order.service';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
 
@@ -40,5 +40,16 @@ export class OrderController {
   @Get(':id')
   async getOrderById(@Param('id') id: number) {
     return this.orderService.getOrderById(id);
+  }
+
+  /**
+   * 履行订单（生成应收发票）
+   * POST /api/internal/orders/:id/fulfill
+   */
+  @Post(':id/fulfill')
+  async fulfillOrder(@Param('id') id: number, @Request() req) {
+    // 从 token 中获取 userId（未来实现 JWT 后使用）
+    const userId = req.user?.id || 'system';
+    return this.orderService.fulfillOrder(id, userId);
   }
 }
