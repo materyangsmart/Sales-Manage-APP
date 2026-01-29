@@ -449,3 +449,47 @@ export class ARService {
     };
   }
 }
+
+  /**
+   * 查询应收发票（分页）
+   */
+  async queryInvoices(dto: any) {
+    const {
+      orgId,
+      customerId,
+      status,
+      orderId,
+      page = 1,
+      pageSize = 20,
+    } = dto;
+
+    const qb = this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where('invoice.orgId = :orgId', { orgId });
+
+    if (customerId) {
+      qb.andWhere('invoice.customerId = :customerId', { customerId });
+    }
+
+    if (status) {
+      qb.andWhere('invoice.status = :status', { status });
+    }
+
+    if (orderId) {
+      qb.andWhere('invoice.orderId = :orderId', { orderId });
+    }
+
+    qb.orderBy('invoice.createdAt', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Order } from '../entities/order.entity';
@@ -6,6 +6,8 @@ import { OrderItem } from '../entities/order-item.entity';
 import { Product } from '../entities/product.entity';
 import { Customer } from '../entities/customer.entity';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
+import { ARInvoice } from '../../ar/entities/ar-invoice.entity';
+import { AuditLog } from '../../../common/entities/audit-log.entity';
 
 @Injectable()
 export class OrderService {
@@ -18,6 +20,10 @@ export class OrderService {
     private productRepository: Repository<Product>,
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
+    @InjectRepository(ARInvoice)
+    private arInvoiceRepository: Repository<ARInvoice>,
+    @InjectRepository(AuditLog)
+    private auditLogRepository: Repository<AuditLog>,
     private dataSource: DataSource,
   ) {}
 
@@ -239,3 +245,121 @@ export class OrderService {
     return `ORD-${dateStr}-${seq}`;
   }
 }
+
+  /**
+   * 履行订单（fulfill）
+   * 生成应收发票并写入审计日志
+   */
+  async fulfillOrder(orderId: number, userId: number) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['items'],
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'APPROVED') {
+      throw new BadRequestException('Only approved orders can be fulfilled');
+    }
+
+    if (order.status === 'FULFILLED') {
+      throw new BadRequestException('Order has already been fulfilled');
+    }
+
+    // 使用事务：更新订单状态 + 生成发票 + 写审计日志
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. 更新订单状态为FULFILLED
+      const oldStatus = order.status;
+      order.status = 'FULFILLED';
+      order.fulfilledAt = new Date();
+      order.fulfilledBy = userId;
+
+      await queryRunner.manager.save(order);
+
+      // 2. 生成应收发票
+      const invoiceNo = await this.generateInvoiceNo(order.orgId);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30); // 默认30天账期
+
+      const invoice = this.arInvoiceRepository.create({
+        orgId: order.orgId,
+        customerId: order.customerId,
+        invoiceNo,
+        orderId: order.id,
+        amount: order.totalAmount,
+        taxAmount: 0, // 暂时不考虑税额
+        balance: order.totalAmount,
+        dueDate,
+        status: 'OPEN',
+        remark: `Generated from order ${order.orderNo}`,
+      });
+
+      const savedInvoice = await queryRunner.manager.save(invoice);
+
+      // 3. 写审计日志
+      const auditLog = this.auditLogRepository.create({
+        userId,
+        action: 'FULFILL',
+        resourceType: 'Order',
+        resourceId: order.id.toString(),
+        oldValue: JSON.stringify({
+          status: oldStatus,
+          fulfilledAt: null,
+          fulfilledBy: null,
+        }),
+        newValue: JSON.stringify({
+          status: 'FULFILLED',
+          fulfilledAt: order.fulfilledAt,
+          fulfilledBy: order.fulfilledBy,
+          generatedInvoice: {
+            invoiceId: savedInvoice.id,
+            invoiceNo: savedInvoice.invoiceNo,
+            amount: savedInvoice.amount,
+          },
+        }),
+        ipAddress: '127.0.0.1',
+        userAgent: 'Internal API',
+      });
+
+      await queryRunner.manager.save(auditLog);
+
+      await queryRunner.commitTransaction();
+
+      // 返回订单和发票信息
+      return {
+        order,
+        invoice: savedInvoice,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * 生成发票编号
+   */
+  private async generateInvoiceNo(orgId: number): Promise<string> {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+
+    // 查询今天的发票数量
+    const count = await this.arInvoiceRepository.count({
+      where: {
+        orgId,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        invoiceNo: { $like: `INV-${dateStr}-%` } as any,
+      },
+    });
+
+    const seq = (count + 1).toString().padStart(4, '0');
+    return `INV-${dateStr}-${seq}`;
+  }

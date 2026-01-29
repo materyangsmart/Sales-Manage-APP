@@ -73,6 +73,12 @@ export class Order {
   @Column({ name: 'review_comment', type: 'text', nullable: true, comment: '审核意见' })
   reviewComment: string | null;
 
+  @Column({ name: 'fulfilled_by', type: 'int', nullable: true, comment: '履行人ID' })
+  fulfilledBy: number | null;
+
+  @Column({ name: 'fulfilled_at', type: 'datetime', nullable: true, comment: '履行时间' })
+  fulfilledAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at', comment: '创建时间' })
   createdAt: Date;
 

@@ -13,6 +13,7 @@ import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { ApplyPaymentDto } from '../dto/apply-payment.dto';
 import { GetSummaryDto } from '../dto/get-summary.dto';
 import { ListPaymentsDto } from '../dto/list-payments.dto';
+import { QueryInvoicesDto } from '../dto/query-invoices.dto';
 import { Idempotent } from '../../../common/decorators/idempotency.decorator';
 import { IdempotencyInterceptor } from '../../../common/interceptors/idempotency.interceptor';
 import type { Request } from 'express';
@@ -119,6 +120,38 @@ export class ARController {
   })
   async listPayments(@Query() dto: ListPaymentsDto) {
     return this.arService.listPayments(dto);
+  }
+
+  @Get('invoices')
+  @ApiOperation({ summary: '查询应收发票列表' })
+  @ApiResponse({
+    status: 200,
+    description: '返回应收发票列表',
+    schema: {
+      example: {
+        items: [
+          {
+            id: 1,
+            invoiceNo: 'INV-20240129-0001',
+            orgId: 2,
+            customerId: 1,
+            orderId: 1,
+            amount: 10000,
+            balance: 10000,
+            status: 'OPEN',
+            dueDate: '2024-02-28',
+            createdAt: '2024-01-29T10:05:00Z',
+          },
+        ],
+        total: 10,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      },
+    },
+  })
+  async queryInvoices(@Query() dto: QueryInvoicesDto) {
+    return this.arService.queryInvoices(dto);
   }
 
   @Get('summary')
