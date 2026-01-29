@@ -7,7 +7,7 @@ import { Product } from '../entities/product.entity';
 import { Customer } from '../entities/customer.entity';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
 import { ARInvoice } from '../../ar/entities/ar-invoice.entity';
-import { AuditLog } from '../../../common/entities/audit-log.entity';
+import { AuditLog } from '../../ar/entities/audit-log.entity';
 
 @Injectable()
 export class OrderService {
