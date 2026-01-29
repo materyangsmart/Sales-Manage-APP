@@ -1,0 +1,52 @@
+# ops-frontend 功能清单
+
+## 基础设施
+- [x] 创建统一的API client连接backend的internal接口
+- [x] 实现internal token身份验证机制
+- [x] 配置DashboardLayout统一布局
+- [x] 设置路由结构和导航菜单
+
+## 订单管理
+- [x] 订单审核页面
+  - [x] 显示PENDING_REVIEW状态的订单列表
+  - [x] 订单详情查看（订单项、金额）
+  - [x] Approve操作（带备注）
+  - [x] Reject操作（带备注）
+- [x] 订单履行页面
+  - [x] 显示APPROVED状态的订单列表
+  - [x] Fulfill操作生成invoice
+  - [x] 显示履行状态
+
+## AR应收账款管理
+- [x] AR发票管理页面
+  - [x] 显示invoices列表
+  - [x] 按OPEN/CLOSED状态过滤
+  - [x] 显示发票详情（订单关联、金额、余额）
+- [x] AR收款管理页面
+  - [x] 显示payments列表
+  - [x] 按UNAPPLIED/PARTIAL/APPLIED状态过滤
+  - [x] 显示收款详情（客户、金额、未核销金额）
+
+## 核销操作
+- [x] 核销操作页面
+  - [x] 选择payment（显示未核销金额）
+  - [x] 选择invoice（显示未付余额）
+  - [x] 输入applied_amount
+  - [x] 执行核销操作
+  - [x] 显示核销结果
+
+## 审计查询
+- [x] 审计日志页面
+  - [x] 显示audit_logs列表
+  - [x] 按resource过滤
+  - [x] 按action过滤
+  - [x] 按time过滤
+  - [x] Trace功能（按resourceType+resourceId拉链路）
+  - [x] 显示审计详情（用户、时间、变更内容）
+
+## 测试与验证
+- [ ] 使用seed数据测试完整业务闭环
+- [ ] 验证订单审核→履行→发票生成流程
+- [ ] 验证收款→核销→发票关闭流程
+- [ ] 验证审计日志完整性
+- [ ] 创建项目checkpoint
