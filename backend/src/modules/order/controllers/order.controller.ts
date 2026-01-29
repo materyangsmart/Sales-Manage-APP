@@ -19,7 +19,17 @@ export class OrderController {
   async createOrder(@Body() dto: CreateOrderDto, @Request() req) {
     // 从token中获取createdBy，而不是从DTO中获取
     const userId = req.user?.id || 1; // TODO: 从JWT token中获取
-    return this.orderService.createOrder({ ...dto, createdBy: userId });
+    const createOrderData = {
+      orgId: dto.orgId,
+      customerId: dto.customerId,
+      orderDate: dto.orderDate,
+      items: dto.items,
+      deliveryAddress: dto.deliveryAddress,
+      deliveryDate: dto.deliveryDate,
+      remark: dto.remark,
+      createdBy: userId,
+    };
+    return this.orderService.createOrder(createOrderData);
   }
 
   /**
@@ -32,7 +42,13 @@ export class OrderController {
   async reviewOrder(@Body() dto: ReviewOrderDto, @Request() req) {
     // 从token中获取reviewedBy，而不是从DTO中获取
     const userId = req.user?.id || 1; // TODO: 从JWT token中获取
-    return this.orderService.reviewOrder({ ...dto, reviewedBy: userId });
+    const reviewOrderData = {
+      orderId: dto.orderId,
+      action: dto.action,
+      comment: dto.comment,
+      reviewedBy: userId,
+    };
+    return this.orderService.reviewOrder(reviewOrderData);
   }
 
   /**
