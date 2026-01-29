@@ -23,7 +23,12 @@
 ```typescript
 @Post(':id/fulfill')
 async fulfillOrder(@Param('id') id: number, @Request() req) {
-  const userId = req.user?.id || 'system';
+  // 强制要求 internal token，不允许 fallback
+  if (!req.user?.id) {
+    throw new UnauthorizedException('Fulfill order requires internal authentication');
+  }
+  
+  const userId = req.user.id; // 必须是 number
   return this.orderService.fulfillOrder(id, userId);
 }
 ```
@@ -43,7 +48,7 @@ async fulfillOrder(@Param('id') id: number, @Request() req) {
 
 **实现**:
 ```typescript
-async fulfillOrder(orderId: number, userId: string) {
+async fulfillOrder(orderId: number, userId: number) {
   const order = await this.orderRepository.findOne({
     where: { id: orderId },
     relations: ['items'],
@@ -217,7 +222,7 @@ private async generateInvoiceNo(orgId: number): Promise<string> {
 
 4. **查询应收发票**
    ```bash
-   GET /ar/payments?orgId=2
+   GET /ar/invoices?orgId=2
    ```
    **结果**: 可以看到从订单生成的发票
 
@@ -353,7 +358,7 @@ curl -X POST http://localhost:3000/api/internal/orders/1/fulfill
 ### 4. 查询应收发票
 
 ```bash
-curl "http://localhost:3000/ar/payments?orgId=2"
+curl "http://localhost:3000/ar/invoices?orgId=2&orderId=1"
 ```
 
 **期望响应**:

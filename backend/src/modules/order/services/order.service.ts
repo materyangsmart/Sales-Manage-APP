@@ -250,7 +250,7 @@ export class OrderService {
    * 履行订单（fulfill）
    * 生成应收发票并写入审计日志
    */
-  async fulfillOrder(orderId: number, userId: string) {
+  async fulfillOrder(orderId: number, userId: number) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ['items'],

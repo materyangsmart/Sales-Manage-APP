@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, UnauthorizedException } from '@nestjs/common';
 import { OrderService } from '../services/order.service';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
 
@@ -48,8 +48,12 @@ export class OrderController {
    */
   @Post(':id/fulfill')
   async fulfillOrder(@Param('id') id: number, @Request() req) {
-    // 从 token 中获取 userId（未来实现 JWT 后使用）
-    const userId = req.user?.id || 'system';
+    // 强制要求 internal token，不允许 fallback
+    if (!req.user?.id) {
+      throw new UnauthorizedException('Fulfill order requires internal authentication');
+    }
+    
+    const userId = req.user.id; // 必须是 number
     return this.orderService.fulfillOrder(id, userId);
   }
 }
