@@ -21,6 +21,7 @@
     "smoke:ar": "bash scripts/smoke-ar.sh",
     "perf:audit": "bash scripts/perf-test-audit.sh",
     "generate:audit-logs": "ts-node -r tsconfig-paths/register scripts/generate-audit-logs.ts",
+    "seed": "ts-node -r tsconfig-paths/register scripts/seed.ts",
     "db:sync": "ts-node -r tsconfig-paths/register scripts/db-sync.ts"
   },
   "dependencies": {
