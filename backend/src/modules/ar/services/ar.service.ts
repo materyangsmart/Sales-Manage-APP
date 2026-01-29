@@ -448,7 +448,6 @@ export class ARService {
       },
     };
   }
-}
 
   /**
    * 查询应收发票（分页）
@@ -493,3 +492,4 @@ export class ARService {
       totalPages: Math.ceil(total / pageSize),
     };
   }
+}

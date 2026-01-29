@@ -244,7 +244,6 @@ export class OrderService {
     const seq = (count + 1).toString().padStart(4, '0');
     return `ORD-${dateStr}-${seq}`;
   }
-}
 
   /**
    * 履行订单（fulfill）
@@ -363,3 +362,4 @@ export class OrderService {
     const seq = (count + 1).toString().padStart(4, '0');
     return `INV-${dateStr}-${seq}`;
   }
+}
