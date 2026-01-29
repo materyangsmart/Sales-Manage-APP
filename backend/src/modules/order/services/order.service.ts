@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Like } from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Product } from '../entities/product.entity';
@@ -232,12 +232,11 @@ export class OrderService {
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
 
-    // 查询今天的订单数量
+    // 查询今天的订单数量（使用TypeORM标准Like()）
     const count = await this.orderRepository.count({
       where: {
         orgId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        orderNo: { $like: `ORD-${dateStr}-%` } as any,
+        orderNo: Like(`ORD-${dateStr}-%`),
       },
     });
 
@@ -350,12 +349,11 @@ export class OrderService {
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
 
-    // 查询今天的发票数量
+    // 查询今天的发票数量（使用TypeORM标准Like()）
     const count = await this.arInvoiceRepository.count({
       where: {
         orgId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        invoiceNo: { $like: `INV-${dateStr}-%` } as any,
+        invoiceNo: Like(`INV-${dateStr}-%`),
       },
     });
 
