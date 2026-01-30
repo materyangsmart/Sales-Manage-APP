@@ -79,6 +79,6 @@
 - [ ] 验收闭环测试
 
 ## P17-3: 前端联调回归
-- [ ] 创建e2e测试脚本（Playwright/Cypress）
-- [ ] 创建docs/OPS_FRONTEND_SMOKE.md文档
-- [ ] 一键运行验收命令
+- [x] 创建docs/OPS_FRONTEND_SMOKE.md文档
+- [ ] 创建e2e测试脚本（Playwright/Cypress）（未来任务）
+- [ ] 验收一遍跑通闭环（需要backend服务运行）
