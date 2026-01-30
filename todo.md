@@ -66,12 +66,16 @@
 - [ ] 实现401/403错误友好提示
 
 ## P17-2: 页面闭环MVP
-- [ ] 订单审核页完整实现
-- [ ] 订单履行页完整实现
-- [ ] 发票页完整实现
-- [ ] 收款页完整实现
-- [ ] 核销页完整实现
-- [ ] 审计查询页完整实现
+- [x] 删除旧的client/src/lib/api.ts（直接调用backend，token泄露）
+- [x] 创建client/src/lib/types.ts（共享类型定义）
+- [x] 订单审核页迁移到tRPC (OrderReview.tsx)
+- [x] 订单履行页迁移到tRPC (OrderFulfill.tsx)
+- [x] 发票页迁移到tRPC (ARInvoices.tsx)
+- [x] 收款页迁移到tRPC (ARPayments.tsx)
+- [ ] 核销页迁移到tRPC (ARApply.tsx)
+- [x] 审计查询页迁移到tRPC (AuditLogs.tsx)
+- [ ] Home页更新（如果需要）
+- [ ] 修复TypeScript类型错误
 - [ ] 验收闭环测试
 
 ## P17-3: 前端联调回归

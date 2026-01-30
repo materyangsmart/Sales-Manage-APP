@@ -27,60 +27,44 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Search, Loader2, Filter, GitBranch } from "lucide-react";
-import { useEffect, useState } from "react";
-import { auditLogApi, type AuditLog } from "@/lib/api";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import type { AuditLog } from "@/lib/types";
 
 export default function AuditLogs() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tracing, setTracing] = useState(false);
-  const [traceLogs, setTraceLogs] = useState<AuditLog[]>([]);
   const [showTraceDialog, setShowTraceDialog] = useState(false);
+  const [traceResourceType, setTraceResourceType] = useState<string>("");
+  const [traceResourceId, setTraceResourceId] = useState<number>(0);
   
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("ALL");
   const [actionFilter, setActionFilter] = useState<string>("ALL");
   const [resourceIdFilter, setResourceIdFilter] = useState<string>("");
 
-  useEffect(() => {
-    loadLogs();
-  }, [resourceTypeFilter, actionFilter]);
+  // 使用tRPC查询审计日志
+  const { data: logsData, isLoading: loading } = trpc.auditLogs.list.useQuery({
+    resourceType: resourceTypeFilter === "ALL" ? undefined : resourceTypeFilter,
+    action: actionFilter === "ALL" ? undefined : actionFilter,
+    resourceId: resourceIdFilter ? parseInt(resourceIdFilter) : undefined,
+    page: 1,
+    pageSize: 50,
+  });
 
-  const loadLogs = async () => {
-    try {
-      setLoading(true);
-      const params: Record<string, string> = {};
-      
-      if (resourceTypeFilter !== "ALL") {
-        params.resourceType = resourceTypeFilter;
-      }
-      if (actionFilter !== "ALL") {
-        params.action = actionFilter;
-      }
-      if (resourceIdFilter) {
-        params.resourceId = resourceIdFilter;
-      }
+  // 追踪查询
+  const { data: traceData, isLoading: tracing } = trpc.auditLogs.trace.useQuery(
+    { resourceType: traceResourceType, resourceId: traceResourceId },
+    { enabled: showTraceDialog && !!traceResourceType && !!traceResourceId }
+  );
 
-      const response = await auditLogApi.list(params);
-      setLogs(response.data);
-    } catch (error) {
-      toast.error("加载审计日志失败: " + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
+  const logs = logsData?.data || [];
+  const traceLogs = traceData || [];
+
+  const handleTrace = (resourceType: string, resourceId: number) => {
+    setTraceResourceType(resourceType);
+    setTraceResourceId(resourceId);
+    setShowTraceDialog(true);
   };
 
-  const handleTrace = async (resourceType: string, resourceId: number) => {
-    try {
-      setTracing(true);
-      const traceLogs = await auditLogApi.trace(resourceType, resourceId);
-      setTraceLogs(traceLogs);
-      setShowTraceDialog(true);
-    } catch (error) {
-      toast.error("追踪失败: " + (error as Error).message);
-    } finally {
-      setTracing(false);
-    }
-  };
+
 
   const resourceTypes = ["ALL", "ORDER", "INVOICE", "PAYMENT"];
   const actions = ["ALL", "CREATE", "REVIEW", "FULFILL", "CREATE_PAYMENT", "APPLY"];

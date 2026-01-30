@@ -12,48 +12,53 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Receipt, Loader2, AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
-import { paymentApi, invoiceApi, type Payment, type Invoice } from "@/lib/api";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ARApply() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  
   const [selectedPaymentId, setSelectedPaymentId] = useState<string>("");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
   const [appliedAmount, setAppliedAmount] = useState<string>("");
 
-  const selectedPayment = payments.find(p => p.id.toString() === selectedPaymentId);
-  const selectedInvoice = invoices.find(i => i.id.toString() === selectedInvoiceId);
+  // 使用tRPC查询收款和发票
+  const { data: paymentsData, isLoading: loadingPayments, refetch: refetchPayments } = trpc.payments.list.useQuery({
+    orgId: 2,
+    page: 1,
+    pageSize: 100,
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: invoicesData, isLoading: loadingInvoices, refetch: refetchInvoices } = trpc.invoices.list.useQuery({
+    orgId: 2,
+    status: "OPEN",
+    page: 1,
+    pageSize: 100,
+  });
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [paymentsRes, invoicesRes] = await Promise.all([
-        paymentApi.list({ orgId: 2 }),
-        invoiceApi.list({ orgId: 2 }),
-      ]);
-      
-      // 只显示有未核销金额的收款
-      setPayments(paymentsRes.data.filter(p => p.unappliedAmount > 0));
-      
-      // 只显示未结清的发票
-      setInvoices(invoicesRes.data.filter(i => i.status === "OPEN"));
-    } catch (error) {
-      toast.error("加载数据失败: " + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 只显示有未核销金额的收款
+  const payments = (paymentsData?.data || []).filter((p: any) => p.unappliedAmount > 0);
+  const invoices = invoicesData?.data || [];
+  const loading = loadingPayments || loadingInvoices;
 
-  const handleApply = async () => {
+  const selectedPayment = payments.find((p: any) => p.id.toString() === selectedPaymentId);
+  const selectedInvoice = invoices.find((i: any) => i.id.toString() === selectedInvoiceId);
+
+  // 核销mutation
+  const applyMutation = trpc.arApply.create.useMutation({
+    onSuccess: () => {
+      toast.success("核销成功");
+      setSelectedPaymentId("");
+      setSelectedInvoiceId("");
+      setAppliedAmount("");
+      refetchPayments();
+      refetchInvoices();
+    },
+    onError: (error) => {
+      toast.error("核销失败: " + error.message);
+    },
+  });
+
+  const handleApply = () => {
     if (!selectedPaymentId || !selectedInvoiceId || !appliedAmount) {
       toast.error("请填写完整信息");
       return;
@@ -65,44 +70,31 @@ export default function ARApply() {
       return;
     }
 
-    if (selectedPayment && amount > selectedPayment.unappliedAmount) {
+    if (selectedPayment && amount > (selectedPayment as any).unappliedAmount) {
       toast.error("核销金额不能超过收款的未核销金额");
       return;
     }
 
-    if (selectedInvoice && amount > selectedInvoice.balance) {
+    if (selectedInvoice && amount > (selectedInvoice as any).balance) {
       toast.error("核销金额不能超过发票的未付余额");
       return;
     }
 
-    try {
-      setSubmitting(true);
-      await paymentApi.apply(parseInt(selectedPaymentId), {
-        invoiceId: parseInt(selectedInvoiceId),
-        appliedAmount: amount,
-      });
-      toast.success("核销成功");
-      
-      // 重置表单
-      setSelectedPaymentId("");
-      setSelectedInvoiceId("");
-      setAppliedAmount("");
-      
-      // 重新加载数据
-      loadData();
-    } catch (error) {
-      toast.error("核销失败: " + (error as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+    applyMutation.mutate({
+      paymentId: parseInt(selectedPaymentId),
+      invoiceId: parseInt(selectedInvoiceId),
+      appliedAmount: amount,
+    });
   };
+
+
 
   const suggestAmount = () => {
     if (!selectedPayment || !selectedInvoice) return;
     
     const maxAmount = Math.min(
-      selectedPayment.unappliedAmount,
-      selectedInvoice.balance
+      (selectedPayment as any).unappliedAmount,
+      (selectedInvoice as any).balance
     );
     setAppliedAmount(maxAmount.toFixed(2));
   };

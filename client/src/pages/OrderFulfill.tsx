@@ -11,42 +11,36 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Package, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { orderApi, type Order } from "@/lib/api";
+import { trpc } from "@/lib/trpc";
 
 export default function OrderFulfill() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fulfilling, setFulfilling] = useState<number | null>(null);
+  // 使用tRPC查询已审核订单
+  const { data: ordersData, isLoading: loading, refetch } = trpc.orders.list.useQuery({
+    orgId: 2, // TODO: 从用户context获取orgId
+    status: "APPROVED",
+    page: 1,
+    pageSize: 20,
+  });
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await orderApi.list({ status: "APPROVED" });
-      setOrders(response.data);
-    } catch (error) {
-      toast.error("加载订单失败: " + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFulfill = async (orderId: number) => {
-    try {
-      setFulfilling(orderId);
-      await orderApi.fulfill(orderId);
+  // 履行订单mutation
+  const fulfillMutation = trpc.orders.fulfill.useMutation({
+    onSuccess: () => {
       toast.success("订单履行成功，已生成发票");
-      loadOrders();
-    } catch (error) {
-      toast.error("履行失败: " + (error as Error).message);
-    } finally {
-      setFulfilling(null);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("履行失败: " + error.message);
+    },
+  });
+
+  const handleFulfill = (orderId: number) => {
+    if (confirm("确认履行此订单并生成发票？")) {
+      fulfillMutation.mutate({ orderId });
     }
   };
+
+  const orders = ordersData?.data || [];
+  const fulfilling = fulfillMutation.variables?.orderId || null;
 
   return (
     <DashboardLayout>

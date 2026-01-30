@@ -17,32 +17,24 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { CreditCard, Loader2, Filter } from "lucide-react";
-import { useEffect, useState } from "react";
-import { paymentApi, type Payment, type PaymentStatus } from "@/lib/api";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import type { PaymentAppliedStatus } from "@/lib/types";
 
 export default function ARPayments() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<PaymentAppliedStatus | "ALL">("ALL");
 
-  useEffect(() => {
-    loadPayments();
-  }, [statusFilter]);
+  // 使用tRPC查询收款
+  const { data: paymentsData, isLoading: loading } = trpc.payments.list.useQuery({
+    orgId: 2,
+    appliedStatus: statusFilter === "ALL" ? undefined : statusFilter,
+    page: 1,
+    pageSize: 50,
+  });
 
-  const loadPayments = async () => {
-    try {
-      setLoading(true);
-      const params = statusFilter === "ALL" ? { orgId: 2 } : { status: statusFilter, orgId: 2 };
-      const response = await paymentApi.list(params);
-      setPayments(response.data);
-    } catch (error) {
-      toast.error("加载收款失败: " + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const payments = paymentsData?.data || [];
 
-  const getStatusBadge = (status: PaymentStatus) => {
+  const getStatusBadge = (status: PaymentAppliedStatus) => {
     const styles = {
       UNAPPLIED: "bg-blue-100 text-blue-800",
       PARTIAL: "bg-yellow-100 text-yellow-800",

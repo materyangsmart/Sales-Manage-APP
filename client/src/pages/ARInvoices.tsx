@@ -18,30 +18,22 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { FileText, Loader2, Filter } from "lucide-react";
-import { useEffect, useState } from "react";
-import { invoiceApi, type Invoice, type InvoiceStatus } from "@/lib/api";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import type { InvoiceStatus } from "@/lib/types";
 
 export default function ARInvoices() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "ALL">("ALL");
 
-  useEffect(() => {
-    loadInvoices();
-  }, [statusFilter]);
+  // 使用tRPC查询发票
+  const { data: invoicesData, isLoading: loading } = trpc.invoices.list.useQuery({
+    orgId: 2,
+    status: statusFilter === "ALL" ? undefined : statusFilter,
+    page: 1,
+    pageSize: 50,
+  });
 
-  const loadInvoices = async () => {
-    try {
-      setLoading(true);
-      const params = statusFilter === "ALL" ? { orgId: 2 } : { status: statusFilter, orgId: 2 };
-      const response = await invoiceApi.list(params);
-      setInvoices(response.data);
-    } catch (error) {
-      toast.error("加载发票失败: " + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const invoices = invoicesData?.data || [];
 
   const getStatusBadge = (status: InvoiceStatus) => {
     const styles = {
