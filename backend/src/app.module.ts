@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ARModule } from './modules/ar/ar.module';
 import { OrderModule } from './modules/order/order.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { OrderModule } from './modules/order/order.module';
     }),
     ARModule,
     OrderModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
