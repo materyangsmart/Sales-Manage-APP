@@ -21,4 +21,11 @@ export class HealthController {
   async checkReadiness() {
     return this.healthService.checkReadiness();
   }
+
+  @Get('version')
+  @ApiOperation({ summary: '版本信息 - 用于发布验证' })
+  @ApiResponse({ status: 200, description: '版本信息' })
+  async getVersion() {
+    return this.healthService.getVersion();
+  }
 }
