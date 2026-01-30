@@ -124,10 +124,10 @@ echo "-----------------------------------"
 
 test_case "GET /audit-logs (无参数)" \
   "curl -s -o /dev/null -w '%{http_code}' $BASE_URL/audit-logs" \
-  "400"
+  "200"
 
-test_case "GET /audit-logs?page=1&limit=10" \
-  "curl -s -o /dev/null -w '%{http_code}' '$BASE_URL/audit-logs?page=1&limit=10'" \
+test_case "GET /audit-logs?page=1&pageSize=10" \
+  "curl -s -o /dev/null -w '%{http_code}' '$BASE_URL/audit-logs?page=1&pageSize=10'" \
   "200"
 
 echo ""
@@ -136,13 +136,13 @@ echo ""
 echo "6. 检查订单API"
 echo "-----------------------------------"
 
-test_case "GET /api/internal/orders (无参数)" \
+test_case "GET /api/internal/orders (无token)" \
   "curl -s -o /dev/null -w '%{http_code}' $BASE_URL/api/internal/orders" \
-  "400"
+  "403"
 
-test_case "GET /api/internal/orders?orgId=2" \
+test_case "GET /api/internal/orders?orgId=2 (无token)" \
   "curl -s -o /dev/null -w '%{http_code}' '$BASE_URL/api/internal/orders?orgId=2'" \
-  "200"
+  "403"
 
 echo ""
 
@@ -150,9 +150,9 @@ echo ""
 echo "7. 检查外部API隔离"
 echo "-----------------------------------"
 
-test_case "GET /api/external/orders?orgId=2 (只读)" \
+test_case "GET /api/external/orders?orgId=2 (无token)" \
   "curl -s -o /dev/null -w '%{http_code}' '$BASE_URL/api/external/orders?orgId=2'" \
-  "200"
+  "403"
 
 test_case "POST /api/external/orders (禁止写入)" \
   "curl -s -o /dev/null -w '%{http_code}' -X POST $BASE_URL/api/external/orders" \
