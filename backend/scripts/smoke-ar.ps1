@@ -1,4 +1,4 @@
-# AR模块冒烟测试脚本 (PowerShell版本)
+﻿﻿# AR模块冒烟测试脚本 (PowerShell版本)
 # 用途：快速验证AR模块的核心功能是否正常
 # 使用：powershell -ExecutionPolicy Bypass -File scripts/smoke-ar.ps1
 # 兼容性：PowerShell 5.1 和 7+

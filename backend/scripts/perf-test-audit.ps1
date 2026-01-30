@@ -1,4 +1,4 @@
-# 审计日志查询性能基准测试脚本 (PowerShell版本)
+﻿# 审计日志查询性能基准测试脚本 (PowerShell版本)
 # 用途：测试审计日志查询API的性能，生成P50/P95基准数据
 # 使用：powershell -ExecutionPolicy Bypass -File scripts/perf-test-audit.ps1
 
