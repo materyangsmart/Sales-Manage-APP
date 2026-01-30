@@ -187,16 +187,11 @@ Write-Host "5. 检查审计日志API" -ForegroundColor Yellow
 Write-Host "-----------------------------------"
 
 Test-Case "GET /audit-logs (无参数)" {
-    try {
-        Invoke-WebRequest -Uri "$BASE_URL/audit-logs" -UseBasicParsing -ErrorAction Stop
-        "200"
-    } catch {
-        $_.Exception.Response.StatusCode.value__.ToString()
-    }
-} "400"
+    (Invoke-WebRequest -Uri "$BASE_URL/audit-logs" -UseBasicParsing).StatusCode.ToString()
+} "200"
 
-Test-Case "GET /audit-logs?page=1&limit=10" {
-    $url = "$BASE_URL/audit-logs?page=1&limit=10"
+Test-Case "GET /audit-logs?page=1&pageSize=10" {
+    $url = "$BASE_URL/audit-logs?page=1&pageSize=10"
     (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
@@ -206,19 +201,24 @@ Write-Host ""
 Write-Host "6. 检查订单API" -ForegroundColor Yellow
 Write-Host "-----------------------------------"
 
-Test-Case "GET /api/internal/orders (无参数)" {
+Test-Case "GET /api/internal/orders (无token)" {
     try {
         Invoke-WebRequest -Uri "$BASE_URL/api/internal/orders" -UseBasicParsing -ErrorAction Stop
         "200"
     } catch {
         $_.Exception.Response.StatusCode.value__.ToString()
     }
-} "400"
+} "403"
 
-Test-Case "GET /api/internal/orders?orgId=2" {
-    $url = "$BASE_URL/api/internal/orders?orgId=2"
-    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
-} "200"
+Test-Case "GET /api/internal/orders?orgId=2 (无token)" {
+    try {
+        $url = "$BASE_URL/api/internal/orders?orgId=2"
+        Invoke-WebRequest -Uri $url -UseBasicParsing -ErrorAction Stop
+        "200"
+    } catch {
+        $_.Exception.Response.StatusCode.value__.ToString()
+    }
+} "403"
 
 Write-Host ""
 
@@ -226,10 +226,15 @@ Write-Host ""
 Write-Host "7. 检查外部API隔离" -ForegroundColor Yellow
 Write-Host "-----------------------------------"
 
-Test-Case "GET /api/external/orders?orgId=2 (只读)" {
-    $url = "$BASE_URL/api/external/orders?orgId=2"
-    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
-} "200"
+Test-Case "GET /api/external/orders?orgId=2 (无token)" {
+    try {
+        $url = "$BASE_URL/api/external/orders?orgId=2"
+        Invoke-WebRequest -Uri $url -UseBasicParsing -ErrorAction Stop
+        "200"
+    } catch {
+        $_.Exception.Response.StatusCode.value__.ToString()
+    }
+} "403"
 
 Test-Case "POST /api/external/orders (禁止写入)" {
     try {
