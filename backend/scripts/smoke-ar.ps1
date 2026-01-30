@@ -1,6 +1,7 @@
 # AR模块冒烟测试脚本 (PowerShell版本)
 # 用途：快速验证AR模块的核心功能是否正常
 # 使用：powershell -ExecutionPolicy Bypass -File scripts/smoke-ar.ps1
+# 兼容性：PowerShell 5.1 和 7+
 
 $ErrorActionPreference = "Stop"
 
@@ -41,6 +42,8 @@ function Test-Case {
             return $true
         } else {
             Write-Host "✗ 失败" -ForegroundColor Red
+            Write-Host "  期望: $Expected" -ForegroundColor Gray
+            Write-Host "  实际: $result" -ForegroundColor Gray
             $script:FAILED++
             return $false
         }
@@ -71,11 +74,28 @@ Write-Host "-----------------------------------"
 
 if (Get-Command mysql -ErrorAction SilentlyContinue) {
     Test-Case "数据库连接正常" {
-        mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD -e "SELECT 1" 2>&1 | Out-String
+        # 使用安全的参数拼接方式，避免&运算符问题
+        $mysqlArgs = @(
+            "-h", $DB_HOST,
+            "-P", $DB_PORT,
+            "-u", $DB_USER,
+            "-p$DB_PASSWORD",
+            "-e", "SELECT 1"
+        )
+        $output = & mysql $mysqlArgs 2>&1 | Out-String
+        $output
     } "1"
     
     Test-Case "数据库存在" {
-        mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD -e "SHOW DATABASES LIKE '$DB_NAME'" 2>&1 | Out-String
+        $mysqlArgs = @(
+            "-h", $DB_HOST,
+            "-P", $DB_PORT,
+            "-u", $DB_USER,
+            "-p$DB_PASSWORD",
+            "-e", "SHOW DATABASES LIKE '$DB_NAME'"
+        )
+        $output = & mysql $mysqlArgs 2>&1 | Out-String
+        $output
     } "$DB_NAME"
 } else {
     Write-Host "⚠ MySQL客户端未安装，跳过数据库测试" -ForegroundColor Yellow
@@ -89,15 +109,42 @@ Write-Host "-----------------------------------"
 
 if (Get-Command mysql -ErrorAction SilentlyContinue) {
     Test-Case "ar_payments表存在" {
-        mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD $DB_NAME -e "SHOW TABLES LIKE 'ar_payments'" 2>&1 | Out-String
+        $mysqlArgs = @(
+            "-h", $DB_HOST,
+            "-P", $DB_PORT,
+            "-u", $DB_USER,
+            "-p$DB_PASSWORD",
+            $DB_NAME,
+            "-e", "SHOW TABLES LIKE 'ar_payments'"
+        )
+        $output = & mysql $mysqlArgs 2>&1 | Out-String
+        $output
     } "ar_payments"
     
     Test-Case "ar_invoices表存在" {
-        mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD $DB_NAME -e "SHOW TABLES LIKE 'ar_invoices'" 2>&1 | Out-String
+        $mysqlArgs = @(
+            "-h", $DB_HOST,
+            "-P", $DB_PORT,
+            "-u", $DB_USER,
+            "-p$DB_PASSWORD",
+            $DB_NAME,
+            "-e", "SHOW TABLES LIKE 'ar_invoices'"
+        )
+        $output = & mysql $mysqlArgs 2>&1 | Out-String
+        $output
     } "ar_invoices"
     
     Test-Case "audit_logs表存在" {
-        mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASSWORD $DB_NAME -e "SHOW TABLES LIKE 'audit_logs'" 2>&1 | Out-String
+        $mysqlArgs = @(
+            "-h", $DB_HOST,
+            "-P", $DB_PORT,
+            "-u", $DB_USER,
+            "-p$DB_PASSWORD",
+            $DB_NAME,
+            "-e", "SHOW TABLES LIKE 'audit_logs'"
+        )
+        $output = & mysql $mysqlArgs 2>&1 | Out-String
+        $output
     } "audit_logs"
 } else {
     Write-Host "⚠ MySQL客户端未安装，跳过表结构测试" -ForegroundColor Yellow
@@ -119,15 +166,18 @@ Test-Case "GET /ar/payments (无参数)" {
 } "400"
 
 Test-Case "GET /ar/payments?orgId=2" {
-    (Invoke-WebRequest -Uri "$BASE_URL/ar/payments?orgId=2" -UseBasicParsing).StatusCode.ToString()
+    $url = "$BASE_URL/ar/payments?orgId=2"
+    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
 Test-Case "GET /ar/invoices?orgId=2" {
-    (Invoke-WebRequest -Uri "$BASE_URL/ar/invoices?orgId=2" -UseBasicParsing).StatusCode.ToString()
+    $url = "$BASE_URL/ar/invoices?orgId=2"
+    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
 Test-Case "GET /ar/summary?orgId=2" {
-    (Invoke-WebRequest -Uri "$BASE_URL/ar/summary?orgId=2" -UseBasicParsing).StatusCode.ToString()
+    $url = "$BASE_URL/ar/summary?orgId=2"
+    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
 Write-Host ""
@@ -146,7 +196,8 @@ Test-Case "GET /audit-logs (无参数)" {
 } "400"
 
 Test-Case "GET /audit-logs?page=1&limit=10" {
-    (Invoke-WebRequest -Uri "$BASE_URL/audit-logs?page=1&limit=10" -UseBasicParsing).StatusCode.ToString()
+    $url = "$BASE_URL/audit-logs?page=1&limit=10"
+    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
 Write-Host ""
@@ -165,7 +216,8 @@ Test-Case "GET /api/internal/orders (无参数)" {
 } "400"
 
 Test-Case "GET /api/internal/orders?orgId=2" {
-    (Invoke-WebRequest -Uri "$BASE_URL/api/internal/orders?orgId=2" -UseBasicParsing).StatusCode.ToString()
+    $url = "$BASE_URL/api/internal/orders?orgId=2"
+    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
 Write-Host ""
@@ -175,7 +227,8 @@ Write-Host "7. 检查外部API隔离" -ForegroundColor Yellow
 Write-Host "-----------------------------------"
 
 Test-Case "GET /api/external/orders?orgId=2 (只读)" {
-    (Invoke-WebRequest -Uri "$BASE_URL/api/external/orders?orgId=2" -UseBasicParsing).StatusCode.ToString()
+    $url = "$BASE_URL/api/external/orders?orgId=2"
+    (Invoke-WebRequest -Uri $url -UseBasicParsing).StatusCode.ToString()
 } "200"
 
 Test-Case "POST /api/external/orders (禁止写入)" {
