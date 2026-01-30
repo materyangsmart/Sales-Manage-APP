@@ -1,0 +1,35 @@
+name: Check PowerShell Encoding
+
+on:
+  pull_request:
+    paths:
+      - 'backend/scripts/*.ps1'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/scripts/*.ps1'
+
+jobs:
+  check-encoding:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Check PowerShell script encoding
+        run: |
+          cd backend/scripts
+          bash check-ps1-encoding.sh
+      
+      - name: Report results
+        if: failure()
+        run: |
+          echo "❌ PowerShell脚本编码检查失败"
+          echo ""
+          echo "请运行以下命令修复："
+          echo "  cd backend/scripts"
+          echo "  python3 add-bom.py"
+          echo "  git add *.ps1"
+          echo "  git commit -m 'fix: add UTF-8 BOM to PowerShell scripts'"
