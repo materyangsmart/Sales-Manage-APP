@@ -50,3 +50,31 @@
 - [ ] 验证收款→核销→发票关闭流程
 - [ ] 验证审计日志完整性
 - [ ] 创建项目checkpoint
+
+## P17-1: 接入后端（server-side tRPC）
+- [x] 创建backend API client (server/backend-api.ts)
+- [x] 配置环境变量（BACKEND_URL, INTERNAL_SERVICE_TOKEN）
+- [x] 实现server-side tRPC procedures调用backend REST API
+  - [x] Orders procedures（list, approve, reject, fulfill）
+  - [x] Invoices procedures（list, get）
+  - [x] Payments procedures（list, get）
+  - [x] AR Apply procedures（create）
+  - [x] AuditLogs procedures（list, trace）
+- [x] 确保INTERNAL_SERVICE_TOKEN只在server端使用
+- [x] 创建token安全验证文档 (docs/TOKEN_SECURITY_VERIFICATION.md)
+- [ ] 验证浏览器bundle/Network/LocalStorage无token泄露
+- [ ] 实现401/403错误友好提示
+
+## P17-2: 页面闭环MVP
+- [ ] 订单审核页完整实现
+- [ ] 订单履行页完整实现
+- [ ] 发票页完整实现
+- [ ] 收款页完整实现
+- [ ] 核销页完整实现
+- [ ] 审计查询页完整实现
+- [ ] 验收闭环测试
+
+## P17-3: 前端联调回归
+- [ ] 创建e2e测试脚本（Playwright/Cypress）
+- [ ] 创建docs/OPS_FRONTEND_SMOKE.md文档
+- [ ] 一键运行验收命令
