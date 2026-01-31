@@ -60,14 +60,14 @@ export const ordersAPI = {
       ...(params.pageSize && { pageSize: params.pageSize.toString() }),
     });
     
-    return request<any>(`/api/internal/orders?${query}`);
+    return request<any>(`/internal/orders?${query}`);
   },
   
   /**
    * 审核订单（批准）
    */
   approve: async (orderId: number, remark?: string) => {
-    return request<any>(`/api/internal/orders/${orderId}/review`, {
+    return request<any>(`/internal/orders/${orderId}/review`, {
       method: 'POST',
       body: JSON.stringify({ action: 'APPROVE', remark }),
     });
@@ -77,7 +77,7 @@ export const ordersAPI = {
    * 审核订单（拒绝）
    */
   reject: async (orderId: number, remark?: string) => {
-    return request<any>(`/api/internal/orders/${orderId}/review`, {
+    return request<any>(`/internal/orders/${orderId}/review`, {
       method: 'POST',
       body: JSON.stringify({ action: 'REJECT', remark }),
     });
@@ -87,7 +87,7 @@ export const ordersAPI = {
    * 履行订单（生成发票）
    */
   fulfill: async (orderId: number) => {
-    return request<any>(`/api/internal/orders/${orderId}/fulfill`, {
+    return request<any>(`/internal/orders/${orderId}/fulfill`, {
       method: 'POST',
     });
   },
@@ -214,3 +214,36 @@ export const auditLogsAPI = {
     return request<any>(`/audit-logs/trace?${query}`);
   },
 };
+
+/**
+ * Server启动自检
+ * 在server启动时调用，验证backend连接
+ */
+export async function healthCheck() {
+  console.log('[Backend API] Health Check');
+  console.log('[Backend API] BACKEND_URL:', BACKEND_URL);
+  console.log('[Backend API] Token configured:', !!INTERNAL_SERVICE_TOKEN);
+  
+  try {
+    // 探测请求：/ar/payments (简单查询，不需要特定参数)
+    const probeUrl = `${BACKEND_URL}/ar/payments?orgId=1&page=1&pageSize=1`;
+    console.log('[Backend API] Probing:', probeUrl);
+    
+    const response = await fetch(probeUrl, {
+      headers: {
+        'Authorization': `Bearer ${INTERNAL_SERVICE_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('[Backend API] Probe result:', response.status, response.statusText);
+    
+    if (response.ok) {
+      console.log('[Backend API] ✓ Backend connection OK');
+    } else {
+      console.warn('[Backend API] ✗ Backend returned non-OK status:', response.status);
+    }
+  } catch (error) {
+    console.error('[Backend API] ✗ Backend connection failed:', error);
+  }
+}

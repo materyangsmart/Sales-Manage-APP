@@ -117,3 +117,10 @@
 - [ ] 依次提交PR并合并
 - [ ] 生成最终文档（PR验证命令、功能链路测试、错误处理、token使用说明）
 - [ ] 确保所有bugfix都已解决
+
+## 修复backend API路径（去掉/api前缀）
+- [x] 检查server/backend-api.ts中的URL拼接逻辑
+- [x] 去掉所有/api前缀，改为直接拼接/internal/orders、/ar/...等
+- [x] 统一所有tRPC procedures的路径
+- [x] 添加server-side启动自检日志（打印BACKEND_URL和探测请求结果）
+- [x] 测试验证：health check显示200 OK
