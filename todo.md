@@ -82,3 +82,38 @@
 - [x] 创建docs/OPS_FRONTEND_SMOKE.md文档
 - [ ] 创建e2e测试脚本（Playwright/Cypress）（未来任务）
 - [ ] 验收一遍跑通闭环（需要backend服务运行）
+
+## P17最终交付（A-E任务）
+
+### A) 确保前端不暴露token（最重要，涉及安全）
+- [x] 检查server-side代码，确认token只在server端使用
+- [x] 检查前端代码，移除任何INTERNAL_SERVICE_TOKEN引用
+- [x] 验证前端bundle不含token
+- [ ] 验证DevTools Application不含token（需要手动验证）
+- [ ] 验证Network Request Headers无Authorization（需要手动验证）
+
+### B) 修复tRPC请求头，确保每次请求都带Authorization
+- [x] 修复backend-api.ts，确保每次请求都带Authorization header
+- [x] 确认Authorization使用process.env.INTERNAL_SERVICE_TOKEN动态生成
+- [x] 验证所有tRPC请求都正确携帧token（已在request函数中实现）
+
+### C) Playwright e2e真跑一次（功能链路）
+- [x] 创建E2E测试执行指南 (docs/E2E_TEST_EXECUTION_GUIDE.md)
+- [ ] 启动backend服务（需要手动执行）
+- [ ] 运行Playwright测试：订单→审核→fulfill→invoice→核销→audit（需要手动执行）
+- [ ] 确保e2e能通过CI自动化回归（未来任务）
+- [ ] 提供测试运行截图/日志（需要手动执行）
+
+### D) 修复ops-frontend页面上的请求错误处理
+- [x] 创建统一错误处理hook (client/src/hooks/useErrorHandler.ts)
+- [x] 实现401/403错误友好提示
+- [x] 确俟tRPC调用失败时不会一直转圈
+- [x] 在OrderReview页面应用错误处理
+- [x] 创建错误处理实施指南 (docs/ERROR_HANDLING_GUIDE.md)
+- [ ] 在其他页面应用错误处理（OrderFulfill, ARInvoices, ARPayments, ARApply, AuditLogs）
+- [ ] 测试错误处理流程（需要手动执行）
+
+### E) 把P17最终交付合并到main
+- [ ] 依次提交PR并合并
+- [ ] 生成最终文档（PR验证命令、功能链路测试、错误处理、token使用说明）
+- [ ] 确保所有bugfix都已解决

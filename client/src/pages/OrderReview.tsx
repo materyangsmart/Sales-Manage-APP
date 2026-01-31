@@ -24,6 +24,7 @@ import { CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import type { Order } from "@/lib/types";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 export default function OrderReview() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -31,12 +32,15 @@ export default function OrderReview() {
   const [reviewAction, setReviewAction] = useState<"APPROVE" | "REJECT" | null>(null);
 
   // 使用tRPC查询待审核订单
-  const { data: ordersData, isLoading, refetch } = trpc.orders.list.useQuery({
+  const { data: ordersData, isLoading, error: listError, refetch } = trpc.orders.list.useQuery({
     orgId: 2, // TODO: 从用户context获取orgId
     status: "PENDING_REVIEW",
     page: 1,
     pageSize: 20,
   });
+
+  // 统一错误处理
+  useErrorHandler(listError, "加载订单列表");
 
   // 审核订单mutation
   const approveMutation = trpc.orders.approve.useMutation({
@@ -46,8 +50,8 @@ export default function OrderReview() {
       setReviewComment("");
       refetch();
     },
-    onError: (error) => {
-      toast.error("批准失败: " + error.message);
+    onError: () => {
+      // 错误处理由useErrorHandler统一处理
     },
   });
 
@@ -58,10 +62,14 @@ export default function OrderReview() {
       setReviewComment("");
       refetch();
     },
-    onError: (error) => {
-      toast.error("拒绝失败: " + error.message);
+    onError: () => {
+      // 错误处理由useErrorHandler统一处理
     },
   });
+
+  // 统一错误处理
+  useErrorHandler(approveMutation.error, "批准订单");
+  useErrorHandler(rejectMutation.error, "拒绝订单");
 
   const handleReview = async (action: "APPROVE" | "REJECT") => {
     if (!selectedOrder) return;
