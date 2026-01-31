@@ -151,3 +151,13 @@
 - [x] 添加health probe（GET ${BACKEND_URL}/health）
 - [x] 添加tRPC请求访问日志（打印backend URL、状态码、错误摘要）
 - [x] 测试验证：server启动日志显示health check结果
+
+## 错误可观测性和启动自检落地
+- [x] 任务1：确认npm run dev启动的是Express server（不是纯Vite dev server）
+- [x] 任务1：确认启动时打印banner（架构、tRPC endpoint、BACKEND_URL、token present、/health probe）
+- [x] 任务2：在/api/trpc handler最外层加强制JSON错误兜底（dev only）
+- [x] 任务2：确保responseMeta/onError生效
+- [x] 任务3：验证backend-api.ts的request函数打印日志
+- [x] 任务3：测试500错误时能看到完整的URL + 状态码 + 错误摘要
+- [ ] 验收：curl /api/trpc/orders.list返回JSON错误（需要手动执行）
+- [x] 验收：server日志显示完整的backend API调用链路

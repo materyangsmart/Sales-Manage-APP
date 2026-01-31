@@ -72,6 +72,27 @@ async function startServer() {
       },
     })
   );
+  
+  // Fallback error handler for /api/trpc (dev only)
+  // This catches any errors that escape tRPC middleware
+  if (process.env.NODE_ENV === 'development') {
+    app.use('/api/trpc', (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error('[Express Error Handler] Caught error in /api/trpc:', err);
+      
+      // Force JSON response
+      res.setHeader('Content-Type', 'application/json');
+      
+      if (!res.headersSent) {
+        res.status(err.status || 500).json({
+          error: {
+            code: err.code || 'INTERNAL_SERVER_ERROR',
+            message: err.message || 'Internal server error',
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+          },
+        });
+      }
+    });
+  }
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
