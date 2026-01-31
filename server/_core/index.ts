@@ -59,10 +59,18 @@ async function startServer() {
   }
 
   server.listen(port, async () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    console.log('='.repeat(60));
+    console.log(`✓ ops-frontend Server running on http://localhost:${port}/`);
+    console.log('='.repeat(60));
+    console.log('Architecture: Vite middleware mode (integrated with Express)');
+    console.log(`tRPC endpoint: http://localhost:${port}/api/trpc`);
+    console.log(`OAuth callback: http://localhost:${port}/api/oauth/callback`);
+    console.log('Frontend: Vite HMR enabled');
+    console.log('='.repeat(60));
     
     // Backend API health check
     await healthCheck();
+    console.log('='.repeat(60));
   });
 }
 

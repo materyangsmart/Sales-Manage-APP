@@ -124,3 +124,23 @@
 - [x] 统一所有tRPC procedures的路径
 - [x] 添加server-side启动自检日志（打印BACKEND_URL和探测请求结果）
 - [x] 测试验证：health check显示200 OK
+
+## P17-Blocker #1: 修复/api/trpc代理目标（ECONNREFUSED）
+- [x] 任务1：确认Vite proxy配置（middleware mode，无需proxy）
+- [x] 任务2：确俟tRPC server启动（架构A - Vite middleware mode）
+- [x] 任务3：添加proxy target启动日志
+- [x] 创建BLOCKER1_RESOLUTION.md文档
+- [x] 验收：curl http://localhost:3000/api/trpc/orders.list 不再500
+
+## P17-Blocker #2: 统一backend base path
+- [x] 清理所有硬编码/api前缀（已在之前完成）
+- [x] 使用BACKEND_URL + /internal/orders, /ar/...方式调用
+- [x] 验收：所有backend API调用路径正确
+
+## P17-Blocker #3: 补齐错误处理
+- [x] 创建useErrorHandler hook
+- [x] 在OrderReview页面应用（示例）
+- [x] 创建ERROR_HANDLING_GUIDE.md
+- [x] 创建BLOCKER3_STATUS.md
+- [ ] 在其他5个页面应用（非阻塞，质量改进）
+- [ ] 验收：模拟后端不可达，页面不无限转圈
