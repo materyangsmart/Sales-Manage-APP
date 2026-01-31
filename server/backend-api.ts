@@ -43,13 +43,21 @@ async function request<T>(
       const errorText = await response.text();
       console.error(`[Backend API] Error response:`, errorText.substring(0, 200));
       
-      const error = new Error(
-        `Backend API error: ${response.status} ${response.statusText}`
-      ) as any;
+      // Task 4: 区分401/403错误，不要统一返回500
+      let errorMessage = `Backend API error: ${response.status} ${response.statusText}`;
+      
+      if (response.status === 401) {
+        errorMessage = 'Unauthorized: Invalid or missing authentication token';
+      } else if (response.status === 403) {
+        errorMessage = 'Forbidden: Insufficient permissions to access this resource';
+      }
+      
+      const error = new Error(errorMessage) as any;
       error.status = response.status;
       error.statusText = response.statusText;
       error.url = url;
       error.responseText = errorText;
+      error.code = response.status === 401 ? 'UNAUTHORIZED' : response.status === 403 ? 'FORBIDDEN' : 'BAD_REQUEST';
       throw error;
     }
     

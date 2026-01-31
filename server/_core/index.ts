@@ -34,8 +34,16 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // Request logging middleware (Task 2)
+  app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.path}`);
+    next();
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  console.log('[Server] Mounting /api/trpc router...');
   // tRPC API
   app.use(
     "/api/trpc",
@@ -51,7 +59,7 @@ async function startServer() {
           cause: error.cause,
         });
         
-        // Log backend API call details if available
+        // Task 4: Log backend API call details
         if (error.cause && typeof error.cause === 'object') {
           const cause = error.cause as any;
           if (cause.url) {
@@ -72,6 +80,8 @@ async function startServer() {
       },
     })
   );
+  
+  console.log('[Server] ✓ /api/trpc router mounted');
   
   // Fallback error handler for /api/trpc (dev only)
   // This catches any errors that escape tRPC middleware
@@ -116,6 +126,22 @@ async function startServer() {
     console.log(`OAuth callback: http://localhost:${port}/api/oauth/callback`);
     console.log('Frontend: Vite HMR enabled');
     console.log('='.repeat(60));
+    console.log('');
+    console.log('[Server] Runtime Configuration (Task 3)');
+    console.log('='.repeat(60));
+    console.log('SERVER_ENTRY: server/_core/index.ts');
+    // Get git commit hash
+    try {
+      const { execSync } = await import('child_process');
+      const gitCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+      console.log(`GIT_COMMIT: ${gitCommit}`);
+    } catch {
+      console.log('GIT_COMMIT: (not available)');
+    }
+    console.log(`BACKEND_URL: ${process.env.BACKEND_URL || '(not set)'}`);
+    console.log(`TOKEN_PRESENT: ${!!process.env.INTERNAL_SERVICE_TOKEN}`);
+    console.log('='.repeat(60));
+    console.log('');
     
     // Backend API health check
     await healthCheck();

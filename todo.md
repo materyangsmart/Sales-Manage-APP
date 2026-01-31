@@ -171,3 +171,28 @@
 - [x] 交付3：提供启动自检输出示例
 - [x] 交付3：提供3条curl验收命令（ping、orders.list、强制错误）
 - [x] 测试验证：npm run dev能一键启动server并通过curl测试
+
+## Task 1-4: tRPC可观测性和错误处理改进
+
+### Task 1: /api/trpc/ping返回200 JSON
+- [ ] 实现system.ping procedure（纯本地返回，不调用backend）
+- [ ] 确保响应是application/json
+- [ ] 确保status是200
+- [ ] 验收：curl http://localhost:3000/api/trpc/system.ping返回200 JSON
+
+### Task 2: 请求落点日志和错误JSON兜底
+- [ ] 添加Express请求日志中间件（打印method + path）
+- [ ] 在/api/trpc路由挂载前后打印日志
+- [ ] 添加全局error handler强制JSON（dev模式）
+- [ ] 验收：任何请求都能在日志中看到method + path
+
+### Task 3: 确认server入口版本和banner
+- [ ] 启动时打印SERVER_ENTRY=server/_core/index.ts
+- [ ] 启动时打印GIT_COMMIT=<short sha>
+- [ ] 启动时打印BACKEND_URL和TOKEN_PRESENT
+- [ ] 验收：npm run dev显示完整banner
+
+### Task 4: 区分401/403错误
+- [ ] backend返回401/403时，tRPC返回对应code
+- [ ] 只有真正未捕获异常才返回500
+- [ ] 验收：token为空时，orders.list返回401/403 JSON（不是500 text/plain）

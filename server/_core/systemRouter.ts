@@ -3,6 +3,12 @@ import { notifyOwner } from "./notification";
 import { adminProcedure, publicProcedure, router } from "./trpc";
 
 export const systemRouter = router({
+  ping: publicProcedure
+    .query(() => ({
+      message: "pong",
+      timestamp: Date.now(),
+    })),
+
   health: publicProcedure
     .input(
       z.object({

@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI } from "./backend-api";
 
@@ -19,6 +20,16 @@ export const appRouter = router({
     }),
   }),
 
+  // Task 1: Ping endpoint (不依赖backend，用于验证tRPC handler被命中)
+  ping: publicProcedure.query(() => {
+    return {
+      success: true,
+      message: 'pong',
+      timestamp: new Date().toISOString(),
+      server: 'ops-frontend tRPC',
+    };
+  }),
+
   // Backend API Routers
   // 通过server-side tRPC procedures调用backend REST API
   // INTERNAL_SERVICE_TOKEN只在server端使用，不会暴露到前端
@@ -32,7 +43,29 @@ export const appRouter = router({
         pageSize: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        return ordersAPI.list(input);
+        try {
+          return await ordersAPI.list(input);
+        } catch (error: any) {
+          // Task 4: Preserve 401/403 error codes from backend
+          if (error.status === 401) {
+            throw new TRPCError({
+              code: 'UNAUTHORIZED',
+              message: error.message || 'Unauthorized: Invalid or missing authentication token',
+              cause: error,
+            });
+          } else if (error.status === 403) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: error.message || 'Forbidden: Insufficient permissions',
+              cause: error,
+            });
+          }
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to fetch orders',
+            cause: error,
+          });
+        }
       }),
     
     approve: protectedProcedure
@@ -119,13 +152,13 @@ export const appRouter = router({
   auditLogs: router({
     list: protectedProcedure
       .input(z.object({
-        page: z.number().optional(),
-        pageSize: z.number().optional(),
         resourceType: z.string().optional(),
         resourceId: z.number().optional(),
         action: z.string().optional(),
         startTime: z.string().optional(),
         endTime: z.string().optional(),
+        page: z.number().optional(),
+        pageSize: z.number().optional(),
       }))
       .query(async ({ input }) => {
         return auditLogsAPI.list(input);
