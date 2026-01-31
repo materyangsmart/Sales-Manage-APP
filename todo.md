@@ -144,3 +144,10 @@
 - [x] 创建BLOCKER3_STATUS.md
 - [ ] 在其他5个页面应用（非阻塞，质量改进）
 - [ ] 验收：模拟后端不可达，页面不无限转圈
+
+## 改进tRPC错误响应和日志
+- [x] 改进tRPC错误响应为JSON格式（添加onError和responseMeta）
+- [x] 增强启动时配置验证（打印BACKEND_URL、token状态）
+- [x] 添加health probe（GET ${BACKEND_URL}/health）
+- [x] 添加tRPC请求访问日志（打印backend URL、状态码、错误摘要）
+- [x] 测试验证：server启动日志显示health check结果

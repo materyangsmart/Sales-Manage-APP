@@ -17,27 +17,50 @@ if (!INTERNAL_SERVICE_TOKEN) {
  */
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  logContext?: string
 ): Promise<T> {
   const url = `${BACKEND_URL}${endpoint}`;
+  
+  // 访问日志：打印请求信息
+  const requestMethod = options.method || 'GET';
+  console.log(`[Backend API] ${requestMethod} ${url}${logContext ? ` (${logContext})` : ''}`);
   
   const headers = new Headers(options.headers || {});
   headers.set('Authorization', `Bearer ${INTERNAL_SERVICE_TOKEN}`);
   headers.set('Content-Type', 'application/json');
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Backend API error: ${response.status} ${response.statusText} - ${errorText}`
-    );
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+    
+    // 访问日志：打印响应状态
+    console.log(`[Backend API] Response: ${response.status} ${response.statusText}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Backend API] Error response:`, errorText.substring(0, 200));
+      
+      const error = new Error(
+        `Backend API error: ${response.status} ${response.statusText}`
+      ) as any;
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.url = url;
+      error.responseText = errorText;
+      throw error;
+    }
+    
+    return response.json();
+  } catch (error) {
+    // 访问日志：打印错误摘要
+    if (error instanceof Error) {
+      console.error(`[Backend API] Request failed:`, error.message);
+    }
+    throw error;
   }
-  
-  return response.json();
 }
 
 /**
@@ -220,30 +243,50 @@ export const auditLogsAPI = {
  * 在server启动时调用，验证backend连接
  */
 export async function healthCheck() {
-  console.log('[Backend API] Health Check');
-  console.log('[Backend API] BACKEND_URL:', BACKEND_URL);
-  console.log('[Backend API] Token configured:', !!INTERNAL_SERVICE_TOKEN);
+  console.log('='.repeat(60));
+  console.log('[Backend API] Runtime Configuration');
+  console.log('='.repeat(60));
+  console.log('BACKEND_URL:', BACKEND_URL);
+  console.log('Internal token present?', !!INTERNAL_SERVICE_TOKEN);
+  console.log('='.repeat(60));
   
   try {
-    // 探测请求：/ar/payments (简单查询，不需要特定参数)
-    const probeUrl = `${BACKEND_URL}/ar/payments?orgId=1&page=1&pageSize=1`;
-    console.log('[Backend API] Probing:', probeUrl);
+    // 探测请求1：/health (backend健康检查)
+    const healthUrl = `${BACKEND_URL}/health`;
+    console.log('[Backend API] Probing /health:', healthUrl);
     
-    const response = await fetch(probeUrl, {
+    const healthResponse = await fetch(healthUrl);
+    console.log('[Backend API] /health status code:', healthResponse.status);
+    
+    if (healthResponse.ok) {
+      console.log('[Backend API] ✓ Backend /health OK');
+    } else {
+      console.warn('[Backend API] ✗ Backend /health returned:', healthResponse.status);
+    }
+    
+    // 探测请求2：/ar/payments (验证API可访问性)
+    const probeUrl = `${BACKEND_URL}/ar/payments?orgId=1&page=1&pageSize=1`;
+    console.log('[Backend API] Probing /ar/payments:', probeUrl);
+    
+    const probeResponse = await fetch(probeUrl, {
       headers: {
         'Authorization': `Bearer ${INTERNAL_SERVICE_TOKEN}`,
         'Content-Type': 'application/json',
       },
     });
     
-    console.log('[Backend API] Probe result:', response.status, response.statusText);
+    console.log('[Backend API] /ar/payments status code:', probeResponse.status);
     
-    if (response.ok) {
-      console.log('[Backend API] ✓ Backend connection OK');
+    if (probeResponse.ok) {
+      console.log('[Backend API] ✓ Backend API access OK');
     } else {
-      console.warn('[Backend API] ✗ Backend returned non-OK status:', response.status);
+      console.warn('[Backend API] ✗ Backend API returned:', probeResponse.status);
+      const errorText = await probeResponse.text();
+      console.warn('[Backend API] Error response:', errorText.substring(0, 200));
     }
   } catch (error) {
-    console.error('[Backend API] ✗ Backend connection failed:', error);
+    console.error('[Backend API] ✗ Backend connection failed:');
+    console.error(error);
   }
+  console.log('='.repeat(60));
 }

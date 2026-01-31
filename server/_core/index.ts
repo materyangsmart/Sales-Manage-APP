@@ -42,6 +42,34 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      onError({ error, type, path, input, ctx, req }) {
+        console.error('[tRPC Error]', {
+          type,
+          path,
+          code: error.code,
+          message: error.message,
+          cause: error.cause,
+        });
+        
+        // Log backend API call details if available
+        if (error.cause && typeof error.cause === 'object') {
+          const cause = error.cause as any;
+          if (cause.url) {
+            console.error('[tRPC Error] Backend URL:', cause.url);
+          }
+          if (cause.status) {
+            console.error('[tRPC Error] Backend Status:', cause.status);
+          }
+        }
+      },
+      responseMeta({ ctx, paths, errors, type }) {
+        // Ensure errors are returned as JSON
+        return {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+      },
     })
   );
   // development mode uses Vite, production mode uses static files
