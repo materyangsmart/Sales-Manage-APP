@@ -161,3 +161,13 @@
 - [x] 任务3：测试500错误时能看到完整的URL + 状态码 + 错误摘要
 - [ ] 验收：curl /api/trpc/orders.list返回JSON错误（需要手动执行）
 - [x] 验收：server日志显示完整的backend API调用链路
+
+## Express+tRPC server入口交付
+- [x] 交付1：确认server入口文件路径（server/_core/index.ts）
+- [x] 交付1：贴出文件头部，确认Express + createExpressMiddleware
+- [x] 交付2：package.json已正确配置（dev脚本已是tsx watch server/_core/index.ts）
+- [x] 交付2：npm run dev已是一键启动Express+tRPC server
+- [x] 交付3：创建SERVER_ENTRY_DELIVERY.md文档
+- [x] 交付3：提供启动自检输出示例
+- [x] 交付3：提供3条curl验收命令（ping、orders.list、强制错误）
+- [x] 测试验证：npm run dev能一键启动server并通过curl测试
