@@ -206,6 +206,34 @@ export const applyAPI = {
 };
 
 /**
+ * Customers API
+ */
+export const customersAPI = {
+  /**
+   * 获取客户列表
+   * @param params.orgId - 组织ID
+   * @param params.createdAfter - 过滤创建时间晚于此日期的客户（ISO 8601格式）
+   * @param params.page - 页码
+   * @param params.pageSize - 每页数量
+   */
+  list: async (params: {
+    orgId: number;
+    createdAfter?: string;
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const query = new URLSearchParams({
+      orgId: params.orgId.toString(),
+      ...(params.createdAfter && { createdAfter: params.createdAfter }),
+      ...(params.page && { page: params.page.toString() }),
+      ...(params.pageSize && { pageSize: params.pageSize.toString() }),
+    });
+    
+    return request<any>(`/internal/customers?${query}`, {}, 'customersAPI.list');
+  },
+};
+
+/**
  * Audit Logs API
  */
 export const auditLogsAPI = {

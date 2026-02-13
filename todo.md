@@ -196,3 +196,13 @@
 - [ ] backend返回401/403时，tRPC返回对应code
 - [ ] 只有真正未捕获异常才返回500
 - [ ] 验收：token为空时，orders.list返回401/403 JSON（不是500 text/plain）
+
+## 多维度KPI提成引擎（新增功能）
+
+- [x] 扩展Backend API层：增加customersAPI.list方法支持按日期过滤新客户
+- [x] 扩展Backend API层：确俟ordersAPI.list能正确过滤fulfilled状态订单
+- [x] 完善提成路由逻辑：实现commission.getKpiStats接口
+- [x] 实现KPI计算公式：Commission = (发货总额 × 基础利率) + (新增有效客户数 × 奖励基数)
+- [x] 添加ruleVersion字段关联sales_commission_rules表
+- [x] 自动化测试：验证/api/trpc/commission.getKpiStats接口
+- [ ] 同步代码到GitHub
