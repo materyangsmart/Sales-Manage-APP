@@ -90,11 +90,12 @@ export async function getUserByOpenId(openId: string) {
 }
 
 /**
- * Get commission rule by version
+ * Get commission rule by version and category
  * @param ruleVersion - Rule version identifier (e.g., "2026-V1")
+ * @param category - Customer category (e.g., "WET_MARKET", "SUPERMARKET", "DEFAULT")
  * @returns Commission rule or undefined if not found
  */
-export async function getCommissionRule(ruleVersion: string) {
+export async function getCommissionRule(ruleVersion: string, category: string = "DEFAULT") {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot get commission rule: database not available");
@@ -102,10 +103,17 @@ export async function getCommissionRule(ruleVersion: string) {
   }
 
   const { salesCommissionRules } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  
   const result = await db
     .select()
     .from(salesCommissionRules)
-    .where(eq(salesCommissionRules.ruleVersion, ruleVersion))
+    .where(
+      and(
+        eq(salesCommissionRules.ruleVersion, ruleVersion),
+        eq(salesCommissionRules.category, category as any)
+      )
+    )
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;

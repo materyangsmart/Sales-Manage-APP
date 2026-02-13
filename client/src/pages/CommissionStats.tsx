@@ -18,6 +18,7 @@ export default function CommissionStats() {
   const [startDate, setStartDate] = useState('2026-01-01');
   const [endDate, setEndDate] = useState('2026-01-31');
   const [ruleVersion, setRuleVersion] = useState('2026-V1');
+  const [customerCategory, setCustomerCategory] = useState<string>(''); // 客户类型过滤器
   const [shouldFetch, setShouldFetch] = useState(false);
 
   // 使用tRPC查询KPI统计
@@ -27,7 +28,8 @@ export default function CommissionStats() {
       startDate,
       endDate,
       ruleVersion,
-    },
+      customerCategory: customerCategory || undefined,
+    } as any,
     {
       enabled: shouldFetch && !!orgId && !!startDate && !!endDate && !!ruleVersion,
     }
@@ -53,7 +55,7 @@ export default function CommissionStats() {
           <CardDescription>选择日期范围、组织和规则版本</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* 组织选择 */}
             <div className="space-y-2">
               <Label htmlFor="orgId">组织</Label>
@@ -105,6 +107,24 @@ export default function CommissionStats() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* 客户类型选择 */}
+            <div className="space-y-2">
+              <Label htmlFor="customerCategory">客户类型</Label>
+              <Select value={customerCategory} onValueChange={setCustomerCategory}>
+                <SelectTrigger id="customerCategory">
+                  <SelectValue placeholder="全部类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">全部类型</SelectItem>
+                  <SelectItem value="WET_MARKET">菜市场类</SelectItem>
+                  <SelectItem value="WHOLESALE_B">批发商类</SelectItem>
+                  <SelectItem value="SUPERMARKET">商超类</SelectItem>
+                  <SelectItem value="ECOMMERCE">电商类</SelectItem>
+                  <SelectItem value="DEFAULT">默认类型</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="mt-4">
@@ -140,7 +160,7 @@ export default function CommissionStats() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 发货总额 */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -191,6 +211,48 @@ export default function CommissionStats() {
                 </p>
               </CardContent>
             </Card>
+
+            {/* 毛利总额（SUPERMARKET类别显示） */}
+            {data.data.category === 'SUPERMARKET' && data.data.kpi.totalMargin !== undefined && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">毛利总额</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ¥{data.data.kpi.totalMargin.toLocaleString('zh-CN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    商超类核心指标
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 账期内收款（WET_MARKET/WHOLESALE_B类别显示） */}
+            {(data.data.category === 'WET_MARKET' || data.data.category === 'WHOLESALE_B') && data.data.kpi.validPaymentAmount !== undefined && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">账期内收款</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    ¥{data.data.kpi.validPaymentAmount.toLocaleString('zh-CN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    地推型/批发型核心指标
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* 提成明细 */}
@@ -225,28 +287,66 @@ export default function CommissionStats() {
                 </div>
               </div>
 
+              {/* 毛利提成（SUPERMARKET类别） */}
+              {data.data.commission.marginCommission !== undefined && data.data.commission.marginCommission > 0 && (
+                <div className="flex justify-between items-center pb-3 border-b">
+                  <div>
+                    <p className="font-medium">毛利提成</p>
+                    <p className="text-sm text-muted-foreground">
+                      毛利总额 × 毛利权重 (商超类核心指标)
+                    </p>
+                  </div>
+                  <div className="text-xl font-bold">
+                    ¥{data.data.commission.marginCommission.toLocaleString('zh-CN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 回款提成（WET_MARKET/WHOLESALE_B类别） */}
+              {data.data.commission.collectionCommission !== undefined && data.data.commission.collectionCommission > 0 && (
+                <div className="flex justify-between items-center pb-3 border-b">
+                  <div>
+                    <p className="font-medium">回款提成</p>
+                    <p className="text-sm text-muted-foreground">
+                      账期内收款 × 回款权重 (地推型/批发型核心指标)
+                    </p>
+                  </div>
+                  <div className="text-xl font-bold">
+                    ¥{data.data.commission.collectionCommission.toLocaleString('zh-CN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* 新客户提成 */}
-              <div className="flex justify-between items-center pb-3 border-b">
-                <div>
-                  <p className="font-medium">新客户奖励</p>
-                  <p className="text-sm text-muted-foreground">
-                    新增客户数 × 奖励基数 ({data.data.kpi.newCustomerCount} × ¥{data.data.rule.newCustomerBonus})
-                  </p>
+              {data.data.commission.newCustomerCommission !== undefined && data.data.commission.newCustomerCommission > 0 && (
+                <div className="flex justify-between items-center pb-3 border-b">
+                  <div>
+                    <p className="font-medium">新客户奖励</p>
+                    <p className="text-sm text-muted-foreground">
+                      新增客户数 × 奖励基数 ({data.data.kpi.newCustomerCount} × ¥{data.data.rule.newCustomerBonus})
+                    </p>
+                  </div>
+                  <div className="text-xl font-bold">
+                    ¥{data.data.commission.newCustomerCommission.toLocaleString('zh-CN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
                 </div>
-                <div className="text-xl font-bold">
-                  ¥{data.data.commission.newCustomerCommission.toLocaleString('zh-CN', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-              </div>
+              )}
 
               {/* 总提成 */}
               <div className="flex justify-between items-center pt-2">
                 <div>
                   <p className="text-lg font-semibold">总提成</p>
                   <p className="text-sm text-muted-foreground">
-                    基础提成 + 新客户奖励
+                    基础提成 + 毛利提成 + 回款提成 + 新客户奖励
                   </p>
                 </div>
                 <div className="text-3xl font-bold text-primary">

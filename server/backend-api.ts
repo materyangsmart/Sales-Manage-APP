@@ -153,6 +153,29 @@ export const invoicesAPI = {
   get: async (invoiceId: number) => {
     return request<any>(`/ar/invoices/${invoiceId}`);
   },
+  
+  /**
+   * 获取发票毛利数据
+   * @param params.orgId - 组织ID
+   * @param params.startDate - 开始日期 (ISO 8601格式)
+   * @param params.endDate - 结束日期 (ISO 8601格式)
+   * @param params.customerId - 客户ID（可选）
+   */
+  getMarginStats: async (params: {
+    orgId: number;
+    startDate: string;
+    endDate: string;
+    customerId?: number;
+  }) => {
+    const query = new URLSearchParams({
+      orgId: params.orgId.toString(),
+      startDate: params.startDate,
+      endDate: params.endDate,
+      ...(params.customerId && { customerId: params.customerId.toString() }),
+    });
+    
+    return request<any>(`/ar/invoices/margin-stats?${query}`, {}, 'invoicesAPI.getMarginStats');
+  },
 };
 
 /**

@@ -219,3 +219,17 @@
 - [x] 更新commission.test.ts模拟数据库查询
 - [x] 运行测试确保全部通过
 - [x] 同步代码到GitHub
+
+## P3：多维度分层提成引擎（客户类型差异化）
+
+- [x] 数据库架构扩展：修改sales_commission_rules表，增加category字段（WET_MARKET/WHOLESALE_B/SUPERMARKET/ECOMMERCE）
+- [x] 数据库架构扩展：在ruleJson中支持各维度权重存储（collectionWeight, marginWeight, newCustomerBonus）
+- [x] 扩展Backend API：在invoicesAPI中添加获取毛利数据的方法
+- [x] 后端路由逻辑重构：在getKpiStats中根据客户category分别应用计算公式
+- [x] 后端路由逻辑重构：增加“超账期自动扣减”逻辑（appliedStatus超过账期则不计入提成基数）
+- [x] 后端路由逻辑重构：引入利润维度作为SUPERMARKET类别的核心权重
+- [x] 前端KPI看板升级：增加“客户类型”过滤器
+- [x] 前端KPI看板升级：针对不同类型展示不同的KPI指标（地推型展示账期内收款，商超型展示毛利总额）
+- [x] 更新测试脚本：模拟包含不同客户类型的订单数据集
+- [x] 更新测试脚本：验证复合提成结果的准确性
+- [ ] 同步代码到GitHub

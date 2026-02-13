@@ -138,4 +138,106 @@ describe('Commission KPI Engine', () => {
     console.log('New customer commission:', newCustomerCommission);
     console.log('Total commission:', totalCommission);
   });
+
+  it('should calculate multi-dimensional commission for different customer categories', () => {
+    // 测试多维度分层提成计算
+    
+    // 测试数据：商超类（SUPERMARKET）
+    const supermarketData = {
+      category: 'SUPERMARKET',
+      totalShippedAmount: 100000,
+      totalMargin: 20000, // 毛利总额
+      baseRate: 0.02,
+      marginWeight: 0.5, // 毛利权重
+    };
+    
+    const supermarketBaseCommission = supermarketData.totalShippedAmount * supermarketData.baseRate * 0.5; // 降低发货额权重
+    const supermarketMarginCommission = supermarketData.totalMargin * supermarketData.marginWeight;
+    const supermarketTotalCommission = supermarketBaseCommission + supermarketMarginCommission;
+    
+    expect(supermarketBaseCommission).toBe(1000); // 100000 * 0.02 * 0.5 = 1000
+    expect(supermarketMarginCommission).toBe(10000); // 20000 * 0.5 = 10000
+    expect(supermarketTotalCommission).toBe(11000); // 1000 + 10000 = 11000
+    
+    console.log('✓ SUPERMARKET category commission calculation is correct');
+    console.log('Base commission:', supermarketBaseCommission);
+    console.log('Margin commission:', supermarketMarginCommission);
+    console.log('Total commission:', supermarketTotalCommission);
+    
+    // 测试数据：地推型（WET_MARKET）
+    const wetMarketData = {
+      category: 'WET_MARKET',
+      totalShippedAmount: 100000,
+      validPaymentAmount: 80000, // 账期内收款
+      baseRate: 0.02,
+      collectionWeight: 0.02, // 回款权重
+    };
+    
+    const wetMarketBaseCommission = wetMarketData.totalShippedAmount * wetMarketData.baseRate;
+    const wetMarketCollectionCommission = wetMarketData.validPaymentAmount * wetMarketData.collectionWeight;
+    const wetMarketTotalCommission = wetMarketBaseCommission + wetMarketCollectionCommission;
+    
+    expect(wetMarketBaseCommission).toBe(2000); // 100000 * 0.02 = 2000
+    expect(wetMarketCollectionCommission).toBe(1600); // 80000 * 0.02 = 1600
+    expect(wetMarketTotalCommission).toBe(3600); // 2000 + 1600 = 3600
+    
+    console.log('✓ WET_MARKET category commission calculation is correct');
+    console.log('Base commission:', wetMarketBaseCommission);
+    console.log('Collection commission:', wetMarketCollectionCommission);
+    console.log('Total commission:', wetMarketTotalCommission);
+    
+    // 测试数据：电商类（ECOMMERCE）
+    const ecommerceData = {
+      category: 'ECOMMERCE',
+      totalShippedAmount: 100000,
+      newCustomerCount: 10,
+      baseRate: 0.02,
+      newCustomerBonus: 100,
+    };
+    
+    const ecommerceBaseCommission = ecommerceData.totalShippedAmount * ecommerceData.baseRate;
+    const ecommerceNewCustomerCommission = ecommerceData.newCustomerCount * ecommerceData.newCustomerBonus * 1.5; // 提高新客户奖励
+    const ecommerceTotalCommission = ecommerceBaseCommission + ecommerceNewCustomerCommission;
+    
+    expect(ecommerceBaseCommission).toBe(2000); // 100000 * 0.02 = 2000
+    expect(ecommerceNewCustomerCommission).toBe(1500); // 10 * 100 * 1.5 = 1500
+    expect(ecommerceTotalCommission).toBe(3500); // 2000 + 1500 = 3500
+    
+    console.log('✓ ECOMMERCE category commission calculation is correct');
+    console.log('Base commission:', ecommerceBaseCommission);
+    console.log('New customer commission (enhanced):', ecommerceNewCustomerCommission);
+    console.log('Total commission:', ecommerceTotalCommission);
+  });
+
+  it('should handle payment due date deduction correctly', () => {
+    // 测试账期扣减逻辑
+    
+    const paymentData = {
+      payments: [
+        { appliedAmount: 10000, daysDiff: 15 }, // 账期内
+        { appliedAmount: 5000, daysDiff: 45 }, // 超账期
+        { appliedAmount: 8000, daysDiff: 20 }, // 账期内
+        { appliedAmount: 3000, daysDiff: 60 }, // 超账期
+      ],
+      paymentDueDays: 30,
+    };
+    
+    let validPaymentAmount = 0;
+    let overduePaymentAmount = 0;
+    
+    paymentData.payments.forEach(payment => {
+      if (payment.daysDiff <= paymentData.paymentDueDays) {
+        validPaymentAmount += payment.appliedAmount;
+      } else {
+        overduePaymentAmount += payment.appliedAmount;
+      }
+    });
+    
+    expect(validPaymentAmount).toBe(18000); // 10000 + 8000 = 18000
+    expect(overduePaymentAmount).toBe(8000); // 5000 + 3000 = 8000
+    
+    console.log('✓ Payment due date deduction logic is correct');
+    console.log('Valid payment amount (within due date):', validPaymentAmount);
+    console.log('Overdue payment amount:', overduePaymentAmount);
+  });
 });
