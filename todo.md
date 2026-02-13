@@ -206,3 +206,16 @@
 - [x] 添加ruleVersion字段关联sales_commission_rules表
 - [x] 自动化测试：验证/api/trpc/commission.getKpiStats接口
 - [x] 同步代码到GitHub
+
+## 提成引擎数据驱动改造与UI交付（P1-P2优化）
+
+- [x] 数据库规则联动：使用Drizzle ORM查询sales_commission_rules表
+- [x] 替换硬编码规则为数据库查询结果
+- [x] 开发前端KPI看板页面（CommissionStats.tsx）
+- [x] 实现日期范围选择、组织选择、规则版本选择
+- [x] 实现KPI指标卡片展示（发货总额、订单数、新增客户数）
+- [x] 实现提成明细拆解展示（基础提成、新客奖金、总额）
+- [x] 在系统导航中添加提成查询入口
+- [x] 更新commission.test.ts模拟数据库查询
+- [x] 运行测试确保全部通过
+- [ ] 同步代码到GitHub

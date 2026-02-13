@@ -11,6 +11,7 @@ import ARInvoices from "./pages/ARInvoices";
 import ARPayments from "./pages/ARPayments";
 import ARApply from "./pages/ARApply";
 import AuditLogs from "./pages/AuditLogs";
+import CommissionStats from "./pages/CommissionStats";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -23,6 +24,7 @@ function Router() {
       <Route path={"/ar/payments"} component={ARPayments} />
       <Route path={"/ar/apply"} component={ARApply} />
       <Route path={"/audit/logs"} component={AuditLogs} />
+      <Route path={"/commission/stats"} component={CommissionStats} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

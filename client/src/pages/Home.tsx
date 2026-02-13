@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardCheck, Package, FileText, CreditCard, Receipt, Search } from "lucide-react";
+import { ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Home() {
@@ -46,6 +46,13 @@ export default function Home() {
       icon: Search,
       href: "/audit/logs",
       color: "text-cyan-500",
+    },
+    {
+      title: "提成查询",
+      description: "查询KPI指标和提成计算结果",
+      icon: TrendingUp,
+      href: "/commission/stats",
+      color: "text-emerald-500",
     },
   ];
 

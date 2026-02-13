@@ -25,4 +25,15 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// Sales commission rules table
+export const salesCommissionRules = mysqlTable("sales_commission_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  ruleVersion: varchar("rule_version", { length: 50 }).notNull(),
+  baseRate: varchar("base_rate", { length: 20 }).notNull(), // Stored as string to avoid decimal precision issues
+  newCustomerBonus: varchar("new_customer_bonus", { length: 20 }).notNull(), // Stored as string
+  effectiveDate: varchar("effective_date", { length: 10 }).notNull(), // ISO date string (YYYY-MM-DD)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SalesCommissionRule = typeof salesCommissionRules.$inferSelect;
+export type InsertSalesCommissionRule = typeof salesCommissionRules.$inferInsert;

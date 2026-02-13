@@ -200,12 +200,22 @@ export const appRouter = router({
             return createdAt >= new Date(input.startDate) && createdAt <= new Date(input.endDate);
           }).length;
 
-          // 步骤43：从数据库获取提成规则（这里暂时使用2026-V1的默认值）
-          // TODO: 实现从 sales_commission_rules 表查询规则
+          // 步骤3：从数据库获取提成规则
+          const { getCommissionRule } = await import('./db');
+          const dbRule = await getCommissionRule(input.ruleVersion);
+          
+          if (!dbRule) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: `Commission rule not found: ${input.ruleVersion}`,
+            });
+          }
+
+          // 解析数据库中的字符串值为数字
           const commissionRule = {
-            ruleVersion: input.ruleVersion,
-            baseRate: 0.02, // 2% 基础利率
-            newCustomerBonus: 100, // 每个新客户100元奖励
+            ruleVersion: dbRule.ruleVersion,
+            baseRate: parseFloat(dbRule.baseRate),
+            newCustomerBonus: parseFloat(dbRule.newCustomerBonus),
           };
 
           // 步骤4：计算提成

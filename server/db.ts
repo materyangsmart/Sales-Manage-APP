@@ -89,4 +89,45 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+/**
+ * Get commission rule by version
+ * @param ruleVersion - Rule version identifier (e.g., "2026-V1")
+ * @returns Commission rule or undefined if not found
+ */
+export async function getCommissionRule(ruleVersion: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get commission rule: database not available");
+    return undefined;
+  }
+
+  const { salesCommissionRules } = await import("../drizzle/schema");
+  const result = await db
+    .select()
+    .from(salesCommissionRules)
+    .where(eq(salesCommissionRules.ruleVersion, ruleVersion))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Get the latest commission rule by effective date
+ * @returns Latest commission rule or undefined if none found
+ */
+export async function getLatestCommissionRule() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get latest commission rule: database not available");
+    return undefined;
+  }
+
+  const { salesCommissionRules } = await import("../drizzle/schema");
+  const result = await db
+    .select()
+    .from(salesCommissionRules)
+    .orderBy(salesCommissionRules.effectiveDate)
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}

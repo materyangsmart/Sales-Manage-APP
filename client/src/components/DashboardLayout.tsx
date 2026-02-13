@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: FileText, label: "发票管理", path: "/ar/invoices" },
   { icon: CreditCard, label: "收款管理", path: "/ar/payments" },
   { icon: Receipt, label: "核销操作", path: "/ar/apply" },
+  { icon: TrendingUp, label: "提成查询", path: "/commission/stats" },
   { icon: Search, label: "审计日志", path: "/audit/logs" },
 ];
 
