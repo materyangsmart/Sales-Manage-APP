@@ -205,4 +205,4 @@
 - [x] 实现KPI计算公式：Commission = (发货总额 × 基础利率) + (新增有效客户数 × 奖励基数)
 - [x] 添加ruleVersion字段关联sales_commission_rules表
 - [x] 自动化测试：验证/api/trpc/commission.getKpiStats接口
-- [ ] 同步代码到GitHub
+- [x] 同步代码到GitHub
