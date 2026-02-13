@@ -18,7 +18,7 @@ export default function CommissionStats() {
   const [startDate, setStartDate] = useState('2026-01-01');
   const [endDate, setEndDate] = useState('2026-01-31');
   const [ruleVersion, setRuleVersion] = useState('2026-V1');
-  const [customerCategory, setCustomerCategory] = useState<string>(''); // 客户类型过滤器
+  const [customerCategory, setCustomerCategory] = useState<string>('ALL'); // 客户类型过滤器
   const [shouldFetch, setShouldFetch] = useState(false);
 
   // 使用tRPC查询KPI统计
@@ -28,7 +28,7 @@ export default function CommissionStats() {
       startDate,
       endDate,
       ruleVersion,
-      customerCategory: customerCategory || undefined,
+      customerCategory: customerCategory === 'ALL' ? undefined : customerCategory,
     } as any,
     {
       enabled: shouldFetch && !!orgId && !!startDate && !!endDate && !!ruleVersion,
@@ -116,7 +116,7 @@ export default function CommissionStats() {
                   <SelectValue placeholder="全部类型" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">全部类型</SelectItem>
+                  <SelectItem value="ALL">全部类型</SelectItem>
                   <SelectItem value="WET_MARKET">菜市场类</SelectItem>
                   <SelectItem value="WHOLESALE_B">批发商类</SelectItem>
                   <SelectItem value="SUPERMARKET">商超类</SelectItem>
