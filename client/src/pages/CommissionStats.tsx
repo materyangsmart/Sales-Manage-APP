@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,20 +22,30 @@ export default function CommissionStats() {
   const [shouldFetch, setShouldFetch] = useState(false);
 
   // 使用tRPC查询KPI统计
+  const queryInput = useMemo(() => ({
+    orgId: parseInt(orgId),
+    startDate,
+    endDate,
+    ruleVersion,
+    customerCategory: customerCategory === 'ALL' ? undefined : (customerCategory as 'WET_MARKET' | 'WHOLESALE_B' | 'SUPERMARKET' | 'ECOMMERCE' | 'DEFAULT'),
+  }), [orgId, startDate, endDate, ruleVersion, customerCategory]);
+
   const { data, isLoading, error } = trpc.commission.getKpiStats.useQuery(
-    {
-      orgId: parseInt(orgId),
-      startDate,
-      endDate,
-      ruleVersion,
-      customerCategory: customerCategory === 'ALL' ? undefined : customerCategory,
-    } as any,
+    queryInput,
     {
       enabled: shouldFetch && !!orgId && !!startDate && !!endDate && !!ruleVersion,
     }
   );
 
   const handleQuery = () => {
+    console.log('[CommissionStats] Query triggered with params:', queryInput);
+    console.log('[CommissionStats] Enabled conditions:', {
+      shouldFetch,
+      hasOrgId: !!orgId,
+      hasStartDate: !!startDate,
+      hasEndDate: !!endDate,
+      hasRuleVersion: !!ruleVersion,
+    });
     setShouldFetch(true);
   };
 

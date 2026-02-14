@@ -189,10 +189,10 @@ export const appRouter = router({
           // 解析规则配置
           const ruleJsonParsed = dbRule.ruleJson ? (typeof dbRule.ruleJson === 'string' ? JSON.parse(dbRule.ruleJson) : dbRule.ruleJson) : {};
           const commissionRule = {
-            ruleVersion: dbRule.ruleVersion,
+            ruleVersion: dbRule.version, // Fixed: use 'version' not 'ruleVersion'
             category: dbRule.category,
-            baseRate: parseFloat(ruleJsonParsed.baseRate || dbRule.baseRate || '0'),
-            newCustomerBonus: parseFloat(ruleJsonParsed.newCustomerBonus || dbRule.newCustomerBonus || '0'),
+            baseRate: parseFloat(ruleJsonParsed.baseRate || '0'), // baseRate is in ruleJson, not a separate field
+            newCustomerBonus: parseFloat(ruleJsonParsed.newCustomerBonus || '0'), // newCustomerBonus is in ruleJson
             ruleJson: ruleJsonParsed,
           };
           

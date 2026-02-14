@@ -110,7 +110,7 @@ export async function getCommissionRule(ruleVersion: string, category: string = 
     .from(salesCommissionRules)
     .where(
       and(
-        eq(salesCommissionRules.ruleVersion, ruleVersion),
+        eq(salesCommissionRules.version, ruleVersion), // Fixed: use 'version' not 'ruleVersion'
         eq(salesCommissionRules.category, category as any)
       )
     )
@@ -134,7 +134,7 @@ export async function getLatestCommissionRule() {
   const result = await db
     .select()
     .from(salesCommissionRules)
-    .orderBy(salesCommissionRules.effectiveDate)
+    .orderBy(salesCommissionRules.effectiveFrom) // Fixed: use 'effectiveFrom' not 'effectiveDate'
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;

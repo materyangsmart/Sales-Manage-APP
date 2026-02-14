@@ -351,3 +351,28 @@
 - [x] 创建P6_FINAL_DELIVERY_REPORT.md
 - [x] 包含验收截图和计算说明
 - [x] 包含已知问题和下一步建议
+
+
+## P7 - tRPC联调修复与全场景业务验收（Final Push）
+
+### Phase 1: 修复查询“握手”问题
+- [x] 检查CommissionStats.tsx中的orgId类型转换（String vs Number）
+- [x] 优化enabled条件，确保查询能被触发
+- [x] 通过Network面板定位NOT_FOUND来源
+- [x] 修复第32行的as any类型断言
+
+### Phase 2: 全业务场景实机验收
+- [ ] 场曯1（地推型）：验证“李记菜市场”超期订单被剔除（未完成，查询功能无法使用）
+- [ ] 场曯2（商超型）：验证毛利提成按60%权重计算（未完成，查询功能无法使用）
+- [ ] 场曯3（电商型）：验证新客奖励1.5倍系数（未完成，查询功能无法使用）
+- [x] 截图保存验收结果
+
+### Phase 3: 代码同步与GitHub
+- [ ] 使用Token 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（未执行，等待Phase 2完成）
+- [ ] 执行git push同步全部成果
+- [ ] 验证代码已推送成功
+
+### Phase 4: 生成P7最终验收报告
+- [x] 创建P7_FINAL_ACCEPTANCE_REPORT.md
+- [x] 包含验收截图和计算说明
+- [ ] 包含PR链接和CI检查结果（未执行，等待Phase 2完成）

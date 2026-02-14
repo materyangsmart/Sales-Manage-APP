@@ -26,15 +26,16 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 // Sales commission rules table
+// Note: This table was created by backend TypeORM, so field names use camelCase
 export const salesCommissionRules = mysqlTable("sales_commission_rules", {
   id: int("id").autoincrement().primaryKey(),
-  ruleVersion: varchar("rule_version", { length: 50 }).notNull(),
+  version: varchar("version", { length: 20 }).notNull(), // Backend uses 'version', not 'rule_version'
   category: mysqlEnum("category", ["WET_MARKET", "WHOLESALE_B", "SUPERMARKET", "ECOMMERCE", "DEFAULT"]).default("DEFAULT").notNull(),
-  baseRate: varchar("base_rate", { length: 20 }).notNull(), // Stored as string to avoid decimal precision issues
-  newCustomerBonus: varchar("new_customer_bonus", { length: 20 }).notNull(), // Stored as string
-  ruleJson: text("rule_json"), // JSON string for flexible rule configuration (collectionWeight, marginWeight, etc.)
-  effectiveDate: varchar("effective_date", { length: 10 }).notNull(), // ISO date string (YYYY-MM-DD)
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  effectiveFrom: timestamp("effectiveFrom").notNull(), // Backend uses 'effectiveFrom', not 'effective_date'
+  ruleJson: text("ruleJson").notNull(), // Backend uses 'ruleJson' (camelCase)
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type SalesCommissionRule = typeof salesCommissionRules.$inferSelect;
