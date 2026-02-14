@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI } from "./backend-api";
+import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI } from "./backend-api";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -359,6 +359,122 @@ export const appRouter = router({
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: error.message || 'Failed to calculate KPI stats',
+            cause: error,
+          });
+        }
+      }),
+  }),
+
+  commissionRules: router({ 
+    list: protectedProcedure
+      .input(z.object({
+        category: z.string().optional(),
+        page: z.number().optional(),
+        pageSize: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        try {
+          return await commissionRulesAPI.list(input);
+        } catch (error: any) {
+          if (error.status === 401) {
+            throw new TRPCError({
+              code: 'UNAUTHORIZED',
+              message: error.message || 'Unauthorized',
+              cause: error,
+            });
+          } else if (error.status === 403) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: error.message || 'Forbidden',
+              cause: error,
+            });
+          }
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to fetch commission rules',
+            cause: error,
+          });
+        }
+      }),
+    
+    get: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          return await commissionRulesAPI.get(input.id);
+        } catch (error: any) {
+          if (error.status === 404) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Commission rule not found',
+              cause: error,
+            });
+          }
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to fetch commission rule',
+            cause: error,
+          });
+        }
+      }),
+    
+    create: protectedProcedure
+      .input(z.object({
+        ruleVersion: z.string(),
+        category: z.string(),
+        baseRate: z.number(),
+        newCustomerBonus: z.number(),
+        ruleJson: z.string().optional(),
+        effectiveFrom: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          return await commissionRulesAPI.create(input);
+        } catch (error: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to create commission rule',
+            cause: error,
+          });
+        }
+      }),
+    
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        ruleVersion: z.string().optional(),
+        category: z.string().optional(),
+        baseRate: z.number().optional(),
+        newCustomerBonus: z.number().optional(),
+        ruleJson: z.string().optional(),
+        effectiveFrom: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        try {
+          return await commissionRulesAPI.update(id, data);
+        } catch (error: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to update commission rule',
+            cause: error,
+          });
+        }
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          return await commissionRulesAPI.delete(input.id);
+        } catch (error: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to delete commission rule',
             cause: error,
           });
         }

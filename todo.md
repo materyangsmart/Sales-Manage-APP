@@ -233,3 +233,57 @@
 - [x] 更新测试脚本：模拟包含不同客户类型的订单数据集
 - [x] 更新测试脚本：验证复合提成结果的准确性
 - [x] 同步代码到GitHub
+
+## P4：提成规则管理UI与全链路网络打通
+
+### P4-A: 规则管理UI开发
+- [x] 创建CommissionRules.tsx页面
+- [x] 实现规则列表展示（表格形式）
+- [x] 实现创建规则功能（表单+验证）
+- [x] 实现编辑规则功能（表单+验证）
+- [x] 实现删除规则功能（确认对话框）
+- [x] 配置项支持：baseRate（基础利率）
+- [x] 配置项支持：marginWeight（毛利权重）
+- [x] 配置项支持：collectionWeight（回款权重）
+- [x] 配置项支持：paymentDueDays（账期天数）
+- [x] 配置项支持：newCustomerBonus（新客户奖励）
+- [x] 配置项支持：effectiveFrom（生效日期）
+- [x] 配置项支持：category（客户类型）
+- [x] 在导航中添加规则管理入口
+- [x] 在路由中注册CommissionRules页面
+
+### P4-B: 后端API支持规则CRUD
+- [x] 在server/backend-api.ts中添加commissionRulesAPI
+- [x] 实现commissionRulesAPI.list方法
+- [x] 实现commissionRulesAPI.get方法
+- [x] 实现commissionRulesAPI.create方法
+- [x] 实现commissionRulesAPI.update方法
+- [x] 实现commissionRulesAPI.delete方法
+- [x] 在server/routers.ts中添加commissionRules router
+- [x] 实现commissionRules.list procedure
+- [x] 实现commissionRules.get procedure
+- [x] 实现commissionRules.create procedure
+- [x] 实现commissionRules.update procedure
+- [x] 实现commissionRules.delete procedure
+
+### P4-C: 网络联调与端到端验证
+- [ ] 引导用户在Windows本机运行ngrok http 3100
+- [ ] 获取ngrok公网URL
+- [ ] 更新BACKEND_URL环境变量为ngrok URL
+- [ ] 重启ops-frontend dev server
+- [ ] 验证CommissionStats页面能展示真实数据
+- [ ] 验证CommissionRules页面能进行CRUD操作
+- [ ] 测试完整业务流程：订单审核→履行→发票→核销→提成查询
+
+### P4-D: 消除TypeScript类型警告
+- [ ] 修复client/src/pages/AuditLogs.tsx的implicit any警告（2个）
+- [ ] 修复client/src/pages/OrderFulfill.tsx的implicit any警告（1个）
+- [ ] 修复client/src/pages/OrderReview.tsx的implicit any警告（1个）
+- [ ] 修复其他文件的implicit any警告（23个）
+- [ ] 运行tsc验证无类型错误
+
+### P4-E: 测试和验证
+- [ ] 更新server/commission.test.ts
+- [ ] 运行测试确保全部通过
+- [ ] 创建P4完成报告
+- [ ] 同步代码到GitHub

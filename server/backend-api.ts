@@ -91,14 +91,14 @@ export const ordersAPI = {
       ...(params.pageSize && { pageSize: params.pageSize.toString() }),
     });
     
-    return request<any>(`/internal/orders?${query}`);
+    return request<any>(`/api/internal/orders?${query}`);
   },
   
   /**
    * 审核订单（批准）
    */
   approve: async (orderId: number, remark?: string) => {
-    return request<any>(`/internal/orders/${orderId}/review`, {
+    return request<any>(`/api/internal/orders/${orderId}/review`, {
       method: 'POST',
       body: JSON.stringify({ action: 'APPROVE', remark }),
     });
@@ -108,7 +108,7 @@ export const ordersAPI = {
    * 审核订单（拒绝）
    */
   reject: async (orderId: number, remark?: string) => {
-    return request<any>(`/internal/orders/${orderId}/review`, {
+    return request<any>(`/api/internal/orders/${orderId}/review`, {
       method: 'POST',
       body: JSON.stringify({ action: 'REJECT', remark }),
     });
@@ -118,7 +118,7 @@ export const ordersAPI = {
    * 履行订单（生成发票）
    */
   fulfill: async (orderId: number) => {
-    return request<any>(`/internal/orders/${orderId}/fulfill`, {
+    return request<any>(`/api/internal/orders/${orderId}/fulfill`, {
       method: 'POST',
     });
   },
@@ -252,7 +252,7 @@ export const customersAPI = {
       ...(params.pageSize && { pageSize: params.pageSize.toString() }),
     });
     
-    return request<any>(`/internal/customers?${query}`, {}, 'customersAPI.list');
+    return request<any>(`/api/internal/customers?${query}`, {}, 'customersAPI.list');
   },
 };
 
@@ -294,6 +294,77 @@ export const auditLogsAPI = {
     });
     
     return request<any>(`/audit-logs/trace?${query}`);
+  },
+};
+
+/**
+ * Commission Rules API
+ */
+export const commissionRulesAPI = {
+  /**
+   * 获取提成规则列表
+   */
+  list: async (params?: {
+    category?: string;
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.category) query.set('category', params.category);
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.pageSize) query.set('pageSize', params.pageSize.toString());
+    
+    return request<any>(`/api/internal/commission-rules${query.toString() ? `?${query}` : ''}`, {}, 'commissionRulesAPI.list');
+  },
+  
+  /**
+   * 获取提成规则详情
+   */
+  get: async (id: number) => {
+    return request<any>(`/api/internal/commission-rules/${id}`, {}, 'commissionRulesAPI.get');
+  },
+  
+  /**
+   * 创建提成规则
+   */
+  create: async (data: {
+    ruleVersion: string;
+    category: string;
+    baseRate: number;
+    newCustomerBonus: number;
+    ruleJson?: string;
+    effectiveFrom: string;
+  }) => {
+    return request<any>(`/api/internal/commission-rules`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, 'commissionRulesAPI.create');
+  },
+  
+  /**
+   * 更新提成规则
+   */
+  update: async (id: number, data: {
+    ruleVersion?: string;
+    category?: string;
+    baseRate?: number;
+    newCustomerBonus?: number;
+    ruleJson?: string;
+    effectiveFrom?: string;
+  }) => {
+    return request<any>(`/api/internal/commission-rules/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, 'commissionRulesAPI.update');
+  },
+  
+  /**
+   * 删除提成规则
+   */
+  delete: async (id: number) => {
+    return request<any>(`/api/internal/commission-rules/${id}`, {
+      method: 'DELETE',
+    }, 'commissionRulesAPI.delete');
   },
 };
 
