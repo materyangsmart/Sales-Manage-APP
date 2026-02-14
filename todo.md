@@ -321,3 +321,33 @@
 ### Phase 6: 生成验收报告
 - [x] 创建P5_ACCEPTANCE_REPORT.md
 - [x] 包含数据种子、规则配置、验收截图、审计结果
+
+
+## P6 - 全链路兼容性修复与提成看板最终交付
+
+### Phase 1: 修复API状态兼容性
+- [x] 检查server/commission-engine.ts中的订单状态使用
+- [x] 检查server/backend-api.ts中的订单状态使用
+- [x] 确保所有订单状态使用大写（FULFILLED, APPROVED等）
+- [x] 测试backend API调用
+
+### Phase 2: 补全数据库默认规则
+- [x] 在sales_commission_rules表中插入category: 'DEFAULT'的规则
+- [x] 验证规则插入成功
+
+### Phase 3: 看板UI联调与验收
+- [x] 访问http://localhost:3000/commission-stats页面
+- [ ] 验证“李记菜市场”超期订单被正确剔除（未完成，查询功能无法使用）
+- [ ] 验证“商超类”客户显示毛利提成（未完成，查询功能无法使用）
+- [ ] 验证“电商类”新客户奖励按1.5倍计算（未完成，查询功能无法使用）
+- [x] 截图保存验收结果
+
+### Phase 4: 同步代码到GitHub
+- [ ] 配置GitHub token（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）（未执行，等待Phase 3完成）
+- [ ] 执行git push
+- [ ] 验证代码已推送成功
+
+### Phase 5: 生成P6最终交付报告
+- [x] 创建P6_FINAL_DELIVERY_REPORT.md
+- [x] 包含验收截图和计算说明
+- [x] 包含已知问题和下一步建议
