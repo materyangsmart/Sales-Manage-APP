@@ -1,0 +1,2 @@
+ALTER TABLE `sales_commission_rules` ADD `category` enum('WET_MARKET','WHOLESALE_B','SUPERMARKET','ECOMMERCE','DEFAULT') DEFAULT 'DEFAULT' NOT NULL;--> statement-breakpoint
+ALTER TABLE `sales_commission_rules` ADD `rule_json` text;
