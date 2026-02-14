@@ -171,30 +171,11 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         try {
-          // 步骤1：获取fulfilled订单（发货总额）
-          const fulfilledOrders = await ordersAPI.list({
-            orgId: input.orgId,
-            status: 'fulfilled',
-            page: 1,
-            pageSize: 10000, // 获取所有订单
-          });
-
-          // 步骤2：获取收款数据（用于账期扣减）
-          const payments = await paymentsAPI.list({
-            orgId: input.orgId,
-            page: 1,
-            pageSize: 10000,
-          });
-
-          // 步骤3：获取毛利数据（用于SUPERMARKET类别）
-          const marginStats = await invoicesAPI.getMarginStats({
-            orgId: input.orgId,
-            startDate: input.startDate,
-            endDate: input.endDate,
-          });
-
-          // 步骤4：从数据库获取提成规则
+          // 使用新的commission-engine模块
+          const { calculateCommission } = await import('./commission-engine');
           const { getCommissionRule } = await import('./db');
+          
+          // 获取提成规则
           const category = input.customerCategory || 'DEFAULT';
           const dbRule = await getCommissionRule(input.ruleVersion, category);
           
@@ -204,143 +185,21 @@ export const appRouter = router({
               message: `Commission rule not found: ${input.ruleVersion} (category: ${category})`,
             });
           }
-
+          
           // 解析规则配置
+          const ruleJsonParsed = dbRule.ruleJson ? (typeof dbRule.ruleJson === 'string' ? JSON.parse(dbRule.ruleJson) : dbRule.ruleJson) : {};
           const commissionRule = {
             ruleVersion: dbRule.ruleVersion,
             category: dbRule.category,
-            baseRate: parseFloat(dbRule.baseRate),
-            newCustomerBonus: parseFloat(dbRule.newCustomerBonus),
-            ruleJson: dbRule.ruleJson ? JSON.parse(dbRule.ruleJson) : {},
+            baseRate: parseFloat(ruleJsonParsed.baseRate || dbRule.baseRate || '0'),
+            newCustomerBonus: parseFloat(ruleJsonParsed.newCustomerBonus || dbRule.newCustomerBonus || '0'),
+            ruleJson: ruleJsonParsed,
           };
-
-          // 步骤5：按客户类型分层计算
-          let totalShippedAmount = 0;
-          let totalMargin = 0;
-          let validPaymentAmount = 0; // 账期内的收款额
-          let overduePaymentAmount = 0; // 超账期的收款额
-
-          // 计算发货总额（只统计期间内的订单）
-          const filteredOrders = fulfilledOrders.data.filter((order: any) => {
-            const fulfilledAt = new Date(order.fulfilledAt);
-            const inPeriod = fulfilledAt >= new Date(input.startDate) && fulfilledAt <= new Date(input.endDate);
-            
-            // 如果指定了客户类型，只统计该类型的订单
-            if (input.customerCategory && order.customer?.category !== input.customerCategory) {
-              return false;
-            }
-            
-            return inPeriod;
-          });
-
-          totalShippedAmount = filteredOrders.reduce((sum: number, order: any) => {
-            return sum + parseFloat(order.totalAmount || '0');
-          }, 0);
-
-          // 计算账期扣减（超账期的收款不计入提成基数）
-          const paymentDueDays = commissionRule.ruleJson.paymentDueDays || 30; // 默认30天账期
           
-          payments.data.forEach((payment: any) => {
-            const paymentDate = new Date(payment.createdAt);
-            const appliedDate = payment.appliedAt ? new Date(payment.appliedAt) : null;
-            
-            if (appliedDate) {
-              const daysDiff = Math.floor((appliedDate.getTime() - paymentDate.getTime()) / (1000 * 60 * 60 * 24));
-              
-              if (daysDiff <= paymentDueDays) {
-                validPaymentAmount += parseFloat(payment.appliedAmount || '0');
-              } else {
-                overduePaymentAmount += parseFloat(payment.appliedAmount || '0');
-              }
-            }
-          });
+          // 计算提成
+          return await calculateCommission(input, commissionRule);
 
-          // 计算毛利（用于SUPERMARKET类别）
-          totalMargin = marginStats.data?.totalMargin || 0;
 
-          // 步骤6：获取新增客户数
-          const newCustomers = await customersAPI.list({
-            orgId: input.orgId,
-            createdAfter: input.startDate,
-            page: 1,
-            pageSize: 10000,
-          });
-
-          const newCustomerCount = newCustomers.data.filter((customer: any) => {
-            const createdAt = new Date(customer.createdAt);
-            const inPeriod = createdAt >= new Date(input.startDate) && createdAt <= new Date(input.endDate);
-            
-            // 如果指定了客户类型，只统计该类型的客户
-            if (input.customerCategory && customer.category !== input.customerCategory) {
-              return false;
-            }
-            
-            return inPeriod;
-          }).length;
-
-          // 步骤7：根据客户类型应用不同的计算公式
-          let baseCommission = 0;
-          let marginCommission = 0;
-          let collectionCommission = 0;
-          let newCustomerCommission = 0;
-
-          switch (category) {
-            case 'SUPERMARKET':
-              // 商超类：毛利维度为核心权重
-              marginCommission = totalMargin * (commissionRule.ruleJson.marginWeight || 0.5);
-              baseCommission = totalShippedAmount * commissionRule.baseRate * 0.5; // 降低发货额权重
-              break;
-              
-            case 'WET_MARKET':
-            case 'WHOLESALE_B':
-              // 地推型/批发型：回款维度为重点
-              collectionCommission = validPaymentAmount * (commissionRule.ruleJson.collectionWeight || 0.02);
-              baseCommission = totalShippedAmount * commissionRule.baseRate;
-              break;
-              
-            case 'ECOMMERCE':
-              // 电商类：均衡发货额和新客户
-              baseCommission = totalShippedAmount * commissionRule.baseRate;
-              newCustomerCommission = newCustomerCount * commissionRule.newCustomerBonus * 1.5; // 提高新客户奖励
-              break;
-              
-            default:
-              // 默认规则
-              baseCommission = totalShippedAmount * commissionRule.baseRate;
-              newCustomerCommission = newCustomerCount * commissionRule.newCustomerBonus;
-              break;
-          }
-
-          const totalCommission = baseCommission + marginCommission + collectionCommission + newCustomerCommission;
-
-          // 返回结果
-          return {
-            success: true,
-            data: {
-              period: {
-                startDate: input.startDate,
-                endDate: input.endDate,
-              },
-              kpi: {
-                totalShippedAmount,
-                fulfilledOrderCount: filteredOrders.length,
-                newCustomerCount,
-                totalMargin, // 毛利总额
-                validPaymentAmount, // 账期内收款
-                overduePaymentAmount, // 超账期收款
-              },
-              commission: {
-                baseCommission,
-                marginCommission,
-                collectionCommission,
-                newCustomerCommission,
-                totalCommission,
-              },
-              ruleVersion: commissionRule.ruleVersion,
-              category: commissionRule.category,
-              rule: commissionRule,
-            },
-          };
         } catch (error: any) {
           // 错误处理
           if (error.status === 401) {

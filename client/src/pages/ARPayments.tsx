@@ -75,7 +75,7 @@ export default function ARPayments() {
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select
                   value={statusFilter}
-                  onValueChange={(value) => setStatusFilter(value as PaymentStatus | "ALL")}
+                  onValueChange={(value) => setStatusFilter(value as any)}
                 >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="筛选状态" />
@@ -113,7 +113,7 @@ export default function ARPayments() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment) => (
+                  {payments.map((payment: any) => (
                     <TableRow key={payment.id}>
                       <TableCell className="font-medium">{payment.paymentNo}</TableCell>
                       <TableCell>{payment.customerName || `客户${payment.customerId}`}</TableCell>
@@ -142,12 +142,12 @@ export default function ARPayments() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {payments.filter(p => p.status === "UNAPPLIED").length}
+                {payments.filter((p: any) => p.status === "UNAPPLIED").length}
               </div>
               <p className="text-xs text-muted-foreground">
                 总金额: ¥{payments
-                  .filter(p => p.status === "UNAPPLIED")
-                  .reduce((sum, p) => sum + p.amount, 0)
+                  .filter((p: any) => p.status === "UNAPPLIED")
+                  .reduce((sum: number, p: any) => sum + p.amount, 0)
                   .toFixed(2)}
               </p>
             </CardContent>
@@ -163,7 +163,7 @@ export default function ARPayments() {
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
                 ¥{payments
-                  .reduce((sum, p) => sum + p.unappliedAmount, 0)
+                  .reduce((sum: number, p: any) => sum + p.unappliedAmount, 0)
                   .toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -181,7 +181,7 @@ export default function ARPayments() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {payments.filter(p => p.status === "APPLIED").length}
+                {payments.filter((p: any) => p.status === "APPLIED").length}
               </div>
               <p className="text-xs text-muted-foreground">
                 已完成核销

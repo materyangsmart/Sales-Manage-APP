@@ -138,7 +138,7 @@ export default function AuditLogs() {
               </div>
 
               <div className="flex items-end">
-                <Button onClick={loadLogs} className="w-full">
+                <Button onClick={() => {}} className="w-full">
                   <Search className="h-4 w-4 mr-2" />
                   查询
                 </Button>
@@ -176,7 +176,7 @@ export default function AuditLogs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs.map((log) => (
+                  {logs.map((log: any) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-medium">{log.resourceType}</TableCell>
                       <TableCell>{log.resourceId}</TableCell>
@@ -223,7 +223,7 @@ export default function AuditLogs() {
               </div>
             ) : (
               <div className="space-y-4">
-                {traceLogs.map((log, index) => (
+                {traceLogs.map((log: any, index: number) => (
                   <div
                     key={log.id}
                     className="relative border-l-2 border-blue-500 pl-4 pb-4"

@@ -112,7 +112,7 @@ export default function ARInvoices() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice) => (
+                  {invoices.map((invoice: any) => (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">{invoice.invoiceNo}</TableCell>
                       <TableCell>{invoice.customerName || `客户${invoice.customerId}`}</TableCell>
@@ -142,12 +142,12 @@ export default function ARInvoices() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {invoices.filter(inv => inv.status === "OPEN").length}
+                {invoices.filter((inv: any) => inv.status === "OPEN").length}
               </div>
               <p className="text-xs text-muted-foreground">
                 总金额: ¥{invoices
-                  .filter(inv => inv.status === "OPEN")
-                  .reduce((sum, inv) => sum + inv.totalAmount, 0)
+                  .filter((inv: any) => inv.status === "OPEN")
+                  .reduce((sum: number, inv: any) => sum + inv.totalAmount, 0)
                   .toFixed(2)}
               </p>
             </CardContent>
@@ -163,7 +163,7 @@ export default function ARInvoices() {
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">
                 ¥{invoices
-                  .reduce((sum, inv) => sum + inv.balance, 0)
+                  .reduce((sum: number, inv: any) => sum + inv.balance, 0)
                   .toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -181,7 +181,7 @@ export default function ARInvoices() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {invoices.filter(inv => inv.status === "CLOSED").length}
+                {invoices.filter((inv: any) => inv.status === "CLOSED").length}
               </div>
               <p className="text-xs text-muted-foreground">
                 已完成核销

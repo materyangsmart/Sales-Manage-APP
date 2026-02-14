@@ -58,6 +58,8 @@ export default function ARApply() {
     },
   });
 
+  const submitting = applyMutation.isPending;
+
   const handleApply = () => {
     if (!selectedPaymentId || !selectedInvoiceId || !appliedAmount) {
       toast.error("请填写完整信息");
@@ -140,7 +142,7 @@ export default function ARApply() {
                           暂无可用收款
                         </SelectItem>
                       ) : (
-                        payments.map((payment) => (
+                        payments.map((payment: any) => (
                           <SelectItem key={payment.id} value={payment.id.toString()}>
                             {payment.paymentNo} - {payment.customerName || `客户${payment.customerId}`} 
                             (未核销: ¥{payment.unappliedAmount.toFixed(2)})
@@ -173,7 +175,7 @@ export default function ARApply() {
                           暂无未结清发票
                         </SelectItem>
                       ) : (
-                        invoices.map((invoice) => (
+                        invoices.map((invoice: any) => (
                           <SelectItem key={invoice.id} value={invoice.id.toString()}>
                             {invoice.invoiceNo} - {invoice.customerName || `客户${invoice.customerId}`}
                             (余额: ¥{invoice.balance.toFixed(2)})

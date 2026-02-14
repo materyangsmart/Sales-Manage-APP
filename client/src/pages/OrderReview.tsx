@@ -128,7 +128,7 @@ export default function OrderReview() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
+                {orders.map((order: any) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.orderNo}</TableCell>
                     <TableCell>{order.customerName || `客户#${order.customerId}`}</TableCell>
