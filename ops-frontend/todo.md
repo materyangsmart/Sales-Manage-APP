@@ -376,3 +376,17 @@
 - [x] 创建P7_FINAL_ACCEPTANCE_REPORT.md
 - [x] 包含验收截图和计算说明
 - [ ] 包含PR链接和CI检查结果（未执行，等待Phase 2完成）
+
+
+## P8 - 修复tRPC鉴权拦截并启用看板查询
+
+### 问题描述
+- [x] 看板查询报错：UNAUTHORIZED: Please login (10001)
+- [x] tRPC路由缺少Session Cookie
+- [x] 需要在开发环境下绕过鉴权
+
+### 修复任务
+- [x] 修改前端tRPC中间件（server/_core/context.ts），在开发环境下自动注入Mock用户（ID: 1, Role: admin）
+- [x] 保持commission.getKpiStats使用protectedProcedure（Mock用户已注入，鉴权会通过）
+- [x] 修复BACKEND_URL配置（从http://localhost:3000改为http://localhost:3100）
+- [x] 推送代码到GitHub
