@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { ARModule } from './modules/ar/ar.module';
 import { OrderModule } from './modules/order/order.module';
 import { HealthModule } from './modules/health/health.module';
+import { CustomerModule } from './modules/customer/customer.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { HealthModule } from './modules/health/health.module';
     ARModule,
     OrderModule,
     HealthModule,
+    CustomerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

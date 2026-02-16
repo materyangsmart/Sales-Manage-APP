@@ -12,7 +12,7 @@
  */
 
 import { DataSource } from 'typeorm';
-import { Customer } from './src/modules/order/entities/customer.entity';
+import { Customer } from './src/modules/customer/entities/customer.entity';
 import { Product } from './src/modules/order/entities/product.entity';
 import { Order } from './src/modules/order/entities/order.entity';
 import { OrderItem } from './src/modules/order/entities/order-item.entity';
