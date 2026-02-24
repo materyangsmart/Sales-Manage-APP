@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI } from "./backend-api";
+import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI } from "./backend-api";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -38,43 +38,8 @@ export const appRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN', message: '仅CEO可访问此功能' });
       }
       
-      // TODO: 实现实际的雷达数据查询逻辑
-      // 这里先返回模拟数据
-      return {
-        badDebtRisks: [
-          {
-            customerId: 1,
-            customerName: '李记菜市场',
-            unpaidAmount: 25000,
-            overdueDays: 18,
-            creditScore: 75,
-            estimatedLoss: 18750, // 25000 * 0.75
-          },
-        ],
-        yieldAnomalies: [
-          {
-            batchNo: 'QZ20260224001',
-            soybeanInput: 1000,
-            productOutput: 2850,
-            actualYield: 285,
-            standardYield: 290,
-            deviation: -1.72, // (285 - 290) / 290 * 100
-            productionDate: new Date().toISOString(),
-          },
-        ],
-        churnRisks: [
-          {
-            customerId: 2,
-            customerName: '张家大排档',
-            customerCategory: '菜市场',
-            daysSinceLastOrder: 3,
-            lastOrderDate: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
-            avgMonthlyOrders: 25,
-            salesRepName: '王五',
-          },
-        ],
-        lastUpdate: new Date().toISOString(),
-      };
+      // 调用backend API获取真实雷达数据
+      return ceoRadarAPI.getRadarData();
     }),
   }),
   

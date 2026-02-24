@@ -28,6 +28,7 @@ async function request<T>(
   
   const headers = new Headers(options.headers || {});
   headers.set('Authorization', `Bearer ${INTERNAL_SERVICE_TOKEN}`);
+  headers.set('x-internal-token', INTERNAL_SERVICE_TOKEN);
   headers.set('Content-Type', 'application/json');
   
   try {
@@ -427,3 +428,182 @@ export async function healthCheck() {
   }
   console.log('='.repeat(60));
 }
+
+
+/**
+ * ========================================
+ * 治理级API（P21-P23）
+ * ========================================
+ */
+
+export interface BadDebtRisk {
+  customerId: number;
+  customerName: string;
+  unpaidAmount: number;
+  overdueDays: number;
+  creditScore: number;
+  estimatedLoss: number;
+}
+
+export interface YieldAnomaly {
+  batchNo: string;
+  soybeanInput: number;
+  productOutput: number;
+  actualYield: number;
+  standardYield: number;
+  deviation: number;
+  productionDate: string;
+}
+
+export interface ChurnRisk {
+  customerId: number;
+  customerName: string;
+  customerCategory: string;
+  daysSinceLastOrder: number;
+  lastOrderDate: string;
+  avgMonthlyOrders: number;
+  salesRepName: string;
+}
+
+export interface CEORadarData {
+  badDebtRisks: BadDebtRisk[];
+  yieldAnomalies: YieldAnomaly[];
+  churnRisks: ChurnRisk[];
+  lastUpdate: string;
+}
+
+/**
+ * CEO雷达API
+ */
+export const ceoRadarAPI = {
+  /**
+   * 获取CEO雷达数据
+   */
+  async getRadarData(): Promise<CEORadarData> {
+    return request<CEORadarData>('/api/internal/ceo/radar', {}, 'CEO Radar');
+  },
+};
+
+export interface PriceAnomaly {
+  id: number;
+  orderId: number;
+  customerId: number;
+  customerName: string;
+  productId: number;
+  productName: string;
+  unitPrice: string;
+  regionAvgPrice: string;
+  deviationPercent: string;
+  salesRepId: number;
+  salesRepName: string;
+  specialReason: string | null;
+  approvedBy: number | null;
+  approvedAt: Date | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SettlementAudit {
+  id: number;
+  paymentId: number;
+  invoiceId: number;
+  applyAmount: string;
+  salesRepId: number;
+  salesRepName: string;
+  applyTime: Date;
+  commissionDeadline: Date;
+  timeToDeadline: number;
+  isSuspicious: boolean;
+  suspiciousReason: string | null;
+  createdAt: Date;
+}
+
+/**
+ * 反舞弊API
+ */
+export const antiFraudAPI = {
+  /**
+   * 获取所有待审批的价格异常
+   */
+  async getPriceAnomalies(): Promise<PriceAnomaly[]> {
+    return request<PriceAnomaly[]>('/api/internal/anti-fraud/price-anomalies', {}, 'Get Price Anomalies');
+  },
+
+  /**
+   * 批准价格异常
+   */
+  async approvePriceAnomaly(anomalyId: number, approvedBy: number, specialReason: string): Promise<void> {
+    return request<void>(`/api/internal/anti-fraud/price-anomalies/${anomalyId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ approvedBy, specialReason }),
+    }, 'Approve Price Anomaly');
+  },
+
+  /**
+   * 拒绝价格异常
+   */
+  async rejectPriceAnomaly(anomalyId: number, rejectedBy: number): Promise<void> {
+    return request<void>(`/api/internal/anti-fraud/price-anomalies/${anomalyId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ rejectedBy }),
+    }, 'Reject Price Anomaly');
+  },
+
+  /**
+   * 获取所有疑似结算审计记录
+   */
+  async getSuspiciousSettlements(): Promise<SettlementAudit[]> {
+    return request<SettlementAudit[]>('/api/internal/anti-fraud/suspicious-settlements', {}, 'Get Suspicious Settlements');
+  },
+};
+
+export interface CustomerCreditScore {
+  id: number;
+  customerId: number;
+  customerName: string;
+  creditScore: number;
+  creditLevel: 'S' | 'A' | 'B' | 'C' | 'D';
+  totalOrders: number;
+  totalAmount: string;
+  paidAmount: string;
+  paymentRate: string;
+  overdueCount: number;
+  maxOverdueDays: number;
+  autoApproveEnabled: boolean;
+  autoApproveLimit: string;
+  lastCalculatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * 信用评分API
+ */
+export const creditAPI = {
+  /**
+   * 计算客户信用评分
+   */
+  async calculateCreditScore(customerId: number): Promise<CustomerCreditScore> {
+    return request<CustomerCreditScore>('/api/internal/credit/calculate', {
+      method: 'POST',
+      body: JSON.stringify({ customerId }),
+    }, 'Calculate Credit Score');
+  },
+
+  /**
+   * 获取客户信用评分
+   */
+  async getCreditScore(customerId: number): Promise<CustomerCreditScore | null> {
+    return request<CustomerCreditScore | null>(`/api/internal/credit/${customerId}`, {}, 'Get Credit Score');
+  },
+
+  /**
+   * 批量计算所有客户的信用评分
+   */
+  async calculateAllCreditScores(): Promise<{ message: string }> {
+    return request<{ message: string }>('/api/internal/credit/calculate-all', {
+      method: 'POST',
+    }, 'Calculate All Credit Scores');
+  },
+};

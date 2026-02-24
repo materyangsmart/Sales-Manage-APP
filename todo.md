@@ -622,3 +622,90 @@
 - [ ] 实现投诉自动关联生产批次号和司机ID
 - [ ] 在CEO Dashboard显示投诉列表
 - [ ] 实现责任闭环追溯功能
+
+
+## P21-P25技术债务补齐（摩天大楼标准）
+
+### P21 - CEO雷达实战化
+- [ ] 废除ceo.getRadarData中的所有Mock数据
+- [ ] 实现坏账风险真实SQL查询（ar_invoices + customer_credit_scores）
+- [ ] 实现得率异动真实SQL查询（production_plans表）
+- [ ] 实现客户流失预警真实SQL查询（orders表MAX(order_date)）
+- [ ] 确保所有数据来自数据库，无硬编码对象
+
+### P22 - 反舞弊强力拦截
+- [ ] 在订单创建API中植入价格洼地监控逻辑
+- [ ] 实现片区30天同品类平均价计算
+- [ ] 实现unit_price < avg_price * 0.97时自动插入price_anomalies
+- [ ] 实现订单状态强制锁定为PENDING_DIRECTOR_AUDIT
+- [ ] 实现AR Apply时的结算冲刺审计（距离月末<2小时标记疑似）
+- [ ] 实现settlement_audit表自动记录
+
+### P23 - 数字信用自动驾驶
+- [ ] 实现calculateCreditScore函数（回款率0.6权重+逾期天数0.4权重）
+- [ ] 实现定时任务每日凌晨自动计算所有客户信用分
+- [ ] 实现自动更新customer_credit_scores表
+- [ ] 在OrderService中实现自动审批逻辑
+- [ ] S/A级客户+回款率>=98%+金额<=限额*1.15 → 自动批准
+- [ ] 其他情况 → 转人工审批
+- [ ] 记录到auto_approval_logs表
+- [ ] 确保处理时间<100ms
+
+### P24 - 职能隔离与账户自动化
+- [ ] 修改创建员工API，根据positionCode自动分配权限
+- [ ] FINANCE_SUPERVISOR → 自动调用assignRole('FINANCE')
+- [ ] SALES → 调用ar模块API时返回403 Forbidden
+- [ ] 前端展示"权限拦截"错误页
+- [ ] 记录到permission_change_logs表
+
+### P25 - 质量反馈直达中枢
+- [ ] PublicTrace投诉表单自动抓取batch_no和driver_id
+- [ ] 投诉存入quality_complaints表
+- [ ] CEO看板实时显示投诉（闪烁提醒）
+- [ ] 投诉不经过销售和片区，直达CEO
+
+### 验收标准
+- [ ] 无任何// TODO注释残留
+- [ ] 修改订单单价后，CEO看板实时出现预警提示（录屏）
+- [ ] 6亿营收种子数据下提成计算延迟<500ms（性能测试报告）
+- [ ] 所有功能通过真实数据验证
+
+
+## P21-P25技术债务补齐（摩天大楼标准）
+
+### P21 CEO雷达实战化
+- [x] 在backend创建ceo-radar模块
+- [x] 实现坏账风险对冲（真实SQL查询）
+- [x] 实现客户流失预警（真实SQL查询）
+- [x] 暴露/api/internal/ceo/radar接口
+- [x] 在ops-frontend中集成backend API
+- [x] 废除所有Mock数据
+- [ ] 实现得率异动审计（需要创建production_plans表）
+
+### P22 反舞弊强力拦截
+- [x] 在backend创建anti-fraud模块
+- [x] 实现价格洼地监控（片区30天平均价，偏差>3%自动拦截）
+- [x] 实现结算行为审计（距离截止<2小时标记疑似）
+- [x] 暴露/api/internal/anti-fraud/*接口
+- [x] 在ops-frontend中集成backend API
+- [ ] 在订单创建流程中植入checkPrice调用
+- [ ] 在AR Apply流程中植入auditSettlement调用
+
+### P23 数字信用自动驾驶
+- [x] 在backend创建credit模块
+- [x] 实现信用评分计算引擎（基于回款率+逾期数据）
+- [x] 实现自动审批逻辑（S/A级+回款率>=98%自动放行）
+- [x] 暴露/api/internal/credit/*接口
+- [x] 在ops-frontend中集成backend API
+- [ ] 在订单创建流程中植入autoApproveOrder调用
+- [ ] 创建定时任务（每日凌晨计算所有客户信用分）
+
+### P24 职能隔离与账户自动化
+- [ ] 实现自动权限映射（positionCode -> role -> permissions）
+- [ ] 实现硬性隔离（SALES角色物理拦截ar模块API）
+- [ ] 创建透明提成规则展示页面
+
+### P25 质量反馈直达中枢
+- [x] PublicTrace页面投诉表单已存在
+- [ ] 投诉自动关联batch_no和driver_id
+- [ ] CEO看板闪烁提醒功能
