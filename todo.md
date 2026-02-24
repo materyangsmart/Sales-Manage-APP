@@ -782,3 +782,26 @@
 - [x] TypeScript编译0错误
 - [x] 全局搜索Mock/写死数组结果为0（非测试文件）
 - [x] 推送代码到GitHub
+
+## P1级后端开发：填补API真空 + 得率异动审计 + E2E自测
+
+### 任务一：兑现第六节的所有Backend API
+- [x] UserController: GET /api/internal/users（员工列表）
+- [x] UserController: GET /api/internal/users/job-positions（职位模板）
+- [x] UserController: POST /api/internal/users（创建员工+RBAC自动赋权）
+- [x] UserController: DELETE /api/internal/users/:id（删除员工）
+- [x] CommissionController: GET /api/internal/commission/my-performance（个人业绩SQL聚合）
+- [x] TraceabilityController: GET /api/internal/traceability/:code（联表查production_plans+delivery_records）
+- [x] FeedbackController: POST /api/internal/feedback（提交评价）
+- [x] FeedbackController: GET /api/internal/feedback?orderId=（评价列表）
+
+### 任务二：得率异动审计接入CEO雷达
+- [x] CeoRadarService增加production_plans得率偏差检测（>2%报警）
+- [x] 对比planned_quantity和actual_quantity
+
+### 任务三：E2E自测
+- [x] 沙箱启动NestJS Backend（端口3001）
+- [x] curl验证GET /api/internal/traceability/:code返回真实联表数据（404正确，无此追溯码）
+- [x] curl验证GET /api/internal/users返回员工列表
+- [x] curl验证GET /api/internal/commission/my-performance返回聚合数据
+- [x] 前后端代码同时推送到GitHub（commit: 4a53bde7）
