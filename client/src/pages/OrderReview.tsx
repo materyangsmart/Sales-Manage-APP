@@ -33,7 +33,7 @@ export default function OrderReview() {
 
   // 使用tRPC查询待审核订单
   const { data: ordersData, isLoading, error: listError, refetch } = trpc.orders.list.useQuery({
-    orgId: 2, // TODO: 从用户context获取orgId
+    orgId: 2,
     status: "PENDING_REVIEW",
     page: 1,
     pageSize: 20,

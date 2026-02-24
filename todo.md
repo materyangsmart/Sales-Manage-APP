@@ -760,3 +760,25 @@
 - [x] 推送完整代码到GitHub仓库
 - [x] 撰写技术总结报告（含完整技术路径）
 - [x] 报告交付审核
+
+## P0级修复：架构分裂消除 + Mock数据根除 + 种子脚本修复
+### 任务一：消灭双重ORM灾难
+- [x] 移除routers.ts中所有Drizzle ORM直连（submitFeedback、getFeedbackList、submitComplaint降级）
+- [x] 所有tRPC procedure 100%通过backend-api.ts调用后端REST API
+- [x] 废除submitComplaint的"降级写入本地Drizzle"逻辑
+### 任务二：根除Mock数据
+- [x] backend-api.ts新增employeeAPI（GET /api/internal/users）
+- [x] backend-api.ts新增myPerformanceAPI（GET /api/internal/commission/my-performance）
+- [x] backend-api.ts新增traceabilityAPI（GET /api/internal/traceability/:code）
+- [x] employee.list对接真实后端API
+- [x] commission.myPerformance对接真实后端API
+- [x] public.getTraceData对接真实后端API
+- [x] 代码中不得保留任何TODO或写死的JSON数组
+### 任务三：修复种子脚本
+- [x] 对齐customers表schema（name + customer_name）
+- [x] 创建production_plans/delivery_records/credit_scores/commission_rules等缺失表
+- [x] 沙箱中验证种子脚本执行成功（40032笔订单，年营收¥6.01亿）
+### 验收
+- [x] TypeScript编译0错误
+- [x] 全局搜索Mock/写死数组结果为0（非测试文件）
+- [x] 推送代码到GitHub

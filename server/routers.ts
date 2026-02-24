@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI } from "./backend-api";
+import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI } from "./backend-api";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -237,13 +237,19 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         try {
-          // 使用新的commission-engine模块
+          // 使用commission-engine模块（通过backend-api获取提成规则）
           const { calculateCommission } = await import('./commission-engine');
-          const { getCommissionRule } = await import('./db');
           
-          // 获取提成规则
+          // 通过backend API获取提成规则（不再使用Drizzle直连）
           const category = input.customerCategory || 'DEFAULT';
-          const dbRule = await getCommissionRule(input.ruleVersion, category);
+          const rulesResponse = await commissionRulesAPI.list({ category });
+          const rulesList = rulesResponse?.items || rulesResponse?.data || (Array.isArray(rulesResponse) ? rulesResponse : []);
+          
+          // 匹配版本和类型
+          const dbRule = rulesList.find((r: any) => 
+            (r.ruleVersion === input.ruleVersion || r.version === input.ruleVersion) && 
+            (r.category === category || category === 'DEFAULT')
+          ) || rulesList[0];
           
           if (!dbRule) {
             throw new TRPCError({
@@ -255,10 +261,10 @@ export const appRouter = router({
           // 解析规则配置
           const ruleJsonParsed = dbRule.ruleJson ? (typeof dbRule.ruleJson === 'string' ? JSON.parse(dbRule.ruleJson) : dbRule.ruleJson) : {};
           const commissionRule = {
-            ruleVersion: dbRule.version, // Fixed: use 'version' not 'ruleVersion'
-            category: dbRule.category,
-            baseRate: parseFloat(ruleJsonParsed.baseRate || '0'), // baseRate is in ruleJson, not a separate field
-            newCustomerBonus: parseFloat(ruleJsonParsed.newCustomerBonus || '0'), // newCustomerBonus is in ruleJson
+            ruleVersion: dbRule.ruleVersion || dbRule.version || input.ruleVersion,
+            category: dbRule.category || category,
+            baseRate: parseFloat(ruleJsonParsed.baseRate || dbRule.baseRate || '0'),
+            newCustomerBonus: parseFloat(ruleJsonParsed.newCustomerBonus || dbRule.newCustomerBonus || '0'),
             ruleJson: ruleJsonParsed,
           };
           
@@ -405,16 +411,9 @@ export const appRouter = router({
      */
     myPerformance: protectedProcedure
       .query(async ({ ctx }) => {
-        // TODO: 调用backend API获取当前用户的业绩数据
-        // 暂时返回模拟数据
-        return {
-          totalRevenue: 1250000, // 发货总额：125万
-          orderCount: 45, // 订单数
-          newCustomerCount: 8, // 新增客户数
-          paymentRate: 0.92, // 回款率：92%
-          overdueAmount: 50000, // 逾期金额：5万
-          totalCommission: 28750, // 总提成 = 1250000*0.02 - 50000*0.005 + 8*500 = 25000 - 250 + 4000 = 28750
-        };
+        // 通过backend API获取当前用户的业绩数据
+        const userId = ctx.user?.id || 0;
+        return myPerformanceAPI.get(userId);
       }),
   }),
 
@@ -536,93 +535,11 @@ export const appRouter = router({
 
   employee: router({
     list: protectedProcedure.query(async () => {
-      // TODO: 调用backend API获取员工列表
-      // 暂时返回模拟数据
-      return [
-        {
-          id: 1,
-          username: "admin",
-          email: "admin@example.com",
-          full_name: "系统管理员",
-          phone: "",
-          department: "管理部",
-          status: "ACTIVE",
-          job_position: {
-            id: 1,
-            position_name: "系统管理员",
-            department: "管理部",
-          },
-          roles: [
-            {
-              id: 1,
-              code: "CEO",
-              name: "老板",
-            },
-          ],
-        },
-      ];
+      return employeeAPI.list();
     }),
 
     getJobPositions: protectedProcedure.query(async () => {
-      // TODO: 调用backend API获取职位模板列表
-      // 暂时返回模拟数据
-      return [
-        {
-          id: 1,
-          department: "管理部",
-          position_name: "系统管理员",
-          default_role_id: 1,
-          role: {
-            id: 1,
-            code: "CEO",
-            name: "老板",
-            permissions: [
-              { id: 1, code: "order.view", name: "查看订单" },
-              { id: 2, code: "order.create", name: "创建订单" },
-              { id: 3, code: "invoice.view", name: "查看发票" },
-              { id: 4, code: "payment.view", name: "查看回款" },
-              { id: 5, code: "payment.create", name: "录入回款" },
-              { id: 6, code: "apply.create", name: "核销操作" },
-              { id: 7, code: "commission.view", name: "查看提成" },
-              { id: 8, code: "employee.manage", name: "员工管理" },
-            ],
-          },
-        },
-        {
-          id: 2,
-          department: "财务部",
-          position_name: "财务主管",
-          default_role_id: 2,
-          role: {
-            id: 2,
-            code: "FINANCE_MANAGER",
-            name: "财务主管",
-            permissions: [
-              { id: 1, code: "order.view", name: "查看订单" },
-              { id: 3, code: "invoice.view", name: "查看发票" },
-              { id: 4, code: "payment.view", name: "查看回款" },
-              { id: 5, code: "payment.create", name: "录入回款" },
-              { id: 6, code: "apply.create", name: "核销操作" },
-            ],
-          },
-        },
-        {
-          id: 3,
-          department: "销售部",
-          position_name: "高级业务员",
-          default_role_id: 4,
-          role: {
-            id: 4,
-            code: "SALES",
-            name: "销售",
-            permissions: [
-              { id: 1, code: "order.view", name: "查看订单" },
-              { id: 2, code: "order.create", name: "创建订单" },
-              { id: 7, code: "commission.view", name: "查看提成" },
-            ],
-          },
-        },
-      ];
+      return employeeAPI.getJobPositions();
     }),
 
     create: protectedProcedure
@@ -636,12 +553,7 @@ export const appRouter = router({
         job_position_id: z.string(),
       }))
       .mutation(async ({ input }) => {
-        // TODO: 调用backend API创建员工
-        // 暂时返回成功
-        return {
-          success: true,
-          message: "员工创建成功",
-        };
+        return employeeAPI.create(input);
       }),
 
     delete: protectedProcedure
@@ -649,12 +561,7 @@ export const appRouter = router({
         id: z.number(),
       }))
       .mutation(async ({ input }) => {
-        // TODO: 调用backend API删除员工
-        // 暂时返回成功
-        return {
-          success: true,
-          message: "员工删除成功",
-        };
+        return employeeAPI.delete(input.id);
       }),
   }),
 
@@ -690,34 +597,11 @@ export const appRouter = router({
         orderId: z.number(),
       }))
       .query(async ({ input }) => {
-        // 模拟追溯数据（实际应从backend API获取）
-        return {
-          orderNo: `ORD-${input.orderId}`,
-          customerName: '李记菜市场',
-          totalAmount: 12500,
-          status: 'FULFILLED',
-          createdAt: new Date().toISOString(),
-          rawMaterial: {
-            soybeanBatch: 'SB-2026-02-20-001',
-            waterQuality: '合格（pH 7.2）',
-          },
-          production: {
-            batchNo: `BATCH-2026-02-${String(input.orderId).padStart(6, '0')}`,
-            productionDate: new Date().toISOString(),
-            workshopTemp: 25,
-            sterilizationParams: '121°C × 15min',
-          },
-          logistics: {
-            pickingTime: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-            shippingTime: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-            deliveryTime: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
-            driverName: '张师傅',
-            driverPhone: '138****5678',
-          },
-        };
+        // 通过backend API获取真实追溯数据
+        return traceabilityAPI.getTraceData(input.orderId);
       }),
     
-    // 提交客户评价
+    // 提交客户评价（通过backend API）
     submitFeedback: publicProcedure
       .input(z.object({
         orderId: z.number(),
@@ -728,53 +612,19 @@ export const appRouter = router({
         images: z.array(z.string()).optional(),
       }))
       .mutation(async ({ input }) => {
-        const { getDb } = await import('./db');
-        const { qualityFeedback } = await import('../drizzle/schema');
-        
-        const db = await getDb();
-        if (!db) {
-          throw new Error('Database not available');
-        }
-        
-        const result = await db.insert(qualityFeedback).values({
-          orderId: input.orderId,
-          batchNo: input.batchNo || null,
-          customerName: input.customerName || null,
-          rating: input.rating,
-          comment: input.comment || null,
-          images: input.images ? JSON.stringify(input.images) : null,
-        });
-        
-        return {
-          success: true,
-          feedbackId: result[0].insertId,
-        };
+        return feedbackAPI.submit(input);
       }),
     
-    // 获取订单评价列表
+    // 获取订单评价列表（通过backend API）
     getFeedbackList: publicProcedure
       .input(z.object({
         orderId: z.number(),
       }))
       .query(async ({ input }) => {
-        const { getDb } = await import('./db');
-        const { qualityFeedback } = await import('../drizzle/schema');
-        const { eq } = await import('drizzle-orm');
-        
-        const db = await getDb();
-        if (!db) {
-          return [];
-        }
-        
-        const feedbacks = await db.select().from(qualityFeedback).where(eq(qualityFeedback.orderId, input.orderId));
-        
-        return feedbacks.map((f: any) => ({
-          ...f,
-          images: f.images ? JSON.parse(f.images) : [],
-        }));
+        return feedbackAPI.list(input.orderId);
       }),
 
-    // P25: 投诉直达老板看板
+    // P25: 投诉直达老板看板（通过backend API，不再降级到本地Drizzle）
     submitComplaint: publicProcedure
       .input(z.object({
         batchNo: z.string(),
@@ -786,32 +636,7 @@ export const appRouter = router({
         imageUrls: z.array(z.string()).optional(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const result = await complaintAPI.submitComplaint(input);
-          return result;
-        } catch (error: any) {
-          console.error('[public.submitComplaint] Error:', error.message);
-          // 如果backend不可用，存入本地数据库
-          const { getDb } = await import('./db');
-          const { qualityComplaints } = await import('../drizzle/schema');
-          const db = await getDb();
-          if (db) {
-            const [complaint] = await db.insert(qualityComplaints).values({
-              batchNo: input.batchNo,
-              driverId: input.driverId || null,
-              orderId: input.orderId,
-              customerName: input.complainantName,
-              customerPhone: input.complainantPhone || null,
-              complaintType: 'QUALITY' as const,
-              complaintContent: input.complaintContent,
-              complaintImages: input.imageUrls ? JSON.stringify(input.imageUrls) : null,
-              status: 'PENDING',
-              createdAt: new Date(),
-            }).$returningId();
-            return { id: complaint.id, message: '投诉已提交，将直接发送至CEO看板' };
-          }
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '投诉提交失败' });
-        }
+        return complaintAPI.submitComplaint(input);
       }),
   }),
 

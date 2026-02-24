@@ -2,166 +2,213 @@
  * 订单详情页和客户评价功能测试
  * 
  * 测试范围：
- * 1. orders.get procedure - 获取订单详情
- * 2. public.submitFeedback mutation - 提交客户评价
- * 3. public.getFeedbackList query - 获取评价列表
+ * 1. orders.get procedure - 获取订单详情（通过backend API）
+ * 2. public.submitFeedback mutation - 提交客户评价（通过backend API）
+ * 3. public.getFeedbackList query - 获取评价列表（通过backend API）
+ * 4. public.getTraceData query - 获取追溯数据（通过backend API）
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { appRouter } from './routers';
 import type { TrpcContext } from './_core/context';
 
-// Mock context
-const createMockContext = (user: any = null): TrpcContext => ({
+// 创建测试上下文
+const createTestContext = (user: any = null): TrpcContext => ({
   req: {} as any,
   res: {} as any,
   user,
 });
 
-describe('订单详情页和客户评价功能', () => {
-  describe('orders.get - 获取订单详情', () => {
-    it('应该成功获取订单详情（Mock数据）', async () => {
-      const caller = appRouter.createCaller(createMockContext({
-        id: 1,
-        openId: 'test-user',
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'admin',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+const adminUser = {
+  id: 1,
+  openId: 'test-user',
+  name: 'Test User',
+  email: 'test@example.com',
+  role: 'admin',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-      // 注意：由于backend API可能不可用，这个测试可能会失败
-      // 这里只验证procedure存在且可以被调用
-      try {
-        const result = await caller.orders.get({ orderId: 1 });
-        expect(result).toBeDefined();
-      } catch (error: any) {
-        // 如果backend不可用，至少验证错误是预期的
-        expect(error.message).toBeDefined();
-      }
+// 所有数据通过backend API获取，无Drizzle直连
+vi.mock('./backend-api', () => ({
+  ordersAPI: {
+    get: vi.fn().mockResolvedValue({
+      id: 1,
+      orderNo: 'ORD-20250101-000001',
+      customerName: '菜市场-0001',
+      totalAmount: 3500,
+      status: 'FULFILLED',
+      items: [{ id: 1, productName: '普通千张', quantity: 100, unitPrice: 8.5, totalPrice: 850 }],
+    }),
+    list: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+    approve: vi.fn().mockResolvedValue({ success: true }),
+    reject: vi.fn().mockResolvedValue({ success: true }),
+    fulfill: vi.fn().mockResolvedValue({ success: true }),
+  },
+  invoicesAPI: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }) },
+  paymentsAPI: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }), create: vi.fn() },
+  applyAPI: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }), create: vi.fn() },
+  auditLogsAPI: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }) },
+  customersAPI: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }), get: vi.fn() },
+  commissionRulesAPI: { list: vi.fn().mockResolvedValue([]) },
+  ceoRadarAPI: { getRadarData: vi.fn().mockResolvedValue({}) },
+  antiFraudAPI: { getPriceAnomalies: vi.fn(), reviewAnomaly: vi.fn() },
+  creditAPI: { getScores: vi.fn(), getScoreDetail: vi.fn(), recalculate: vi.fn() },
+  governanceAPI: { getRoles: vi.fn(), getPermissions: vi.fn() },
+  complaintAPI: { submitComplaint: vi.fn(), getUnreadCount: vi.fn(), getComplaints: vi.fn(), markAsRead: vi.fn(), updateComplaintStatus: vi.fn() },
+  employeeAPI: {
+    list: vi.fn().mockResolvedValue([
+      { id: 1, username: 'admin', full_name: '系统管理员', department: '管理部', status: 'ACTIVE' }
+    ]),
+    getJobPositions: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({ success: true }),
+    delete: vi.fn().mockResolvedValue({ success: true }),
+  },
+  myPerformanceAPI: {
+    get: vi.fn().mockResolvedValue({
+      totalRevenue: 1250000,
+      orderCount: 45,
+      newCustomerCount: 8,
+      paymentRate: 0.92,
+      overdueAmount: 50000,
+      totalCommission: 28750,
+    }),
+  },
+  traceabilityAPI: {
+    getTraceData: vi.fn().mockResolvedValue({
+      orderNo: 'ORD-20250101-000001',
+      customerName: '菜市场-0001',
+      totalAmount: 3500,
+      status: 'FULFILLED',
+      rawMaterial: { soybeanBatch: 'SB-2025-01-01-001', waterQuality: '合格' },
+      production: { batchNo: 'QZ20250101001', productionDate: '2025-01-01' },
+      logistics: { driverName: '张师傅', deliveryTime: '2025-01-01T10:00:00Z' },
+    }),
+  },
+  feedbackAPI: {
+    submit: vi.fn().mockResolvedValue({ success: true, feedbackId: 1 }),
+    list: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+describe('订单详情页和客户评价功能（backend API模式）', () => {
+  describe('orders.get - 获取订单详情', () => {
+    it('应该通过backend API获取订单详情', async () => {
+      const caller = appRouter.createCaller(createTestContext(adminUser));
+      const result = await caller.orders.get({ orderId: 1 });
+      expect(result).toBeDefined();
+      expect(result.orderNo).toBe('ORD-20250101-000001');
+      expect(result.customerName).toBe('菜市场-0001');
     });
   });
 
   describe('public.submitFeedback - 提交客户评价', () => {
-    it('应该成功提交客户评价', async () => {
-      const caller = appRouter.createCaller(createMockContext());
-
-      const feedbackData = {
+    it('应该通过backend API提交客户评价', async () => {
+      const caller = appRouter.createCaller(createTestContext());
+      const result = await caller.public.submitFeedback({
         orderId: 1,
-        batchNo: 'QZ202602240001',
+        batchNo: 'QZ20250101001',
         customerName: '张三',
         rating: 5,
-        comment: '产品质量很好，非常满意！',
+        comment: '产品质量很好',
         images: ['https://example.com/image1.jpg'],
-      };
-
-      try {
-        const result = await caller.public.submitFeedback(feedbackData);
-        expect(result.success).toBe(true);
-        expect(result.feedbackId).toBeDefined();
-      } catch (error: any) {
-        // 如果数据库不可用或表不存在，验证错误消息
-        expect(error.message).toBeDefined();
-      }
+      });
+      expect(result.success).toBe(true);
+      expect(result.feedbackId).toBe(1);
     });
 
     it('应该验证必填字段', async () => {
-      const caller = appRouter.createCaller(createMockContext());
-
-      const invalidData = {
-        orderId: 1,
-        rating: 0, // 无效评分
-      };
-
+      const caller = appRouter.createCaller(createTestContext());
       try {
-        await caller.public.submitFeedback(invalidData as any);
-        // 如果没有抛出错误，测试失败
+        await caller.public.submitFeedback({ orderId: 1, rating: 0 } as any);
         expect(true).toBe(false);
       } catch (error: any) {
-        // 应该抛出验证错误
         expect(error).toBeDefined();
       }
     });
   });
 
   describe('public.getFeedbackList - 获取评价列表', () => {
-    it('应该成功获取评价列表', async () => {
-      const caller = appRouter.createCaller(createMockContext());
-
-      try {
-        const result = await caller.public.getFeedbackList({ orderId: 1 });
-        expect(Array.isArray(result)).toBe(true);
-      } catch (error: any) {
-        // 如果数据库不可用，验证错误消息
-        expect(error.message).toBeDefined();
-      }
-    });
-
-    it('应该返回空数组当订单无评价时', async () => {
-      const caller = appRouter.createCaller(createMockContext());
-
-      try {
-        const result = await caller.public.getFeedbackList({ orderId: 999999 });
-        expect(Array.isArray(result)).toBe(true);
-        expect(result.length).toBe(0);
-      } catch (error: any) {
-        // 如果数据库不可用，验证错误消息
-        expect(error.message).toBeDefined();
-      }
+    it('应该通过backend API获取评价列表', async () => {
+      const caller = appRouter.createCaller(createTestContext());
+      const result = await caller.public.getFeedbackList({ orderId: 1 });
+      expect(Array.isArray(result)).toBe(true);
     });
   });
 
-  describe('集成测试 - 完整流程', () => {
-    it('应该完成：提交评价 -> 获取评价列表', async () => {
-      const caller = appRouter.createCaller(createMockContext());
-      const orderId = Math.floor(Math.random() * 1000000);
+  describe('public.getTraceData - 获取追溯数据', () => {
+    it('应该通过backend API获取真实追溯数据', async () => {
+      const caller = appRouter.createCaller(createTestContext());
+      const result = await caller.public.getTraceData({ orderId: 1 });
+      expect(result).toBeDefined();
+      expect(result.orderNo).toBe('ORD-20250101-000001');
+      expect(result.production.batchNo).toBe('QZ20250101001');
+      expect(result.logistics.driverName).toBe('张师傅');
+    });
+  });
 
-      try {
-        // 1. 提交评价
-        const submitResult = await caller.public.submitFeedback({
-          orderId,
-          batchNo: 'QZ202602240001',
-          customerName: '李四',
-          rating: 4,
-          comment: '不错的产品',
-        });
-        expect(submitResult.success).toBe(true);
+  describe('public.submitComplaint - 投诉直达CEO', () => {
+    it('应该通过backend API提交投诉（无Drizzle降级）', async () => {
+      const { complaintAPI } = await import('./backend-api');
+      (complaintAPI.submitComplaint as any).mockResolvedValue({
+        id: 1,
+        message: '投诉已提交，将直接发送至CEO看板',
+      });
 
-        // 2. 获取评价列表
-        const feedbacks = await caller.public.getFeedbackList({ orderId });
-        expect(feedbacks.length).toBeGreaterThan(0);
-        
-        // 3. 验证评价内容
-        const feedback = feedbacks[0];
-        expect(feedback.customerName).toBe('李四');
-        expect(feedback.rating).toBe(4);
-        expect(feedback.comment).toBe('不错的产品');
-      } catch (error: any) {
-        // 如果数据库不可用，跳过测试
-        console.log('Database not available, skipping integration test');
-        expect(error.message).toBeDefined();
-      }
+      const caller = appRouter.createCaller(createTestContext());
+      const result = await caller.public.submitComplaint({
+        batchNo: 'QZ20250101001',
+        orderId: 1,
+        complainantName: '李四',
+        complaintContent: '产品有异味',
+      });
+      expect(result.id).toBe(1);
     });
   });
 });
 
-describe('OrderQRCode组件', () => {
+describe('员工管理（backend API模式）', () => {
+  it('应该通过backend API获取员工列表', async () => {
+    const caller = appRouter.createCaller(createTestContext(adminUser));
+    const result = await caller.employee.list();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].username).toBe('admin');
+  });
+
+  it('应该通过backend API创建员工', async () => {
+    const caller = appRouter.createCaller(createTestContext(adminUser));
+    const result = await caller.employee.create({
+      username: 'newuser',
+      email: 'new@example.com',
+      password: 'test123',
+      full_name: '新员工',
+      job_position_id: '1',
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('个人业绩（backend API模式）', () => {
+  it('应该通过backend API获取个人业绩', async () => {
+    const caller = appRouter.createCaller(createTestContext(adminUser));
+    const result = await caller.commission.myPerformance();
+    expect(result).toBeDefined();
+    expect(result.totalRevenue).toBe(1250000);
+    expect(result.totalCommission).toBe(28750);
+  });
+});
+
+describe('URL解析', () => {
   it('应该生成正确的追溯URL', () => {
     const orderId = 123;
     const expectedUrl = `https://example.com/public/trace/${orderId}`;
-    
-    // 验证URL格式
     expect(expectedUrl).toContain('/public/trace/');
     expect(expectedUrl).toContain('123');
   });
-});
 
-describe('PublicTrace页面', () => {
   it('应该正确解析URL参数', () => {
     const testUrl = '/public/trace/456';
     const match = testUrl.match(/\/public\/trace\/(\d+)/);
-    
     expect(match).toBeDefined();
     expect(match?.[1]).toBe('456');
   });

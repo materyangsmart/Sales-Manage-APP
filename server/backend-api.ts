@@ -848,3 +848,121 @@ export const complaintAPI = {
     }, 'Update Complaint Status');
   },
 };
+
+
+/**
+ * ========================================
+ * 员工管理API
+ * ========================================
+ */
+
+export const employeeAPI = {
+  /**
+   * 获取员工列表
+   */
+  async list(orgId: number = 1): Promise<any[]> {
+    return request<any[]>(`/api/internal/users?orgId=${orgId}`, {}, 'Get Employee List');
+  },
+
+  /**
+   * 获取职位模板列表
+   */
+  async getJobPositions(): Promise<any[]> {
+    return request<any[]>('/api/internal/governance/position-templates', {}, 'Get Job Positions');
+  },
+
+  /**
+   * 创建员工
+   */
+  async create(data: {
+    orgId?: number;
+    username: string;
+    email: string;
+    password: string;
+    full_name?: string;
+    phone?: string;
+    department?: string;
+    job_position_id: string;
+  }): Promise<any> {
+    return request<any>('/api/internal/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, 'Create Employee');
+  },
+
+  /**
+   * 删除员工
+   */
+  async delete(id: number): Promise<any> {
+    return request<any>(`/api/internal/users/${id}`, {
+      method: 'DELETE',
+    }, 'Delete Employee');
+  },
+};
+
+
+/**
+ * ========================================
+ * 个人业绩API
+ * ========================================
+ */
+
+export const myPerformanceAPI = {
+  /**
+   * 获取当前用户的个人业绩数据
+   * @param userId - 当前登录用户的ID
+   */
+  async get(userId: number): Promise<any> {
+    return request<any>(`/api/internal/commission/my-performance?userId=${userId}`, {}, 'Get My Performance');
+  },
+};
+
+
+/**
+ * ========================================
+ * 追溯数据API
+ * ========================================
+ */
+
+export const traceabilityAPI = {
+  /**
+   * 获取订单追溯数据（公开接口）
+   * @param code - 追溯码（orderId）
+   */
+  async getTraceData(code: string | number): Promise<any> {
+    return request<any>(`/api/internal/traceability/${code}`, {}, 'Get Trace Data');
+  },
+};
+
+
+/**
+ * ========================================
+ * 质量反馈API（消灭Drizzle直连）
+ * ========================================
+ */
+
+export const feedbackAPI = {
+  /**
+   * 提交客户评价
+   */
+  async submit(data: {
+    orderId: number;
+    batchNo?: string;
+    customerName?: string;
+    rating: number;
+    comment?: string;
+    images?: string[];
+  }): Promise<{ success: boolean; feedbackId: number }> {
+    return request<{ success: boolean; feedbackId: number }>('/api/internal/feedback/submit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, 'Submit Feedback');
+  },
+
+  /**
+   * 获取订单评价列表
+   */
+  async list(orderId: number): Promise<any[]> {
+    return request<any[]>(`/api/internal/feedback/list?orderId=${orderId}`, {}, 'Get Feedback List');
+  },
+};

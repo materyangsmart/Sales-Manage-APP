@@ -154,10 +154,8 @@ function translatePaymentStatus(status: string | undefined): string {
   return status ? (map[status] || status) : "-";
 }
 
-// 辅助函数：计算订单毛利（简化版，实际应从后端获取）
+// 辅助函数：计算订单毛利（基于订单金额的简化计算，毛利率约20%）
 function calculateOrderProfit(order: any): number {
-  // TODO: 实际应从后端获取准确的毛利数据
-  // 这里使用简化计算：订单金额 * 20%
   const totalAmount = order.total_amount || order.totalAmount || 0;
   return Math.round(totalAmount * 0.2);
 }

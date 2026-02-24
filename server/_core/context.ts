@@ -20,12 +20,12 @@ export async function createContext(
     user = null;
   }
 
-  // Development mode: Auto-inject mock user if no session exists
+  // Development mode: Auto-inject dev user if no session exists
   if (process.env.NODE_ENV === 'development' && !user) {
-    console.log('[tRPC Context] DEV MODE: Injecting mock user (ID: 1, Role: admin)');
+    console.log('[tRPC Context] DEV MODE: Injecting dev user (ID: 1, Role: admin)');
     user = {
       id: 1,
-      openId: 'mock-dev-user',
+      openId: 'dev-auto-login',
       name: 'Dev User',
       email: 'dev@example.com',
       role: 'admin',

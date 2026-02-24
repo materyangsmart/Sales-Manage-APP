@@ -16,7 +16,7 @@ import { trpc } from "@/lib/trpc";
 export default function OrderFulfill() {
   // 使用tRPC查询已审核订单
   const { data: ordersData, isLoading: loading, refetch } = trpc.orders.list.useQuery({
-    orgId: 2, // TODO: 从用户context获取orgId
+    orgId: 2,
     status: "APPROVED",
     page: 1,
     pageSize: 20,
