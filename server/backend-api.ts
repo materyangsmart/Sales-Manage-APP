@@ -95,6 +95,13 @@ export const ordersAPI = {
   },
   
   /**
+   * 获取订单详情
+   */
+  get: async (orderId: number) => {
+    return request<any>(`/api/internal/orders/${orderId}`);
+  },
+  
+  /**
    * 审核订单（批准）
    */
   approve: async (orderId: number, remark?: string) => {

@@ -93,6 +93,29 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return ordersAPI.fulfill(input.orderId);
       }),
+    
+    get: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          return await ordersAPI.get(input.orderId);
+        } catch (error: any) {
+          if (error.status === 404) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: '订单不存在',
+              cause: error,
+            });
+          }
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to fetch order',
+            cause: error,
+          });
+        }
+      }),
   }),
   
   invoices: router({
@@ -649,6 +672,63 @@ export const appRouter = router({
             driverPhone: '138****5678',
           },
         };
+      }),
+    
+    // 提交客户评价
+    submitFeedback: publicProcedure
+      .input(z.object({
+        orderId: z.number(),
+        batchNo: z.string().optional(),
+        customerName: z.string().optional(),
+        rating: z.number().min(1).max(5),
+        comment: z.string().optional(),
+        images: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const { qualityFeedback } = await import('../drizzle/schema');
+        
+        const db = await getDb();
+        if (!db) {
+          throw new Error('Database not available');
+        }
+        
+        const result = await db.insert(qualityFeedback).values({
+          orderId: input.orderId,
+          batchNo: input.batchNo || null,
+          customerName: input.customerName || null,
+          rating: input.rating,
+          comment: input.comment || null,
+          images: input.images ? JSON.stringify(input.images) : null,
+        });
+        
+        return {
+          success: true,
+          feedbackId: result[0].insertId,
+        };
+      }),
+    
+    // 获取订单评价列表
+    getFeedbackList: publicProcedure
+      .input(z.object({
+        orderId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const { qualityFeedback } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const db = await getDb();
+        if (!db) {
+          return [];
+        }
+        
+        const feedbacks = await db.select().from(qualityFeedback).where(eq(qualityFeedback.orderId, input.orderId));
+        
+        return feedbacks.map((f: any) => ({
+          ...f,
+          images: f.images ? JSON.parse(f.images) : [],
+        }));
       }),
   }),
 });

@@ -524,3 +524,36 @@
 - [ ] 在核销操作页面添加权限检查
 - [ ] 在提成规则页面添加权限检查
 - [ ] 在员工管理页面添加权限检查
+
+
+## P21 - 订单详情页和客户评价功能
+
+### 订单详情页
+- [ ] 创建OrderDetail.tsx页面组件
+- [ ] 添加路由配置（/orders/detail/:id）
+- [ ] 显示订单基本信息（客户、日期、状态、金额）
+- [ ] 显示订单项列表（产品、数量、单价、小计）
+- [ ] 显示批次号
+- [ ] 集成OrderQRCode组件显示二维码
+- [ ] 添加"复制追溯链接"按钮
+
+### 客户评价功能
+- [x] 创建quality_feedback数据库表
+- [x] 在drizzle/schema.ts中定义表结构
+- [x] 创建SQL脚本（scripts/create-quality-feedback-table.sql）
+- [x] 在server/routers.ts中添加feedback procedures（submitFeedback, getFeedbackList）
+- [x] 在PublicTrace.tsx中添加评价表单
+- [x] 支持文字评价（textarea）
+- [x] 支持图片上传（最多3张）
+- [x] 支持评分（1-5星）
+- [x] 显示已有评价列表
+
+### 测试验证
+- [x] 创建order-detail-feedback.test.ts测试文件
+- [x] 测试orders.get procedure
+- [x] 测试public.submitFeedback mutation
+- [x] 测试public.getFeedbackList query
+- [x] 测试OrderQRCode组件URL生成
+- [x] 测试PublicTrace页面URL解析
+- [x] 所有8个测试用例全部通过
+- [ ] 推送代码到GitHub

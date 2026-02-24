@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { useParams } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Package, Factory, Truck, CheckCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, Upload, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function PublicTrace() {
   const params = useParams();
@@ -13,6 +19,48 @@ export default function PublicTrace() {
     { orderId },
     { enabled: orderId > 0 }
   );
+  
+  const { data: feedbacks, refetch: refetchFeedbacks } = trpc.public.getFeedbackList.useQuery(
+    { orderId },
+    { enabled: orderId > 0 }
+  );
+  
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [customerName, setCustomerName] = useState('');
+  const [comment, setComment] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  
+  const submitFeedback = trpc.public.submitFeedback.useMutation({
+    onSuccess: () => {
+      toast.success('评价提交成功！');
+      setShowFeedbackForm(false);
+      setRating(5);
+      setCustomerName('');
+      setComment('');
+      setImageUrls([]);
+      refetchFeedbacks();
+    },
+    onError: (error) => {
+      toast.error(`提交失败：${error.message}`);
+    },
+  });
+  
+  const handleSubmitFeedback = () => {
+    if (!customerName.trim()) {
+      toast.error('请输入您的姓名');
+      return;
+    }
+    
+    submitFeedback.mutate({
+      orderId,
+      batchNo: traceData?.production?.batchNo,
+      customerName: customerName.trim(),
+      rating,
+      comment: comment.trim() || undefined,
+      images: imageUrls.length > 0 ? imageUrls : undefined,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -187,12 +235,182 @@ export default function PublicTrace() {
         {/* 客户评价 */}
         <Card>
           <CardHeader>
-            <CardTitle>客户评价与质量反馈</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              客户评价与质量反馈
+            </CardTitle>
+            <CardDescription>您的反馈将帮助我们持续改进产品质量</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-sm text-muted-foreground text-center py-4">
-              暂无评价，扫码后可提交质量反馈
-            </div>
+          <CardContent className="space-y-4">
+            {/* 已有评价列表 */}
+            {feedbacks && feedbacks.length > 0 && (
+              <div className="space-y-3">
+                {feedbacks.map((feedback: any) => (
+                  <div key={feedback.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{feedback.customerName}</span>
+                        <div className="flex items-center">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < feedback.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(feedback.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {feedback.comment && (
+                      <p className="text-sm text-muted-foreground">{feedback.comment}</p>
+                    )}
+                    {feedback.images && feedback.images.length > 0 && (
+                      <div className="flex gap-2">
+                        {feedback.images.map((url: string, idx: number) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            alt={`评价图片${idx + 1}`}
+                            className="w-20 h-20 object-cover rounded border"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <Separator />
+              </div>
+            )}
+            
+            {/* 评价表单 */}
+            {!showFeedbackForm ? (
+              <div className="text-center py-4">
+                <Button onClick={() => setShowFeedbackForm(true)} className="w-full">
+                  提交我的评价
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="customerName">您的姓名 *</Label>
+                  <Input
+                    id="customerName"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="请输入您的姓名"
+                  />
+                </div>
+                
+                <div>
+                  <Label>评分 *</Label>
+                  <div className="flex items-center gap-2 mt-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setRating(i + 1)}
+                        className="focus:outline-none"
+                      >
+                        <Star
+                          className={`w-8 h-8 cursor-pointer transition-colors ${
+                            i < rating
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-300 hover:text-yellow-200'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {rating} 星
+                    </span>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="comment">评价内容（可选）</Label>
+                  <Textarea
+                    id="comment"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="分享您的使用体验或建议..."
+                    rows={4}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="images">上传图片（可选，最多3张）</Label>
+                  <div className="mt-2 space-y-2">
+                    {imageUrls.map((url, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input value={url} readOnly />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== idx))}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                    {imageUrls.length < 3 && (
+                      <div className="flex gap-2">
+                        <Input
+                          id="newImageUrl"
+                          placeholder="输入图片URL"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const input = e.currentTarget;
+                              if (input.value.trim()) {
+                                setImageUrls([...imageUrls, input.value.trim()]);
+                                input.value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById('newImageUrl') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              setImageUrls([...imageUrls, input.value.trim()]);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Upload className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    提示：请先将图片上传到图床或云存储，然后粘贴图片URL
+                  </p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSubmitFeedback}
+                    disabled={submitFeedback.isPending}
+                    className="flex-1"
+                  >
+                    {submitFeedback.isPending ? '提交中...' : '提交评价'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowFeedbackForm(false)}
+                    disabled={submitFeedback.isPending}
+                  >
+                    取消
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

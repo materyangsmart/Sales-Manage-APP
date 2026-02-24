@@ -40,3 +40,19 @@ export const salesCommissionRules = mysqlTable("sales_commission_rules", {
 
 export type SalesCommissionRule = typeof salesCommissionRules.$inferSelect;
 export type InsertSalesCommissionRule = typeof salesCommissionRules.$inferInsert;
+
+// Quality feedback table for customer reviews
+export const qualityFeedback = mysqlTable("quality_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  batchNo: varchar("batchNo", { length: 50 }),
+  customerName: varchar("customerName", { length: 100 }),
+  rating: int("rating").notNull(), // 1-5 stars
+  comment: text("comment"),
+  images: text("images"), // JSON array of image URLs
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QualityFeedback = typeof qualityFeedback.$inferSelect;
+export type InsertQualityFeedback = typeof qualityFeedback.$inferInsert;
