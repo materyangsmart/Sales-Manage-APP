@@ -616,6 +616,41 @@ export const appRouter = router({
         return auditLogsAPI.trace(input.resourceType, input.resourceId);
       }),
   }),
+
+  // Public router (无需登录)
+  public: router({
+    getTraceData: publicProcedure
+      .input(z.object({
+        orderId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        // 模拟追溯数据（实际应从backend API获取）
+        return {
+          orderNo: `ORD-${input.orderId}`,
+          customerName: '李记菜市场',
+          totalAmount: 12500,
+          status: 'FULFILLED',
+          createdAt: new Date().toISOString(),
+          rawMaterial: {
+            soybeanBatch: 'SB-2026-02-20-001',
+            waterQuality: '合格（pH 7.2）',
+          },
+          production: {
+            batchNo: `BATCH-2026-02-${String(input.orderId).padStart(6, '0')}`,
+            productionDate: new Date().toISOString(),
+            workshopTemp: 25,
+            sterilizationParams: '121°C × 15min',
+          },
+          logistics: {
+            pickingTime: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
+            shippingTime: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+            deliveryTime: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
+            driverName: '张师傅',
+            driverPhone: '138****5678',
+          },
+        };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
