@@ -5,7 +5,7 @@
  * INTERNAL_SERVICE_TOKEN只在server端使用，不会暴露到前端
  */
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3100';
 const INTERNAL_SERVICE_TOKEN = process.env.INTERNAL_SERVICE_TOKEN || '';
 
 if (!INTERNAL_SERVICE_TOKEN) {

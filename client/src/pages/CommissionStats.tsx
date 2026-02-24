@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, TrendingUp, Package, Users, DollarSign } from 'lucide-react';
+import { KpiDetailDialog } from '@/components/KpiDetailDialog';
 
 export default function CommissionStats() {
   const [orgId, setOrgId] = useState('2'); // 默认组织ID
@@ -20,6 +21,10 @@ export default function CommissionStats() {
   const [ruleVersion, setRuleVersion] = useState('2026-V1');
   const [customerCategory, setCustomerCategory] = useState<string>('ALL'); // 客户类型过滤器
   const [shouldFetch, setShouldFetch] = useState(false);
+  
+  // KPI详情对话框状态
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailType, setDetailType] = useState<'orders' | 'customers' | null>(null);
 
   // 使用tRPC查询KPI统计
   const queryInput = useMemo(() => ({
@@ -47,6 +52,38 @@ export default function CommissionStats() {
       hasRuleVersion: !!ruleVersion,
     });
     setShouldFetch(true);
+  };
+  
+  // 获取订单详情
+  const { data: orderDetails, isLoading: isLoadingOrders } = trpc.commission.getOrderDetails.useQuery(
+    {
+      orgId: parseInt(orgId),
+      startDate,
+      endDate,
+      customerCategory: customerCategory === 'ALL' ? undefined : (customerCategory as 'WET_MARKET' | 'WHOLESALE_B' | 'SUPERMARKET' | 'ECOMMERCE' | 'DEFAULT'),
+    },
+    {
+      enabled: detailType === 'orders' && detailDialogOpen,
+    }
+  );
+  
+  // 获取新增客户详情
+  const { data: customerDetails, isLoading: isLoadingCustomers } = trpc.commission.getNewCustomerDetails.useQuery(
+    {
+      orgId: parseInt(orgId),
+      startDate,
+      endDate,
+      customerCategory: customerCategory === 'ALL' ? undefined : (customerCategory as 'WET_MARKET' | 'WHOLESALE_B' | 'SUPERMARKET' | 'ECOMMERCE' | 'DEFAULT'),
+    },
+    {
+      enabled: detailType === 'customers' && detailDialogOpen,
+    }
+  );
+  
+  // 处理KPI卡片点击
+  const handleKpiClick = (type: 'orders' | 'customers') => {
+    setDetailType(type);
+    setDetailDialogOpen(true);
   };
 
   return (
@@ -172,7 +209,7 @@ export default function CommissionStats() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 发货总额 */}
-            <Card>
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleKpiClick('orders')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">发货总额</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -185,13 +222,13 @@ export default function CommissionStats() {
                   })}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  已履行订单金额总计
+                  已履行订单金额总计 · 点击查看详情
                 </p>
               </CardContent>
             </Card>
 
             {/* 订单数 */}
-            <Card>
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleKpiClick('orders')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">订单数</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
@@ -201,13 +238,13 @@ export default function CommissionStats() {
                   {data.data.kpi.fulfilledOrderCount}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  已履行订单数量
+                  已履行订单数量 · 点击查看详情
                 </p>
               </CardContent>
             </Card>
 
             {/* 新增客户数 */}
-            <Card>
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleKpiClick('customers')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">新增客户数</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -217,7 +254,7 @@ export default function CommissionStats() {
                   {data.data.kpi.newCustomerCount}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  期间内新增的有效客户
+                  期间内新增的有效客户 · 点击查看详情
                 </p>
               </CardContent>
             </Card>
@@ -383,6 +420,49 @@ export default function CommissionStats() {
           </CardContent>
         </Card>
       )}
+      
+      {/* KPI详情对话框 */}
+      <KpiDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        title={detailType === 'orders' ? '订单详情' : '新增客户详情'}
+        description={
+          detailType === 'orders'
+            ? `期间内已履行的订单列表（${orderDetails?.data?.length || 0}笔）`
+            : `期间内新增的客户列表（${customerDetails?.data?.length || 0}个）`
+        }
+        data={detailType === 'orders' ? orderDetails?.data || null : customerDetails?.data || null}
+        isLoading={detailType === 'orders' ? isLoadingOrders : isLoadingCustomers}
+        columns={
+          detailType === 'orders'
+            ? [
+                { key: 'orderNo', label: '订单编号' },
+                { key: 'customerName', label: '客户名称' },
+                { key: 'customerCategory', label: '客户类型' },
+                {
+                  key: 'totalAmount',
+                  label: '订单金额',
+                  render: (value: number) => `¥${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                },
+                {
+                  key: 'fulfilledAt',
+                  label: '履行时间',
+                  render: (value: string) => new Date(value).toLocaleString('zh-CN'),
+                },
+              ]
+            : [
+                { key: 'customerCode', label: '客户编号' },
+                { key: 'customerName', label: '客户名称' },
+                { key: 'category', label: '客户类型' },
+                {
+                  key: 'createdAt',
+                  label: '创建时间',
+                  render: (value: string) => new Date(value).toLocaleString('zh-CN'),
+                },
+                { key: 'status', label: '状态' },
+              ]
+        }
+      />
     </div>
   );
 }

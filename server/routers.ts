@@ -222,6 +222,117 @@ export const appRouter = router({
           });
         }
       }),
+
+    /**
+     * 获取订单详情列表（用于KPI钻取）
+     */
+    getOrderDetails: protectedProcedure
+      .input(z.object({
+        orgId: z.number(),
+        startDate: z.string(),
+        endDate: z.string(),
+        customerCategory: z.enum(['WET_MARKET', 'WHOLESALE_B', 'SUPERMARKET', 'ECOMMERCE', 'DEFAULT']).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          // 获取期间内已履行的订单
+          const fulfilledOrdersResponse = await ordersAPI.list({
+            orgId: input.orgId,
+            status: 'FULFILLED',
+            page: 1,
+            pageSize: 10000,
+          });
+          
+          const ordersData = fulfilledOrdersResponse.items || fulfilledOrdersResponse.data || [];
+          const startDate = new Date(input.startDate);
+          const endDate = new Date(input.endDate);
+          
+          // 过滤期间内的订单
+          const ordersInPeriod = ordersData.filter((order: any) => {
+            if (!order.fulfilledAt) return false;
+            
+            const fulfilledAt = new Date(order.fulfilledAt);
+            const inPeriod = fulfilledAt >= startDate && fulfilledAt <= endDate;
+            
+            // 如果指定了客户类型且不是"全部类型"，只统计该类型的订单
+            if (input.customerCategory && input.customerCategory !== 'DEFAULT' && order.customer?.category !== input.customerCategory) {
+              return false;
+            }
+            
+            return inPeriod;
+          });
+          
+          return {
+            success: true,
+            data: ordersInPeriod.map((order: any) => ({
+              orderNo: order.orderNo,
+              customerName: order.customer?.name || order.customer?.customerName || 'N/A',
+              customerCategory: order.customer?.category || 'N/A',
+              totalAmount: parseFloat(order.totalAmount || '0'),
+              fulfilledAt: order.fulfilledAt,
+            })),
+          };
+        } catch (error: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to fetch order details',
+            cause: error,
+          });
+        }
+      }),
+
+    /**
+     * 获取新增客户详情列表（用于KPI钻取）
+     */
+    getNewCustomerDetails: protectedProcedure
+      .input(z.object({
+        orgId: z.number(),
+        startDate: z.string(),
+        endDate: z.string(),
+        customerCategory: z.enum(['WET_MARKET', 'WHOLESALE_B', 'SUPERMARKET', 'ECOMMERCE', 'DEFAULT']).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const newCustomersResponse = await customersAPI.list({
+            orgId: input.orgId,
+            createdAfter: input.startDate,
+            page: 1,
+            pageSize: 10000,
+          });
+          
+          const startDate = new Date(input.startDate);
+          const endDate = new Date(input.endDate);
+          
+          const newCustomersInPeriod = newCustomersResponse.data.filter((customer: any) => {
+            const createdAt = new Date(customer.createdAt);
+            const inPeriod = createdAt >= startDate && createdAt <= endDate;
+            
+            // 如果指定了客户类型且不是"全部类型"，只统计该类型的客户
+            if (input.customerCategory && input.customerCategory !== 'DEFAULT' && customer.category !== input.customerCategory) {
+              return false;
+            }
+            
+            return inPeriod;
+          });
+          
+          return {
+            success: true,
+            data: newCustomersInPeriod.map((customer: any) => ({
+              customerCode: customer.customerCode,
+              customerName: customer.name || customer.customerName,
+              category: customer.category,
+              createdAt: customer.createdAt,
+              status: customer.status,
+            })),
+          };
+        } catch (error: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to fetch new customer details',
+            cause: error,
+          });
+        }
+      }),
   }),
 
   commissionRules: router({ 

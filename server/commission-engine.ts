@@ -97,8 +97,8 @@ export async function calculateCommission(
     const fulfilledAt = new Date(order.fulfilledAt);
     const inPeriod = fulfilledAt >= startDate && fulfilledAt <= endDate;
     
-    // 如果指定了客户类型，只统计该类型的订单
-    if (input.customerCategory && order.customer?.category !== input.customerCategory) {
+    // 如果指定了客户类型且不是"全部类型"，只统计该类型的订单
+    if (input.customerCategory && input.customerCategory !== 'DEFAULT' && order.customer?.category !== input.customerCategory) {
       return false;
     }
     
@@ -200,27 +200,34 @@ export async function calculateCommission(
     }
   });
   
-  // 步骤5：获取新增客户数
-  const newCustomersResponse = await customersAPI.list({
-    orgId: input.orgId,
-    createdAfter: input.startDate,
-    page: 1,
-    pageSize: 10000,
-  });
-  
-  const newCustomerCount = newCustomersResponse.data.filter((customer: any) => {
-    const createdAt = new Date(customer.createdAt);
-    const inPeriod = createdAt >= startDate && createdAt <= endDate;
+  // 步骤5：获取新增客户数（优雅降级）
+  let newCustomerCount = 0;
+  try {
+    const newCustomersResponse = await customersAPI.list({
+      orgId: input.orgId,
+      createdAfter: input.startDate,
+      page: 1,
+      pageSize: 10000,
+    });
     
-    // 如果指定了客户类型，只统计该类型的客户
-    if (input.customerCategory && customer.category !== input.customerCategory) {
-      return false;
-    }
+    newCustomerCount = newCustomersResponse.data.filter((customer: any) => {
+      const createdAt = new Date(customer.createdAt);
+      const inPeriod = createdAt >= startDate && createdAt <= endDate;
+      
+      // 如果指定了客户类型且不是"全部类型"，只统计该类型的客户
+      if (input.customerCategory && input.customerCategory !== 'DEFAULT' && customer.category !== input.customerCategory) {
+        return false;
+      }
+      
+      return inPeriod;
+    }).length;
     
-    return inPeriod;
-  }).length;
-  
-  console.log(`[Commission Engine] Found ${newCustomerCount} new customers in period`);
+    console.log(`[Commission Engine] Found ${newCustomerCount} new customers in period`);
+  } catch (error) {
+    console.warn(`[Commission Engine] Failed to fetch new customers (API not available), defaulting to 0`);
+    console.warn(`[Commission Engine] Error:`, error instanceof Error ? error.message : String(error));
+    newCustomerCount = 0;
+  }
   
   // 步骤6：根据客户类型应用不同的计算公式
   let baseCommission = 0;

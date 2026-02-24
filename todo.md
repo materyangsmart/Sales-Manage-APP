@@ -343,9 +343,9 @@
 - [x] 截图保存验收结果
 
 ### Phase 4: 同步代码到GitHub
-- [ ] 配置GitHub token（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）（未执行，等待Phase 3完成）
-- [ ] 执行git push
-- [ ] 验证代码已推送成功
+- [x] 配置GitHub token
+- [x] 执行git push
+- [x] 验证代码已推送成功
 
 ### Phase 5: 生成P6最终交付报告
 - [x] 创建P6_FINAL_DELIVERY_REPORT.md
@@ -368,11 +368,128 @@
 - [x] 截图保存验收结果
 
 ### Phase 3: 代码同步与GitHub
-- [ ] 使用Token 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（未执行，等待Phase 2完成）
-- [ ] 执行git push同步全部成果
-- [ ] 验证代码已推送成功
+- [x] 使用GitHub token
+- [x] 执行git push同步全部成果
+- [x] 验证代码已推送成功
 
 ### Phase 4: 生成P7最终验收报告
 - [x] 创建P7_FINAL_ACCEPTANCE_REPORT.md
 - [x] 包含验收截图和计算说明
 - [ ] 包含PR链接和CI检查结果（未执行，等待Phase 2完成）
+
+
+## P8 - 修复tRPC鉴权拦截并启用看板查询
+
+### 问题描述
+- [x] 看板查询报错：UNAUTHORIZED: Please login (10001)
+- [x] tRPC路由缺少Session Cookie
+- [x] 需要在开发环境下绕过鉴权
+
+### 修复任务
+- [x] 修改前端tRPC中间件（server/_core/context.ts），在开发环境下自动注入Mock用户（ID: 1, Role: admin）
+- [x] 保持commission.getKpiStats使用protectedProcedure（Mock用户已注入，鉴权会通过）
+- [x] 修复BACKEND_URL配置（从http://localhost:3000改为http://localhost:3100）
+- [x] 推送代码到GitHub
+
+
+## P9 - 深度调试提成查询失败问题
+
+### 问题描述
+- [x] 用户执行SQL脚本后仍然无法查询到结果
+- [x] 需要深入调试backend API和tRPC查询逻辑
+- [x] 需要分析网络请求和错误日志
+
+### 根本原因
+- [x] 数据库中不存在sales_commission_rules表
+- [x] 之前的SQL脚本只有INSERT语句，没有CREATE TABLE
+- [x] 导致所有查询都报错"Unknown column 'sales_commission_rules.version'"
+
+### 调试任务
+- [x] 执行SQL脚本并验证数据库中的规则记录
+- [x] 检查backend的commission API查询逻辑
+- [x] 检查tRPC的getKpiStats procedure实现
+- [x] 使用浏览器DevTools分析网络请求和响应
+- [x] 修复发现的所有问题（创建表+插入15条规则）
+- [x] 发现第二个问题：ops-frontend缺少DATABASE_URL环境变量
+- [x] 用户配置DATABASE_URL并重启ops-frontend
+- [x] 发现第三个问题：backend缺少/api/internal/customers API
+- [x] 修改commission-engine.ts，在customers API不可用时优雅降级（newCustomerCount=0）
+- [ ] 验证提成查询功能正常（即使没有订单数据）
+- [ ] 推送修复到GitHub
+
+
+## P10 - 修复33个Backend编译错误
+
+### 问题描述
+- [ ] Customer Entity缺失customerCode字段
+- [ ] seed-kpi-data.ts中使用了不存在的customerCode字段查询
+- [ ] seed-kpi-data.ts中category类型不匹配（字符串 vs enum）
+- [ ] seed-kpi-data.ts中customer可能为null的警告
+- [ ] 导入路径错误（internal-auth.guard, organization.entity）
+- [ ] Backend服务无法启动（端口3100未监听）
+
+### 修复任务
+- [ ] 在Customer Entity中添加customerCode字段
+- [ ] 修复seed-kpi-data.ts的类型错误（使用CustomerCategory enum）
+- [ ] 添加null检查和非空断言
+- [ ] 修复customer.controller.ts的InternalAuthGuard导入路径
+- [ ] 修复customer.entity.ts的Organization导入路径
+- [ ] 本地执行npm run build确保0 Errors
+- [ ] 推送到GitHub
+
+
+## P11 - 提成系统端到端验收（沙箱实机）
+
+### 目标
+在沙箱环境中完成100%可用验收，确保用户能在浏览器中查询到提成数据
+
+### 验收步骤
+- [ ] Phase 1: 修复backend编译错误（npm run build → 0 Errors）
+- [ ] Phase 2: 启动backend（3100端口）+ ops-frontend（3000端口）
+- [ ] Phase 3: 运行seed-kpi-data.ts并验证数据注入（SELECT count(*) FROM orders）
+- [ ] Phase 4: 浏览器访问http://localhost:3000/commission/stats并查询
+- [ ] Phase 5: 截图证明"李记菜市场"的提成数据可见
+- [ ] Phase 6: 推送到GitHub
+
+### 验收标准
+必须在沙箱浏览器中看到提成查询结果，包含"李记菜市场"的KPI数据和提成明细
+
+
+## P12 - 构建全业务仿真系统与百万级数据注入
+
+### 目标
+构建完整的年度经营模拟系统，生成百万级真实业务数据，验证提成查询、收款管理、发票管理等核心功能。
+
+### 技术债务修复
+- [ ] 修复customer.service.ts的findOne返回null问题
+- [ ] 验证backend编译成功（npm run build → 0 Errors）
+- [ ] 确保backend在3100端口稳定启动
+
+### 数据注入要求
+- [ ] 创建seed-full-business-data.ts脚本
+- [ ] 模拟年营业额：5000万/月 × 12个月 = 6亿人民币
+- [ ] 客户增长：每月新增57个客户（50菜市场 + 5商超 + 2批发商）
+- [ ] 客户流失：20%年化流失率
+- [ ] 订单生成：每客户每月2-5笔订单
+- [ ] 发票生成：每笔订单自动生成增值税发票
+- [ ] 回款核销：60%正常、20%逾期、10%部分核销、10%待核销
+
+### 业务逻辑验证
+- [ ] 自动对账逻辑：一张水单对应五张发票
+- [ ] 极端账期测试：超过90天的回款产生坏账预警
+- [ ] 数据一致性：组织、销售人员、客户ID关联正确
+- [ ] 性能优化：使用batchInsert防止内存溢出
+
+### 沙箱验收
+- [ ] 启动backend服务（3100端口）
+- [ ] 运行种子脚本注入数据
+- [ ] 访问/commission/stats查看提成数据
+- [ ] 访问/ar/summary查看收款汇总
+- [ ] 访问/ar/invoices查看发票管理
+- [ ] 截图证明：显示2026年1月数千万营业额的提成看板
+
+### 交付清单
+- [ ] seed-full-business-data.ts脚本
+- [ ] 数据注入报告
+- [ ] 沙箱验收截图
+- [ ] 推送到GitHub
