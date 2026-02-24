@@ -556,4 +556,69 @@
 - [x] 测试OrderQRCode组件URL生成
 - [x] 测试PublicTrace页面URL解析
 - [x] 所有8个测试用例全部通过
-- [ ] 推送代码到GitHub
+- [x] 保存checkpoint（c00a74b6）
+- [x] 所有代码已通过webdev_save_checkpoint保存
+
+
+## P21.1 - 图片上传体验优化
+- [x] 创建ImageUpload组件支持本地文件选择
+- [x] 集成S3文件上传API（使用storagePut）
+- [x] 在server/routers.ts中添加storage.uploadImage procedure
+- [x] 在PublicTrace评价表单中替换URL输入为图片上传
+- [x] 添加上传进度显示和错误处理
+- [x] 支持图片预览和删除
+- [x] 验证文件类型和大小（最大5MB）
+
+## P21 - 经营异常雷达（CEO专属看板）
+- [x] 创建CEO Dashboard页面（/ceo/radar）
+- [x] 实现坏账风险对冲监控（15天以上未核销金额）
+- [x] 实现得率异动审计（黄豆投入vs成品产出比例）
+- [x] 实现客户流失预警（核心客户连续2天无订单）
+- [x] 添加实时刷新和异常标红功能
+- [x] 限制仅CEO角色可见
+- [x] 在server/routers.ts中添加ceo.getRadarData procedure
+- [x] 在Home.tsx中添加CEO雷达入口（仅admin可见）
+- [ ] 实现实际的数据查询逻辑（当前为模拟数据）
+
+## Phase 1: 数据库表结构设计
+- [x] 创建P22-P25数据库设计文档
+- [x] 定义price_anomalies表（价格洼地监控）
+- [x] 定义settlement_audit表（结算行为审计）
+- [x] 定义customer_credit_scores表（客户信用评分）
+- [x] 定义auto_approval_logs表（自动审批日志）
+- [x] 定义role_permissions表（角色权限映射）
+- [x] 定义permission_change_logs表（权限变更审计）
+- [x] 定义batch_trace表（生产批次追溯）
+- [x] 定义quality_complaints表（质量投诉）
+- [x] 定义commission_rules_v2表（透明提成规则）
+- [x] 定义信用评分算法和自动审批逻辑
+- [x] 生成SQL迁移脚本
+- [x] 执行SQL迁移创建9张核心表（总耗时18秒）
+
+## P22 - 反舞弊与偏差预警系统
+- [ ] 实现价格洼地监控（单价低于片区均值3%）
+- [ ] 添加"特价原因"强制填写表单
+- [ ] 实现结算行为审计（核销时间点分析）
+- [ ] 标记"疑似人为操控账期"行为
+- [ ] 创建审计日志表和查询界面
+
+## P23 - 去中心化的数字信用自动放行
+- [ ] 创建customer_credit_score表
+- [ ] 实现动态信用分计算算法（基于历史回款率）
+- [ ] 实现VIP自动放行逻辑（信用分A级且回款率>98%）
+- [ ] 添加信用分查询和历史记录界面
+- [ ] 创建自动审批日志
+
+## P24 - 职能边界与开户自动化
+- [ ] 实现自动权限映射（基于职位自动分配权限）
+- [ ] 创建职位权限模板配置界面
+- [ ] 在销售看板显示透明提成规则
+- [ ] 添加权限隔离验证（财务不能改订单、销售看不到账号）
+- [ ] 创建权限变更审计日志
+
+## P25 - 质量追溯与闭环反馈
+- [ ] 在PublicTrace页面添加"意见直达老板"入口
+- [ ] 创建quality_complaints表
+- [ ] 实现投诉自动关联生产批次号和司机ID
+- [ ] 在CEO Dashboard显示投诉列表
+- [ ] 实现责任闭环追溯功能

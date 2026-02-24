@@ -30,6 +30,84 @@ export const appRouter = router({
     };
   }),
 
+  // CEO router - 经营异常雷达
+  ceo: router({
+    getRadarData: protectedProcedure.query(async ({ ctx }) => {
+      // 限制仅admin角色可访问
+      if (ctx.user?.role !== 'admin') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: '仅CEO可访问此功能' });
+      }
+      
+      // TODO: 实现实际的雷达数据查询逻辑
+      // 这里先返回模拟数据
+      return {
+        badDebtRisks: [
+          {
+            customerId: 1,
+            customerName: '李记菜市场',
+            unpaidAmount: 25000,
+            overdueDays: 18,
+            creditScore: 75,
+            estimatedLoss: 18750, // 25000 * 0.75
+          },
+        ],
+        yieldAnomalies: [
+          {
+            batchNo: 'QZ20260224001',
+            soybeanInput: 1000,
+            productOutput: 2850,
+            actualYield: 285,
+            standardYield: 290,
+            deviation: -1.72, // (285 - 290) / 290 * 100
+            productionDate: new Date().toISOString(),
+          },
+        ],
+        churnRisks: [
+          {
+            customerId: 2,
+            customerName: '张家大排档',
+            customerCategory: '菜市场',
+            daysSinceLastOrder: 3,
+            lastOrderDate: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+            avgMonthlyOrders: 25,
+            salesRepName: '王五',
+          },
+        ],
+        lastUpdate: new Date().toISOString(),
+      };
+    }),
+  }),
+  
+  // Storage router - 文件上传
+  storage: router({
+    uploadImage: protectedProcedure
+      .input(z.object({
+        filename: z.string(),
+        contentType: z.string(),
+        base64Data: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { storagePut } = await import('./storage');
+        
+        // 将Base64转换为Buffer
+        const buffer = Buffer.from(input.base64Data, 'base64');
+        
+        // 生成唯一文件名（防止枚举）
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        const ext = input.filename.split('.').pop() || 'jpg';
+        const fileKey = `feedback-images/${timestamp}-${randomSuffix}.${ext}`;
+        
+        // 上传到S3
+        const { url } = await storagePut(fileKey, buffer, input.contentType);
+        
+        return {
+          url,
+          fileKey,
+        };
+      }),
+  }),
+  
   // Backend API Routers
   // 通过server-side tRPC procedures调用backend REST API
   // INTERNAL_SERVICE_TOKEN只在server端使用，不会暴露到前端
@@ -729,6 +807,58 @@ export const appRouter = router({
           ...f,
           images: f.images ? JSON.parse(f.images) : [],
         }));
+      }),
+  }),
+
+  // P22: Anti-Fraud & Deviation Warning System
+  antiFraud: router({
+    getPriceAnomalies: protectedProcedure
+      .input(z.object({
+        status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+      }))
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
+        }
+        // TODO: 实现从数据库查询价格异常
+        return [];
+      }),
+
+    approvePriceAnomaly: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        specialReason: z.string().min(10),
+      }))
+      .mutation(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可审批' });
+        }
+        // TODO: 实现审批逻辑
+        return { success: true };
+      }),
+
+    rejectPriceAnomaly: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+      }))
+      .mutation(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可审批' });
+        }
+        // TODO: 实现拒绝逻辑
+        return { success: true };
+      }),
+
+    getSettlementAudits: protectedProcedure
+      .input(z.object({
+        suspiciousOnly: z.boolean().default(false),
+      }))
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
+        }
+        // TODO: 实现从数据库查询结算审计
+        return [];
       }),
   }),
 });

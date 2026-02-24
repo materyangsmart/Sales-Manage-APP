@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, Upload, MessageSquare } from 'lucide-react';
+import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageUpload } from '@/components/ImageUpload';
 
 export default function PublicTrace() {
   const params = useParams();
@@ -345,52 +346,11 @@ export default function PublicTrace() {
                 
                 <div>
                   <Label htmlFor="images">上传图片（可选，最多3张）</Label>
-                  <div className="mt-2 space-y-2">
-                    {imageUrls.map((url, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Input value={url} readOnly />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== idx))}
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    ))}
-                    {imageUrls.length < 3 && (
-                      <div className="flex gap-2">
-                        <Input
-                          id="newImageUrl"
-                          placeholder="输入图片URL"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              const input = e.currentTarget;
-                              if (input.value.trim()) {
-                                setImageUrls([...imageUrls, input.value.trim()]);
-                                input.value = '';
-                              }
-                            }
-                          }}
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const input = document.getElementById('newImageUrl') as HTMLInputElement;
-                            if (input?.value.trim()) {
-                              setImageUrls([...imageUrls, input.value.trim()]);
-                              input.value = '';
-                            }
-                          }}
-                        >
-                          <Upload className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    提示：请先将图片上传到图床或云存储，然后粘贴图片URL
-                  </p>
+                  <ImageUpload
+                    maxImages={3}
+                    images={imageUrls}
+                    onChange={setImageUrls}
+                  />
                 </div>
                 
                 <div className="flex gap-2">

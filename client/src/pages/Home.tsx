@@ -1,9 +1,13 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp } from "lucide-react";
+import { ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Shield } from "lucide-react";
 import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 export default function Home() {
+  const { data: currentUser } = trpc.auth.me.useQuery();
+  const isAdmin = currentUser?.role === 'admin';
+  
   const features = [
     {
       title: "订单审核",
@@ -54,6 +58,13 @@ export default function Home() {
       href: "/commission/stats",
       color: "text-emerald-500",
     },
+    ...(isAdmin ? [{
+      title: "经营异常雷达",
+      description: "实时监控经营红线，只抓取“不对劲”的数据",
+      icon: Shield,
+      href: "/ceo/radar",
+      color: "text-red-500",
+    }] : []),
   ];
 
   return (

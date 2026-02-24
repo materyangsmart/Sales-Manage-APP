@@ -17,6 +17,7 @@ import EmployeeManagement from "./pages/EmployeeManagement";
 import MyPerformance from "./pages/MyPerformance";
 import PublicTrace from "./pages/PublicTrace";
 import OrderDetail from "./pages/OrderDetail";
+import CEORadar from "./pages/CEORadar";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -35,6 +36,7 @@ function Router() {
       <Route path={"/sales/my-performance"} component={MyPerformance} />
       <Route path={"/orders/detail/:id"} component={OrderDetail} />
       <Route path={"/public/trace/:id"} component={PublicTrace} />
+      <Route path={"/ceo/radar"} component={CEORadar} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
