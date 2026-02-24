@@ -333,6 +333,23 @@ export const appRouter = router({
           });
         }
       }),
+
+    /**
+     * 获取当前用户的个人业绩数据（销售员专用）
+     */
+    myPerformance: protectedProcedure
+      .query(async ({ ctx }) => {
+        // TODO: 调用backend API获取当前用户的业绩数据
+        // 暂时返回模拟数据
+        return {
+          totalRevenue: 1250000, // 发货总额：125万
+          orderCount: 45, // 订单数
+          newCustomerCount: 8, // 新增客户数
+          paymentRate: 0.92, // 回款率：92%
+          overdueAmount: 50000, // 逾期金额：5万
+          totalCommission: 28750, // 总提成 = 1250000*0.02 - 50000*0.005 + 8*500 = 25000 - 250 + 4000 = 28750
+        };
+      }),
   }),
 
   commissionRules: router({ 

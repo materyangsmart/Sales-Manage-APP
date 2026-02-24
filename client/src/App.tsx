@@ -14,6 +14,7 @@ import AuditLogs from "./pages/AuditLogs";
 import CommissionStats from "./pages/CommissionStats";
 import CommissionRules from "./pages/CommissionRules";
 import EmployeeManagement from "./pages/EmployeeManagement";
+import MyPerformance from "./pages/MyPerformance";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -29,6 +30,7 @@ function Router() {
       <Route path={"/commission/stats"} component={CommissionStats} />
       <Route path={"/commission/rules"} component={CommissionRules} />
       <Route path={"/admin/employees"} component={EmployeeManagement} />
+      <Route path={"/sales/my-performance"} component={MyPerformance} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
