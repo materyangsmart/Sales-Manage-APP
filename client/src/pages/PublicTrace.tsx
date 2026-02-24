@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, MessageSquare } from 'lucide-react';
+import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, MessageSquare, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/ImageUpload';
 
@@ -27,10 +27,17 @@ export default function PublicTrace() {
   );
   
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [showComplaintForm, setShowComplaintForm] = useState(false);
   const [rating, setRating] = useState(5);
   const [customerName, setCustomerName] = useState('');
   const [comment, setComment] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  
+  // P25: 投诉直达老板看板
+  const [complaintName, setComplaintName] = useState('');
+  const [complaintPhone, setComplaintPhone] = useState('');
+  const [complaintContent, setComplaintContent] = useState('');
+  const [complaintImages, setComplaintImages] = useState<string[]>([]);
   
   const submitFeedback = trpc.public.submitFeedback.useMutation({
     onSuccess: () => {
@@ -60,6 +67,49 @@ export default function PublicTrace() {
       rating,
       comment: comment.trim() || undefined,
       images: imageUrls.length > 0 ? imageUrls : undefined,
+    });
+  };
+
+  // P25: 投诉直达老板看板
+  const submitComplaint = trpc.public.submitComplaint.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`投诉已提交，将直接发送至CEO看板！投诉编号: #${data.id}`);
+      setShowComplaintForm(false);
+      setComplaintName('');
+      setComplaintPhone('');
+      setComplaintContent('');
+      setComplaintImages([]);
+    },
+    onError: (error: any) => {
+      toast.error(`投诉提交失败：${error.message}`);
+    },
+  });
+
+  const handleSubmitComplaint = () => {
+    if (!complaintName.trim()) {
+      toast.error('请输入您的姓名');
+      return;
+    }
+    if (!complaintContent.trim()) {
+      toast.error('请输入投诉内容');
+      return;
+    }
+
+    // 自动关联batch_no和driver_id（从二维码追溯数据中抽取）
+    const batchNo = traceData?.production?.batchNo || `ORD-${orderId}`;
+    // driver_id从URL参数或追溯数据中获取
+    const urlParams = new URLSearchParams(window.location.search);
+    const driverIdFromUrl = urlParams.get('driver_id');
+    const driverId = driverIdFromUrl ? parseInt(driverIdFromUrl) : undefined;
+
+    submitComplaint.mutate({
+      batchNo,
+      driverId,
+      orderId,
+      complainantName: complaintName.trim(),
+      complainantPhone: complaintPhone.trim() || undefined,
+      complaintContent: complaintContent.trim(),
+      imageUrls: complaintImages.length > 0 ? complaintImages : undefined,
     });
   };
 
@@ -376,9 +426,118 @@ export default function PublicTrace() {
 
         <Separator />
 
+        {/* P25: 意见直达老板 —— 投诉入口 */}
+        <Card className="border-red-300 bg-red-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-red-600 text-lg">
+              <ShieldAlert className="w-5 h-5" />
+              意见直达老板
+            </CardTitle>
+            <CardDescription className="text-red-500">
+              您的投诉将直接发送至CEO看板，不经过销售和片区中层
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!showComplaintForm ? (
+              <Button
+                variant="destructive"
+                onClick={() => setShowComplaintForm(true)}
+                className="w-full"
+              >
+                我要投诉
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                {/* 自动关联信息展示 */}
+                <div className="bg-white rounded-lg p-3 text-sm space-y-1">
+                  <div className="text-muted-foreground">
+                    以下信息将自动关联到您的投诉：
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">生产批次号: </span>
+                    <span className="font-mono font-medium">
+                      {traceData?.production?.batchNo || `ORD-${orderId}`}
+                    </span>
+                  </div>
+                  {traceData?.logistics?.driverName && (
+                    <div>
+                      <span className="text-muted-foreground">配送司机: </span>
+                      <span className="font-medium">
+                        {traceData.logistics.driverName}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">订单编号: </span>
+                    <span className="font-mono font-medium">{traceData?.orderNo}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="complaintName">您的姓名 *</Label>
+                  <Input
+                    id="complaintName"
+                    value={complaintName}
+                    onChange={(e) => setComplaintName(e.target.value)}
+                    placeholder="请输入您的姓名"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="complaintPhone">联系电话（可选）</Label>
+                  <Input
+                    id="complaintPhone"
+                    value={complaintPhone}
+                    onChange={(e) => setComplaintPhone(e.target.value)}
+                    placeholder="方便我们联系您跟进处理结果"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="complaintContent">投诉内容 *</Label>
+                  <Textarea
+                    id="complaintContent"
+                    value={complaintContent}
+                    onChange={(e) => setComplaintContent(e.target.value)}
+                    placeholder="请详细描述您遇到的质量问题..."
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <Label>上传图片（可选，最多3张）</Label>
+                  <ImageUpload
+                    maxImages={3}
+                    images={complaintImages}
+                    onChange={setComplaintImages}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={handleSubmitComplaint}
+                    disabled={submitComplaint.isPending}
+                    className="flex-1"
+                  >
+                    {submitComplaint.isPending ? '提交中...' : '提交投诉（直达CEO）'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowComplaintForm(false)}
+                    disabled={submitComplaint.isPending}
+                  >
+                    取消
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="text-center text-xs text-muted-foreground pb-4">
           <p>千张销售管理系统 - 质量追溯平台</p>
-          <p className="mt-1">如有质量问题，请联系客服：400-xxx-xxxx</p>
+          <p className="mt-1">您的投诉将直接发送至CEO看板，确保问题得到最高级别关注</p>
         </div>
       </div>
     </div>

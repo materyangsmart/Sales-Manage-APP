@@ -617,11 +617,11 @@
 - [ ] 创建权限变更审计日志
 
 ## P25 - 质量追溯与闭环反馈
-- [ ] 在PublicTrace页面添加"意见直达老板"入口
-- [ ] 创建quality_complaints表
-- [ ] 实现投诉自动关联生产批次号和司机ID
-- [ ] 在CEO Dashboard显示投诉列表
-- [ ] 实现责任闭环追溯功能
+- [x] 在PublicTrace页面添加"意见直达老板"入口
+- [x] 创建quality_complaints表
+- [x] 实现投诉自动关联生产批次号和司机ID
+- [x] 在CEO Dashboard显示投诉列表
+- [x] 实现责任闭环追溯功能
 
 
 ## P21-P25技术债务补齐（摩天大楼标准）
@@ -707,5 +707,50 @@
 
 ### P25 质量反馈直达中枢
 - [x] PublicTrace页面投诉表单已存在
-- [ ] 投诉自动关联batch_no和driver_id
-- [ ] CEO看板闪烁提醒功能
+- [x] 投诉自动关联batch_no和driver_id
+- [x] CEO看板闪烁提醒功能
+
+
+## 全面实战化与管理自动导航
+
+### 任务一：钢性拦截订单流
+- [x] 修改backend OrderService.createOrder，植入AntiFraudService.checkPrice
+- [x] 单价低于片区均值3%时强制设为BLOCKED_PRICE_ANOMALY
+- [x] 调用CreditService.autoApproveOrder实现S/A级客户自动放行
+- [x] 记录审计日志
+- [x] Order entity添加BLOCKED_PRICE_ANOMALY和PENDING_DIRECTOR_AUDIT状态
+- [x] OrderModule注入AntiFraudModule和CreditModule依赖
+- [x] Backend编译成功
+
+### 任务二：信用心脏定时任务
+- [x] 安装@nestjs/schedule依赖
+- [x] 在app.module.ts中注册ScheduleModule.forRoot()
+- [x] 创建CreditCronService定时任务服务
+- [x] 配置NestJS @Cron每日凌晨2点执行（Asia/Shanghai时区）
+- [x] 调用calculateAllCreditScores全量审计684个客户
+- [x] 每6小时高风险客户（C/D级）信用评分更新
+- [x] 同步更新自动放行限额
+- [x] Backend编译成功
+
+### 任务三：员工管理UI + RBAC自动赋权（P24）
+- [x] 在backend创建GovernanceModule
+- [x] 实现自动权限映射（8种职位模板→6种角色→权限→禁止模块）
+- [x] 实现硬性隔离（SALES角色物理拦截ar模块API）
+- [x] 创建EmployeeGovernance.tsx员工治理页面
+- [x] 创建透明提成规则展示
+- [x] 添加路由配置（/governance/employees）
+- [x] 在ops-frontend中集成backend governanceAPI
+- [x] Backend编译成功
+- [x] Frontend TypeScript编译成功
+
+### 任务四：质量投诉直连CEO看板（P25）
+- [x] 投诉表单自动关联batch_no和driver_id
+- [x] 投诉数据存入后CEO看板显示红点提醒
+- [x] 跳过销售中层直达老板
+
+### 任务五：6亿数据压力测试
+- [ ] CEO雷达聚合查询<1秒
+- [ ] 提成聚合查询瞬间完成
+- [ ] 演示单价异常订单被自动锁定
+- [ ] 演示S级客户订单自动通过
+- [ ] 演示扫码投诉在CEO看板实时显示

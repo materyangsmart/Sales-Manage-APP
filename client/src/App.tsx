@@ -18,6 +18,8 @@ import MyPerformance from "./pages/MyPerformance";
 import PublicTrace from "./pages/PublicTrace";
 import OrderDetail from "./pages/OrderDetail";
 import CEORadar from "./pages/CEORadar";
+import EmployeeGovernance from "./pages/EmployeeGovernance";
+import { AntiFraud } from "./pages/AntiFraud";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -37,6 +39,8 @@ function Router() {
       <Route path={"/orders/detail/:id"} component={OrderDetail} />
       <Route path={"/public/trace/:id"} component={PublicTrace} />
       <Route path={"/ceo/radar"} component={CEORadar} />
+      <Route path={"/governance/employees"} component={EmployeeGovernance} />
+      <Route path={"/governance/anti-fraud"} component={AntiFraud} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -465,10 +465,21 @@ export interface ChurnRisk {
   salesRepName: string;
 }
 
+export interface ComplaintAlert {
+  id: number;
+  batchNo: string;
+  complainantName: string;
+  complaintContent: string;
+  severity: string;
+  createdAt: string;
+}
+
 export interface CEORadarData {
   badDebtRisks: BadDebtRisk[];
   yieldAnomalies: YieldAnomaly[];
   churnRisks: ChurnRisk[];
+  complaintAlerts: ComplaintAlert[];
+  unreadComplaintCount: number;
   lastUpdate: string;
 }
 
@@ -605,5 +616,235 @@ export const creditAPI = {
     return request<{ message: string }>('/api/internal/credit/calculate-all', {
       method: 'POST',
     }, 'Calculate All Credit Scores');
+  },
+};
+
+
+/**
+ * ========================================
+ * 治理级API（P24 - 职能隔离与账户自动化）
+ * ========================================
+ */
+
+export interface EmployeeData {
+  id: number;
+  orgId: number;
+  name: string;
+  phone: string;
+  positionCode: string;
+  roleCode: string;
+  permissions: string;
+  blockedModules: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PositionTemplate {
+  code: string;
+  name: string;
+  role: string;
+  permissions: string[];
+  blockedModules: string[];
+}
+
+export interface CommissionRuleDisplay {
+  formula: string;
+  description: string;
+  rules: Array<{
+    category: string;
+    coefficient: number;
+    badDebtDeduction: string;
+    example: string;
+  }>;
+}
+
+/**
+ * 治理API（员工管理 + 权限控制）
+ */
+export const governanceAPI = {
+  /**
+   * 创建员工（自动赋权）
+   */
+  async createEmployee(data: {
+    orgId: number;
+    name: string;
+    phone: string;
+    positionCode: string;
+  }): Promise<EmployeeData> {
+    return request<EmployeeData>('/api/internal/governance/employees', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, 'Create Employee');
+  },
+
+  /**
+   * 更新员工职位（自动重新赋权）
+   */
+  async updateEmployeePosition(employeeId: number, positionCode: string): Promise<EmployeeData> {
+    return request<EmployeeData>(`/api/internal/governance/employees/${employeeId}/position`, {
+      method: 'PUT',
+      body: JSON.stringify({ positionCode }),
+    }, 'Update Employee Position');
+  },
+
+  /**
+   * 获取员工列表
+   */
+  async getEmployees(orgId: number): Promise<EmployeeData[]> {
+    return request<EmployeeData[]>(`/api/internal/governance/employees?orgId=${orgId}`, {}, 'Get Employees');
+  },
+
+  /**
+   * 获取员工详情
+   */
+  async getEmployee(id: number): Promise<EmployeeData> {
+    return request<EmployeeData>(`/api/internal/governance/employees/${id}`, {}, 'Get Employee');
+  },
+
+  /**
+   * 获取职位模板列表
+   */
+  async getPositionTemplates(): Promise<PositionTemplate[]> {
+    return request<PositionTemplate[]>('/api/internal/governance/position-templates', {}, 'Get Position Templates');
+  },
+
+  /**
+   * 获取透明提成规则
+   */
+  async getCommissionRulesDisplay(): Promise<CommissionRuleDisplay> {
+    return request<CommissionRuleDisplay>('/api/internal/governance/commission-rules', {}, 'Get Commission Rules Display');
+  },
+
+  /**
+   * 检查API访问权限
+   */
+  async checkAccess(employeeId: number, module: string, action: string): Promise<{ allowed: boolean }> {
+    return request<{ allowed: boolean }>('/api/internal/governance/check-access', {
+      method: 'POST',
+      body: JSON.stringify({ employeeId, module, action }),
+    }, 'Check Access');
+  },
+};
+
+
+/**
+ * ========================================
+ * 治理级API（P25 - 质量投诉直连CEO看板）
+ * ========================================
+ */
+
+export interface QualityComplaint {
+  id: number;
+  batchNo: string;
+  driverId: number | null;
+  orderId: number | null;
+  customerId: number | null;
+  complainantName: string;
+  complainantPhone: string | null;
+  complaintContent: string;
+  imageUrls: string | null;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'PENDING' | 'INVESTIGATING' | 'RESOLVED' | 'CLOSED';
+  ceoRead: boolean;
+  ceoNote: string | null;
+  productionShift: string | null;
+  productionDate: string | null;
+  resolution: string | null;
+  resolvedBy: number | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 质量投诉API
+ */
+export const complaintAPI = {
+  /**
+   * 提交投诉（公开接口，不需要登录）
+   */
+  async submitComplaint(data: {
+    batchNo: string;
+    driverId?: number;
+    orderId?: number;
+    customerId?: number;
+    complainantName: string;
+    complainantPhone?: string;
+    complaintContent: string;
+    imageUrls?: string[];
+  }): Promise<{ id: number; severity: string; status: string; message: string }> {
+    return request<{ id: number; severity: string; status: string; message: string }>(
+      '/api/internal/complaints/submit',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      'Submit Complaint',
+    );
+  },
+
+  /**
+   * 获取未读投诉数量（CEO红点提醒）
+   */
+  async getUnreadCount(): Promise<{ unreadCount: number }> {
+    return request<{ unreadCount: number }>(
+      '/api/internal/complaints/unread-count',
+      {},
+      'Get Unread Complaint Count',
+    );
+  },
+
+  /**
+   * 获取投诉列表（CEO专用）
+   */
+  async getComplaints(params?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    severity?: string;
+    unreadOnly?: boolean;
+  }): Promise<{ items: QualityComplaint[]; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+    if (params?.status) query.set('status', params.status);
+    if (params?.severity) query.set('severity', params.severity);
+    if (params?.unreadOnly) query.set('unreadOnly', 'true');
+    return request<{ items: QualityComplaint[]; total: number }>(
+      `/api/internal/complaints/list?${query.toString()}`,
+      {},
+      'Get Complaints',
+    );
+  },
+
+  /**
+   * 获取投诉详情
+   */
+  async getComplaintDetail(id: number): Promise<QualityComplaint> {
+    return request<QualityComplaint>(`/api/internal/complaints/${id}`, {}, 'Get Complaint Detail');
+  },
+
+  /**
+   * 标记投诉为已读
+   */
+  async markAsRead(id: number): Promise<void> {
+    return request<void>(`/api/internal/complaints/${id}/read`, {
+      method: 'PUT',
+    }, 'Mark Complaint Read');
+  },
+
+  /**
+   * 更新投诉状态
+   */
+  async updateComplaintStatus(id: number, data: {
+    status: string;
+    ceoNote?: string;
+    resolution?: string;
+  }): Promise<QualityComplaint> {
+    return request<QualityComplaint>(`/api/internal/complaints/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }, 'Update Complaint Status');
   },
 };

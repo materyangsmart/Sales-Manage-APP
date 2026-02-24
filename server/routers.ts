@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI } from "./backend-api";
+import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI } from "./backend-api";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -773,9 +773,49 @@ export const appRouter = router({
           images: f.images ? JSON.parse(f.images) : [],
         }));
       }),
+
+    // P25: 投诉直达老板看板
+    submitComplaint: publicProcedure
+      .input(z.object({
+        batchNo: z.string(),
+        driverId: z.number().optional(),
+        orderId: z.number(),
+        complainantName: z.string().min(1),
+        complainantPhone: z.string().optional(),
+        complaintContent: z.string().min(1),
+        imageUrls: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const result = await complaintAPI.submitComplaint(input);
+          return result;
+        } catch (error: any) {
+          console.error('[public.submitComplaint] Error:', error.message);
+          // 如果backend不可用，存入本地数据库
+          const { getDb } = await import('./db');
+          const { qualityComplaints } = await import('../drizzle/schema');
+          const db = await getDb();
+          if (db) {
+            const [complaint] = await db.insert(qualityComplaints).values({
+              batchNo: input.batchNo,
+              driverId: input.driverId || null,
+              orderId: input.orderId,
+              customerName: input.complainantName,
+              customerPhone: input.complainantPhone || null,
+              complaintType: 'QUALITY' as const,
+              complaintContent: input.complaintContent,
+              complaintImages: input.imageUrls ? JSON.stringify(input.imageUrls) : null,
+              status: 'PENDING',
+              createdAt: new Date(),
+            }).$returningId();
+            return { id: complaint.id, message: '投诉已提交，将直接发送至CEO看板' };
+          }
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '投诉提交失败' });
+        }
+      }),
   }),
 
-  // P22: Anti-Fraud & Deviation Warning System
+  // P22: Anti-Fraud & Deviation Warning System - 真实backend API调用
   antiFraud: router({
     getPriceAnomalies: protectedProcedure
       .input(z.object({
@@ -785,8 +825,12 @@ export const appRouter = router({
         if (ctx.user?.role !== 'admin') {
           throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
         }
-        // TODO: 实现从数据库查询价格异常
-        return [];
+        try {
+          return await antiFraudAPI.getPriceAnomalies();
+        } catch (error: any) {
+          console.error('[antiFraud.getPriceAnomalies] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
       }),
 
     approvePriceAnomaly: protectedProcedure
@@ -794,24 +838,34 @@ export const appRouter = router({
         id: z.number(),
         specialReason: z.string().min(10),
       }))
-      .mutation(async ({ ctx }) => {
+      .mutation(async ({ ctx, input }) => {
         if (ctx.user?.role !== 'admin') {
           throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可审批' });
         }
-        // TODO: 实现审批逻辑
-        return { success: true };
+        try {
+          await antiFraudAPI.approvePriceAnomaly(input.id, 1, input.specialReason);
+          return { success: true };
+        } catch (error: any) {
+          console.error('[antiFraud.approvePriceAnomaly] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
       }),
 
     rejectPriceAnomaly: protectedProcedure
       .input(z.object({
         id: z.number(),
       }))
-      .mutation(async ({ ctx }) => {
+      .mutation(async ({ ctx, input }) => {
         if (ctx.user?.role !== 'admin') {
           throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可审批' });
         }
-        // TODO: 实现拒绝逻辑
-        return { success: true };
+        try {
+          await antiFraudAPI.rejectPriceAnomaly(input.id, 1);
+          return { success: true };
+        } catch (error: any) {
+          console.error('[antiFraud.rejectPriceAnomaly] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
       }),
 
     getSettlementAudits: protectedProcedure
@@ -822,8 +876,102 @@ export const appRouter = router({
         if (ctx.user?.role !== 'admin') {
           throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
         }
-        // TODO: 实现从数据库查询结算审计
-        return [];
+        try {
+          return await antiFraudAPI.getSuspiciousSettlements();
+        } catch (error: any) {
+          console.error('[antiFraud.getSettlementAudits] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+  }),
+
+  // P24: Governance - 职能隔离与账户自动化
+  governance: router({
+    getEmployees: protectedProcedure
+      .input(z.object({ orgId: z.number().default(1) }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
+        }
+        try {
+          return await governanceAPI.getEmployees(input.orgId);
+        } catch (error: any) {
+          console.error('[governance.getEmployees] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+
+    getEmployee: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
+        }
+        try {
+          return await governanceAPI.getEmployee(input.id);
+        } catch (error: any) {
+          console.error('[governance.getEmployee] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+
+    createEmployee: protectedProcedure
+      .input(z.object({
+        orgId: z.number().default(1),
+        name: z.string().min(2),
+        phone: z.string().min(11),
+        positionCode: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可创建员工' });
+        }
+        try {
+          return await governanceAPI.createEmployee(input);
+        } catch (error: any) {
+          console.error('[governance.createEmployee] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+
+    updateEmployeePosition: protectedProcedure
+      .input(z.object({
+        employeeId: z.number(),
+        positionCode: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可修改职位' });
+        }
+        try {
+          return await governanceAPI.updateEmployeePosition(input.employeeId, input.positionCode);
+        } catch (error: any) {
+          console.error('[governance.updateEmployeePosition] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+
+    getPositionTemplates: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
+        }
+        try {
+          return await governanceAPI.getPositionTemplates();
+        } catch (error: any) {
+          console.error('[governance.getPositionTemplates] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+
+    getCommissionRules: protectedProcedure
+      .query(async ({ ctx }) => {
+        try {
+          return await governanceAPI.getCommissionRulesDisplay();
+        } catch (error: any) {
+          console.error('[governance.getCommissionRules] Error:', error.message);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
       }),
   }),
 });
