@@ -451,6 +451,130 @@ export const appRouter = router({
       }),
   }),
 
+  employee: router({
+    list: protectedProcedure.query(async () => {
+      // TODO: 调用backend API获取员工列表
+      // 暂时返回模拟数据
+      return [
+        {
+          id: 1,
+          username: "admin",
+          email: "admin@example.com",
+          full_name: "系统管理员",
+          phone: "",
+          department: "管理部",
+          status: "ACTIVE",
+          job_position: {
+            id: 1,
+            position_name: "系统管理员",
+            department: "管理部",
+          },
+          roles: [
+            {
+              id: 1,
+              code: "CEO",
+              name: "老板",
+            },
+          ],
+        },
+      ];
+    }),
+
+    getJobPositions: protectedProcedure.query(async () => {
+      // TODO: 调用backend API获取职位模板列表
+      // 暂时返回模拟数据
+      return [
+        {
+          id: 1,
+          department: "管理部",
+          position_name: "系统管理员",
+          default_role_id: 1,
+          role: {
+            id: 1,
+            code: "CEO",
+            name: "老板",
+            permissions: [
+              { id: 1, code: "order.view", name: "查看订单" },
+              { id: 2, code: "order.create", name: "创建订单" },
+              { id: 3, code: "invoice.view", name: "查看发票" },
+              { id: 4, code: "payment.view", name: "查看回款" },
+              { id: 5, code: "payment.create", name: "录入回款" },
+              { id: 6, code: "apply.create", name: "核销操作" },
+              { id: 7, code: "commission.view", name: "查看提成" },
+              { id: 8, code: "employee.manage", name: "员工管理" },
+            ],
+          },
+        },
+        {
+          id: 2,
+          department: "财务部",
+          position_name: "财务主管",
+          default_role_id: 2,
+          role: {
+            id: 2,
+            code: "FINANCE_MANAGER",
+            name: "财务主管",
+            permissions: [
+              { id: 1, code: "order.view", name: "查看订单" },
+              { id: 3, code: "invoice.view", name: "查看发票" },
+              { id: 4, code: "payment.view", name: "查看回款" },
+              { id: 5, code: "payment.create", name: "录入回款" },
+              { id: 6, code: "apply.create", name: "核销操作" },
+            ],
+          },
+        },
+        {
+          id: 3,
+          department: "销售部",
+          position_name: "高级业务员",
+          default_role_id: 4,
+          role: {
+            id: 4,
+            code: "SALES",
+            name: "销售",
+            permissions: [
+              { id: 1, code: "order.view", name: "查看订单" },
+              { id: 2, code: "order.create", name: "创建订单" },
+              { id: 7, code: "commission.view", name: "查看提成" },
+            ],
+          },
+        },
+      ];
+    }),
+
+    create: protectedProcedure
+      .input(z.object({
+        username: z.string(),
+        email: z.string().email(),
+        password: z.string(),
+        full_name: z.string().optional(),
+        phone: z.string().optional(),
+        department: z.string().optional(),
+        job_position_id: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        // TODO: 调用backend API创建员工
+        // 暂时返回成功
+        return {
+          success: true,
+          message: "员工创建成功",
+        };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        // TODO: 调用backend API删除员工
+        // 暂时返回成功
+        return {
+          success: true,
+          message: "员工删除成功",
+        };
+      }),
+  }),
+
   auditLogs: router({
     list: protectedProcedure
       .input(z.object({
