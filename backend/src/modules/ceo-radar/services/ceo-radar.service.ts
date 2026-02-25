@@ -88,7 +88,7 @@ export class CeoRadarService {
         DATEDIFF(CURDATE(), MAX(o.order_date)) AS days_since_last_order
       FROM customers c
       LEFT JOIN orders o ON c.id = o.customer_id
-      WHERE c.org_id = ? AND c.status = 'ACTIVE'
+      WHERE c.org_id = ?
       GROUP BY c.id, c.name
       HAVING days_since_last_order > 90 OR last_order_date IS NULL
       ORDER BY days_since_last_order DESC
@@ -198,33 +198,33 @@ export class CeoRadarService {
     try {
       const rows = await this.dataSource.query(
         `SELECT 
-          qc.id, qc.complaint_type, qc.description, qc.batch_no,
-          qc.status, qc.created_at,
-          o.order_no
-        FROM quality_complaints qc
-        LEFT JOIN orders o ON qc.order_id = o.id
-        WHERE qc.status = 'PENDING'
-          AND qc.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        ORDER BY qc.created_at DESC
+          qf.id, qf.rating, qf.comment, qf.customer_name,
+          qf.created_at,
+          o.order_no, o.batch_no
+        FROM quality_feedback qf
+        LEFT JOIN orders o ON qf.order_id = o.id
+        WHERE qf.rating <= 2
+          AND qf.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        ORDER BY qf.rating ASC, qf.created_at DESC
         LIMIT 20`,
       );
 
       return rows.map((row: any) => ({
         type: 'COMPLAINT' as const,
-        level: 'HIGH' as const,
-        title: `质量投诉: ${row.complaint_type || '未分类'}`,
-        description: `${row.description?.substring(0, 100) || '无描述'}${row.order_no ? ` (订单: ${row.order_no})` : ''}`,
+        level: row.rating <= 1 ? 'HIGH' as const : 'MEDIUM' as const,
+        title: `质量投诉: ${row.customer_name || '匿名客户'} (${row.rating}星)`,
+        description: `${row.comment?.substring(0, 100) || '无描述'}${row.order_no ? ` (订单: ${row.order_no})` : ''}`,
         data: {
-          complaintId: row.id,
-          complaintType: row.complaint_type,
+          feedbackId: row.id,
+          rating: row.rating,
           batchNo: row.batch_no,
           orderNo: row.order_no,
-          status: row.status,
+          customerName: row.customer_name,
           createdAt: row.created_at,
         },
       }));
     } catch {
-      // quality_complaints 表可能不存在
+      // quality_feedback 表可能不存在
       return [];
     }
   }

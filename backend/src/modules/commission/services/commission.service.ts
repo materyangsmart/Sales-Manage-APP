@@ -81,7 +81,7 @@ export class CommissionService {
         COALESCE(SUM(o.total_amount), 0) AS delivery_amount
       FROM orders o
       INNER JOIN customers c ON o.customer_id = c.id
-      WHERE o.sales_rep_id = ? AND o.status = 'FULFILLED'
+      WHERE o.created_by = ? AND o.status = 'FULFILLED'
       GROUP BY c.category`,
       [userId],
     );
@@ -94,7 +94,7 @@ export class CommissionService {
       FROM ar_invoices ai
       INNER JOIN orders o ON ai.order_id = o.id
       INNER JOIN customers c ON o.customer_id = c.id
-      WHERE o.sales_rep_id = ?
+      WHERE o.created_by = ?
         AND ai.status IN ('OPEN', 'PARTIAL')
         AND ai.due_date < CURDATE()
       GROUP BY c.category`,
@@ -108,10 +108,9 @@ export class CommissionService {
         COUNT(DISTINCT c.id) AS new_customer_count
       FROM customers c
       WHERE c.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        AND c.status = 'ACTIVE'
         AND EXISTS (
           SELECT 1 FROM orders o 
-          WHERE o.customer_id = c.id AND o.sales_rep_id = ?
+          WHERE o.customer_id = c.id AND o.created_by = ?
         )
       GROUP BY c.category`,
       [userId],
@@ -207,7 +206,7 @@ export class CommissionService {
         COALESCE(SUM(o.total_amount), 0) AS delivery_amount
       FROM orders o
       INNER JOIN customers c ON o.customer_id = c.id
-      WHERE o.sales_rep_id = ? 
+      WHERE o.created_by = ? 
         AND o.status = 'FULFILLED'
         AND o.order_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
       GROUP BY DATE_FORMAT(o.order_date, '%Y-%m'), c.category

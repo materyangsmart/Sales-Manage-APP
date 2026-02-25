@@ -79,17 +79,15 @@ export class TraceabilityService {
 
     // 3. 精确匹配生产批次信息：JOIN production_plans ON orders.batch_no = pp.batch_no
     // 绝对禁止时间范围模糊匹配
-    let productionPlan = null;
+    let productionPlan: any = null;
     if (batchNo) {
       const productionPlans = await this.dataSource.query(
         `SELECT 
-          pp.batch_no, pp.plan_no, pp.plan_date,
-          pp.product_id, pp.planned_quantity, pp.actual_quantity,
-          pp.status AS production_status,
-          pp.workshop, pp.soybean_batch, pp.water_quality,
-          pp.workshop_temp, pp.sterilization_params,
-          pp.quality_inspector, pp.quality_result,
-          pp.production_date
+          pp.batch_no, pp.product_name,
+          pp.planned_quantity, pp.actual_quantity,
+          pp.raw_material, pp.raw_material_batch,
+          pp.production_date, pp.expiry_date,
+          pp.quality_inspector, pp.quality_result
         FROM production_plans pp
         WHERE pp.batch_no = ?
         LIMIT 1`,
@@ -100,20 +98,15 @@ export class TraceabilityService {
         const pp = productionPlans[0];
         productionPlan = {
           batchNo: pp.batch_no,
-          planNo: pp.plan_no,
-          planDate: pp.plan_date,
-          productId: pp.product_id,
+          productName: pp.product_name,
           plannedQuantity: Number(pp.planned_quantity),
-          actualQuantity: Number(pp.actual_quantity),
-          productionStatus: pp.production_status,
-          workshop: pp.workshop,
-          soybeanBatch: pp.soybean_batch,
-          waterQuality: pp.water_quality,
-          workshopTemp: pp.workshop_temp ? Number(pp.workshop_temp) : null,
-          sterilizationParams: pp.sterilization_params,
+          actualQuantity: pp.actual_quantity ? Number(pp.actual_quantity) : null,
+          rawMaterial: pp.raw_material,
+          rawMaterialBatch: pp.raw_material_batch,
+          productionDate: pp.production_date,
+          expiryDate: pp.expiry_date,
           qualityInspector: pp.quality_inspector,
           qualityResult: pp.quality_result,
-          productionDate: pp.production_date,
         };
       }
     }
@@ -121,22 +114,21 @@ export class TraceabilityService {
     // 4. 查询配送记录（通过order_id精确关联）
     const deliveryRecords = await this.dataSource.query(
       `SELECT 
-        dr.batch_no, dr.driver_id, dr.driver_name, dr.driver_phone,
-        dr.picking_time, dr.shipping_time, dr.delivery_time,
-        dr.status AS delivery_status
+        dr.driver_id, dr.driver_name, dr.vehicle_no,
+        dr.departure_time, dr.arrival_time,
+        dr.temperature, dr.status AS delivery_status
       FROM delivery_records dr
       WHERE dr.order_id = ?`,
       [orderId],
     );
 
     const logistics = deliveryRecords.length > 0 ? {
-      batchNo: deliveryRecords[0].batch_no,
       driverId: deliveryRecords[0].driver_id,
       driverName: deliveryRecords[0].driver_name,
-      driverPhone: deliveryRecords[0].driver_phone,
-      pickingTime: deliveryRecords[0].picking_time,
-      shippingTime: deliveryRecords[0].shipping_time,
-      deliveryTime: deliveryRecords[0].delivery_time,
+      vehicleNo: deliveryRecords[0].vehicle_no,
+      departureTime: deliveryRecords[0].departure_time,
+      arrivalTime: deliveryRecords[0].arrival_time,
+      temperature: deliveryRecords[0].temperature ? Number(deliveryRecords[0].temperature) : null,
       deliveryStatus: deliveryRecords[0].delivery_status,
     } : null;
 
@@ -156,21 +148,20 @@ export class TraceabilityService {
 
       // 原料端（来自production_plans精确匹配）
       rawMaterial: productionPlan ? {
-        soybeanBatch: productionPlan.soybeanBatch || 'N/A',
-        waterQuality: productionPlan.waterQuality || '合格',
+        rawMaterial: productionPlan.rawMaterial || 'N/A',
+        rawMaterialBatch: productionPlan.rawMaterialBatch || 'N/A',
       } : null,
 
       // 制造端（来自production_plans精确匹配）
       production: productionPlan ? {
         batchNo: productionPlan.batchNo,
-        productionDate: productionPlan.productionDate || productionPlan.planDate,
-        workshopTemp: productionPlan.workshopTemp,
-        sterilizationParams: productionPlan.sterilizationParams || 'N/A',
+        productName: productionPlan.productName,
+        productionDate: productionPlan.productionDate,
+        expiryDate: productionPlan.expiryDate,
         qualityInspector: productionPlan.qualityInspector || 'N/A',
         qualityResult: productionPlan.qualityResult || 'N/A',
         plannedQuantity: productionPlan.plannedQuantity,
         actualQuantity: productionPlan.actualQuantity,
-        workshop: productionPlan.workshop,
       } : null,
 
       // 物流端（来自delivery_records精确匹配）
