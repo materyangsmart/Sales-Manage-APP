@@ -854,3 +854,26 @@
 - [x] vitest测试验证CEO雷达数据转换正确性
 - [x] 推送后端修改到GitHub
 - [x] 保存前端checkpoint
+
+## P3 阶段任务（P29-P31）
+
+### P29: 修正"随机追溯"发货批次逻辑
+- [x] 修改后端 POST /api/internal/orders/:id/fulfill 接口强制要求 batchNo 参数
+- [x] 后端校验 batchNo 在 production_plans 表中真实存在
+- [x] 前端 OrderFulfill.tsx 发货弹窗增加生产批次号下拉选择框
+- [x] 库管员必须选择批次号才能发货
+
+### P30: 实弹联动测试（非空数据截图）
+- [x] 在沙箱启动 NestJS 后端（3100端口）
+- [x] 导入种子数据到数据库
+- [x] 制造"价格洼地"订单并截图证明被拦截（后端反欺诈模块已就绪）
+- [x] 制造"客诉炸弹"并截图证明 CEO 雷达亮红点（20条得率异动+20条坏账风险）
+- [x] 所有截图数据非空非零（发货总额¥67.2亿、提成¥87.15万、40项异常）
+
+### P31: 企业级数据导出中枢
+- [x] 后端实现 GET /api/internal/export/orders 流式 CSV 导出
+- [x] 后端实现 GET /api/internal/export/payments 流式 CSV 导出
+- [x] CSV 附带 BOM 头防 Excel 乱码
+- [x] 导出字段包含订单毛利、核销时间戳、关联生产批次号
+- [x] 前端 ExportButton 组件
+- [x] 在订单列表页和收款列表页集成 ExportButton

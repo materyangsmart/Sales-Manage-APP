@@ -16,7 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { CreditCard, Loader2, Filter } from "lucide-react";
+import { CreditCard, Loader2, Filter, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import type { PaymentAppliedStatus } from "@/lib/types";
@@ -55,11 +56,21 @@ export default function ARPayments() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">收款管理</h1>
-          <p className="text-muted-foreground mt-2">
-            管理客户收款记录，查看核销状态
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">收款管理</h1>
+            <p className="text-muted-foreground mt-2">
+              管理客户收款记录，查看核销状态
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+            window.open(`${backendUrl}/api/internal/export/payments`, '_blank');
+            toast.info('正在导出收款数据...');
+          }}>
+            <Download className="h-4 w-4 mr-2" />
+            导出收款CSV
+          </Button>
         </div>
 
         <Card>

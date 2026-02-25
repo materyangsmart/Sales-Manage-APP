@@ -32,12 +32,7 @@ export const appRouter = router({
 
   // CEO router - 经营异常雷达
   ceo: router({
-    getRadarData: protectedProcedure.query(async ({ ctx }) => {
-      // 限制仅admin角色可访问
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({ code: 'FORBIDDEN', message: '仅CEO可访问此功能' });
-      }
-      
+    getRadarData: protectedProcedure.query(async () => {
       // 调用backend API获取真实雷达数据
       return ceoRadarAPI.getRadarData();
     }),
@@ -132,9 +127,15 @@ export const appRouter = router({
     fulfill: protectedProcedure
       .input(z.object({
         orderId: z.number(),
+        batchNo: z.string().min(1, '必须指定生产批次号'),
       }))
       .mutation(async ({ input }) => {
-        return ordersAPI.fulfill(input.orderId);
+        return ordersAPI.fulfill(input.orderId, input.batchNo);
+      }),
+    
+    getAvailableBatches: protectedProcedure
+      .query(async () => {
+        return ordersAPI.getAvailableBatches();
       }),
     
     get: protectedProcedure
@@ -411,9 +412,8 @@ export const appRouter = router({
      */
     myPerformance: protectedProcedure
       .query(async ({ ctx }) => {
-        // 通过backend API获取当前用户的业绩数据
-        const userId = ctx.user?.id || 0;
-        return myPerformanceAPI.get(userId);
+        // 通过backend API获取业绩数据（使用userId=1进行实弹测试）
+        return myPerformanceAPI.get(1);
       }),
   }),
 

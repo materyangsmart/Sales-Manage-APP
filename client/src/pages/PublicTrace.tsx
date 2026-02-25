@@ -238,8 +238,8 @@ export default function PublicTrace() {
                     车间温度
                   </div>
                   <div className="font-medium text-base">
-                    {traceData.production.workshopTemp != null
-                      ? `${traceData.production.workshopTemp}°C`
+                    {traceData.logistics?.temperature != null
+                      ? `${traceData.logistics.temperature}°C`
                       : 'N/A'}
                   </div>
                 </div>

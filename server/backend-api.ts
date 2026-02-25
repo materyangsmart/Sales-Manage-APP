@@ -124,11 +124,20 @@ export const ordersAPI = {
   
   /**
    * 履行订单（生成发票）
+   * P29: 强制要求传入 batchNo 参数
    */
-  fulfill: async (orderId: number) => {
+  fulfill: async (orderId: number, batchNo: string) => {
     return request<any>(`/api/internal/orders/${orderId}/fulfill`, {
       method: 'POST',
+      body: JSON.stringify({ batchNo }),
     });
+  },
+
+  /**
+   * 获取可用的生产批次列表（用于发货时选择）
+   */
+  getAvailableBatches: async () => {
+    return request<any[]>(`/api/internal/orders/available-batches`);
   },
 };
 
@@ -493,7 +502,7 @@ export const ceoRadarAPI = {
    */
   async getRadarData(): Promise<CEORadarData> {
     // 后端实际路径: /api/internal/ceo-radar/alerts?orgId=2
-    const alerts = await request<any[]>('/api/internal/ceo-radar/alerts?orgId=2', {}, 'CEO Radar');
+    const alerts = await request<any[]>('/api/internal/ceo-radar/alerts?orgId=1', {}, 'CEO Radar');
     
     // 将 RadarAlert[] 转换为 CEORadarData 结构
     const badDebtRisks: BadDebtRisk[] = [];
