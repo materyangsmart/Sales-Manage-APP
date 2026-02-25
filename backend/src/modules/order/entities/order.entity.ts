@@ -26,7 +26,7 @@ export class Order {
     name: 'order_no',
     type: 'varchar',
     length: 50,
-    unique: true,
+    
     comment: '订单编号',
   })
   orderNo: string;

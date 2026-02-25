@@ -14,7 +14,7 @@ export class ProductionPlan {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'batch_no', type: 'varchar', length: 50, unique: true, comment: '生产批次号' })
+  @Column({ name: 'batch_no', type: 'varchar', length: 50, comment: '生产批次号' })
   batchNo: string;
 
   @Column({ name: 'product_name', type: 'varchar', length: 200, comment: '产品名称' })

@@ -52,7 +52,7 @@ export class User {
   @Column({ name: 'org_id', type: 'int', comment: '组织ID' })
   orgId: number;
 
-  @Column({ length: 50, unique: true, comment: '用户名' })
+  @Column({ length: 50, comment: '用户名' })
   username: string;
 
   @Column({ name: 'real_name', length: 50, comment: '真实姓名' })
