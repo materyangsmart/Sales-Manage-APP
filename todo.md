@@ -805,3 +805,52 @@
 - [x] curl验证GET /api/internal/users返回员工列表
 - [x] curl验证GET /api/internal/commission/my-performance返回聚合数据
 - [x] 前后端代码同时推送到GitHub（commit: 4a53bde7）
+
+
+## P2级贯通：精确追溯 + 多维提成 + 前端UI全栈贯通
+
+### 任务一：重构精确批次追溯（P26）
+- [ ] orders表添加batch_no字段（发货时写入）
+- [ ] TraceabilityService使用WHERE pp.batch_no = ?精确匹配
+- [ ] 种子脚本对齐batch_no字段
+- [ ] 禁止时间范围模糊匹配
+
+### 任务二：还原多维度提成引擎（P27）
+- [ ] CommissionService按客户类型（WET_MARKET/SUPERMARKET/WHOLESALE）分别聚合
+- [ ] 不同客户类型应用不同基础利率和逾期扣减率
+- [ ] API输出分类统计结果（非单一总数）
+
+### 任务三：前端UI全栈贯通（P28）
+- [ ] MyPerformance.tsx对接多维度提成API，展示分类提成明细
+- [ ] PublicTrace.tsx绑定追溯API，展示唯一批次号+质检员+温度
+- [ ] CEORadar.tsx渲染得率异动红点警报
+- [ ] 前端UI截图取证
+
+## P2级贯通任务（P26-P28）
+
+### P26: 重构精确批次追溯
+- [x] 修改后端TraceabilityService使用精确batch_no匹配（WHERE pp.batch_no = ?）
+- [x] 修改后端OrderService发货时写入batch_no到orders表
+- [x] 在Order Entity中添加batch_no字段
+- [x] 修改种子脚本生成production_plans和delivery_records数据
+- [x] 前端PublicTrace.tsx展示精确追溯批次号
+- [x] 前端PublicTrace.tsx展示质检员姓名和车间温度
+- [x] vitest测试验证追溯数据包含精确batchNo
+
+### P27: 还原多维度提成引擎
+- [x] 重写后端CommissionService按客户类型分类聚合
+- [x] 实现WET_MARKET(2%/0.5%)、SUPERMARKET(1.5%/0.3%)、WHOLESALE_B(1%/0.2%)差异化利率
+- [x] API输出categoryBreakdown分类统计结果
+- [x] 前端MyPerformance.tsx展示按商超/菜市场分类的提成明细
+- [x] 前端展示提成计算公式对话框
+- [x] vitest测试验证categoryBreakdown结构和公式正确性
+
+### P28: 前端UI全栈贯通
+- [x] MyPerformance.tsx tRPC接口绑定到GET /api/internal/commission/my-performance
+- [x] PublicTrace.tsx数据源绑定到GET /api/internal/traceability/:code
+- [x] CEORadar.tsx渲染得率异动（Yield Anomalies）红点警报
+- [x] 修复ceoRadarAPI路径（/api/internal/ceo-radar/alerts?orgId=2）
+- [x] 实现RadarAlert[]到CEORadarData结构的数据转换
+- [x] vitest测试验证CEO雷达数据转换正确性
+- [x] 推送后端修改到GitHub
+- [x] 保存前端checkpoint

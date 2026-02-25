@@ -489,9 +489,79 @@ export interface CEORadarData {
 export const ceoRadarAPI = {
   /**
    * 获取CEO雷达数据
+   * 后端返回 RadarAlert[] 数组，需要转换为前端期望的 CEORadarData 结构
    */
   async getRadarData(): Promise<CEORadarData> {
-    return request<CEORadarData>('/api/internal/ceo/radar', {}, 'CEO Radar');
+    // 后端实际路径: /api/internal/ceo-radar/alerts?orgId=2
+    const alerts = await request<any[]>('/api/internal/ceo-radar/alerts?orgId=2', {}, 'CEO Radar');
+    
+    // 将 RadarAlert[] 转换为 CEORadarData 结构
+    const badDebtRisks: BadDebtRisk[] = [];
+    const yieldAnomalies: YieldAnomaly[] = [];
+    const churnRisks: ChurnRisk[] = [];
+    const complaintAlerts: ComplaintAlert[] = [];
+    
+    if (Array.isArray(alerts)) {
+      for (const alert of alerts) {
+        switch (alert.type) {
+          case 'BAD_DEBT':
+            badDebtRisks.push({
+              customerId: alert.data?.customerId || 0,
+              customerName: alert.data?.customerName || alert.title,
+              unpaidAmount: alert.data?.balance || 0,
+              overdueDays: alert.data?.overdueDays || 0,
+              creditScore: 50,
+              estimatedLoss: alert.data?.balance || 0,
+            });
+            break;
+          case 'YIELD_ANOMALY':
+            yieldAnomalies.push({
+              batchNo: alert.data?.batchNo || '',
+              soybeanInput: alert.data?.plannedQuantity || 0,
+              productOutput: alert.data?.actualQuantity || 0,
+              actualYield: alert.data?.actualQuantity && alert.data?.plannedQuantity
+                ? (alert.data.actualQuantity / alert.data.plannedQuantity * 100)
+                : 0,
+              standardYield: 100,
+              deviation: alert.data?.deviationPct
+                ? (alert.data.isOverProduction ? alert.data.deviationPct : -alert.data.deviationPct)
+                : 0,
+              productionDate: alert.data?.productionDate || '',
+            });
+            break;
+          case 'CUSTOMER_CHURN':
+            churnRisks.push({
+              customerId: alert.data?.customerId || 0,
+              customerName: alert.data?.customerName || alert.title,
+              customerCategory: 'N/A',
+              daysSinceLastOrder: alert.data?.daysSinceLastOrder || 0,
+              lastOrderDate: alert.data?.lastOrderDate || '',
+              avgMonthlyOrders: 0,
+              salesRepName: 'N/A',
+            });
+            break;
+          case 'COMPLAINT':
+            complaintAlerts.push({
+              id: alert.data?.complaintId || 0,
+              batchNo: alert.data?.batchNo || '',
+              complainantName: 'N/A',
+              complaintContent: alert.description || '',
+              severity: alert.level || 'MEDIUM',
+              createdAt: alert.data?.createdAt || new Date().toISOString(),
+            });
+            break;
+        }
+      }
+    }
+    
+    return {
+      badDebtRisks,
+      yieldAnomalies,
+      churnRisks,
+      complaintAlerts,
+      unreadComplaintCount: complaintAlerts.length,
+      lastUpdate: new Date().toISOString(),
+    };
   },
 };
 

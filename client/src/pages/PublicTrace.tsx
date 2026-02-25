@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, MessageSquare, ShieldAlert } from 'lucide-react';
+import { Package, Factory, Truck, CheckCircle, AlertCircle, Star, MessageSquare, ShieldAlert, ShieldCheck, Thermometer, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/ImageUpload';
 
@@ -62,7 +62,7 @@ export default function PublicTrace() {
     
     submitFeedback.mutate({
       orderId,
-      batchNo: traceData?.production?.batchNo,
+      batchNo: traceData?.batchNo || traceData?.production?.batchNo,
       customerName: customerName.trim(),
       rating,
       comment: comment.trim() || undefined,
@@ -95,9 +95,8 @@ export default function PublicTrace() {
       return;
     }
 
-    // 自动关联batch_no和driver_id（从二维码追溯数据中抽取）
-    const batchNo = traceData?.production?.batchNo || `ORD-${orderId}`;
-    // driver_id从URL参数或追溯数据中获取
+    // 使用精确的batch_no（来自后端精确匹配）
+    const batchNo = traceData?.batchNo || traceData?.production?.batchNo || `ORD-${orderId}`;
     const urlParams = new URLSearchParams(window.location.search);
     const driverIdFromUrl = urlParams.get('driver_id');
     const driverId = driverIdFromUrl ? parseInt(driverIdFromUrl) : undefined;
@@ -143,7 +142,7 @@ export default function PublicTrace() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-2xl mx-auto space-y-4">
-        {/* 标题卡片 */}
+        {/* 标题卡片 —— 展示唯一追溯批次号 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -154,6 +153,18 @@ export default function PublicTrace() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* 精确追溯批次号（P26核心：唯一标识） */}
+            {traceData.batchNo && (
+              <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <ShieldCheck className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">追溯批次号（唯一标识）</span>
+                </div>
+                <div className="font-mono text-xl font-bold text-green-800 tracking-wider">
+                  {traceData.batchNo}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">订单编号</div>
@@ -165,7 +176,7 @@ export default function PublicTrace() {
               </div>
               <div>
                 <div className="text-muted-foreground">订单金额</div>
-                <div className="font-medium">¥{traceData.totalAmount.toFixed(2)}</div>
+                <div className="font-medium">¥{Number(traceData.totalAmount).toFixed(2)}</div>
               </div>
               <div>
                 <div className="text-muted-foreground">下单时间</div>
@@ -202,7 +213,7 @@ export default function PublicTrace() {
           </Card>
         )}
 
-        {/* 制造端 */}
+        {/* 制造端 —— 展示真实生产温度和质检员姓名 */}
         {traceData.production && (
           <Card>
             <CardHeader>
@@ -211,24 +222,59 @@ export default function PublicTrace() {
                 制造端
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <div className="text-muted-foreground">生产批次</div>
-                  <div className="font-medium">{traceData.production.batchNo}</div>
+                  <div className="font-mono font-bold text-base">{traceData.production.batchNo}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground">生产日期</div>
                   <div className="font-medium">{new Date(traceData.production.productionDate).toLocaleDateString()}</div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">车间温度</div>
-                  <div className="font-medium">{traceData.production.workshopTemp}°C</div>
+                  <div className="text-muted-foreground flex items-center gap-1">
+                    <Thermometer className="w-3 h-3" />
+                    车间温度
+                  </div>
+                  <div className="font-medium text-base">
+                    {traceData.production.workshopTemp != null
+                      ? `${traceData.production.workshopTemp}°C`
+                      : 'N/A'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-muted-foreground">灭菌参数</div>
                   <div className="font-medium">{traceData.production.sterilizationParams}</div>
                 </div>
+              </div>
+
+              {/* 质检员信息（P26核心：展示真实质检员姓名） */}
+              <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-blue-600" />
+                  <span className="text-blue-700 font-medium">质检员</span>
+                  <span className="font-bold text-blue-800">
+                    {traceData.production.qualityInspector || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm mt-1">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <span className="text-blue-700 font-medium">质检结果</span>
+                  <Badge
+                    variant={traceData.production.qualityResult === 'PASS' ? 'default' : 'destructive'}
+                    className={traceData.production.qualityResult === 'PASS' ? 'bg-green-600' : ''}
+                  >
+                    {traceData.production.qualityResult === 'PASS' ? '合格' : traceData.production.qualityResult || 'N/A'}
+                  </Badge>
+                </div>
+                {traceData.production.workshop && (
+                  <div className="flex items-center gap-2 text-sm mt-1">
+                    <Factory className="w-4 h-4 text-blue-600" />
+                    <span className="text-blue-700 font-medium">生产车间</span>
+                    <span className="font-medium text-blue-800">{traceData.production.workshop}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -454,9 +500,9 @@ export default function PublicTrace() {
                     以下信息将自动关联到您的投诉：
                   </div>
                   <div>
-                    <span className="text-muted-foreground">生产批次号: </span>
-                    <span className="font-mono font-medium">
-                      {traceData?.production?.batchNo || `ORD-${orderId}`}
+                    <span className="text-muted-foreground">追溯批次号: </span>
+                    <span className="font-mono font-bold text-green-700">
+                      {traceData?.batchNo || traceData?.production?.batchNo || `ORD-${orderId}`}
                     </span>
                   </div>
                   {traceData?.logistics?.driverName && (
