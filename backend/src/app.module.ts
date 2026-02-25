@@ -14,6 +14,21 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { CeoRadarModule } from './modules/ceo-radar/ceo-radar.module';
 import { ExportModule } from './modules/export/export.module';
 
+// Explicitly import all entities to ensure TypeORM loads them correctly
+import { ARApply } from './modules/ar/entities/ar-apply.entity';
+import { ARInvoice } from './modules/ar/entities/ar-invoice.entity';
+import { ARPayment } from './modules/ar/entities/ar-payment.entity';
+import { AuditLog } from './modules/ar/entities/audit-log.entity';
+import { Customer as CustomerEntity } from './modules/customer/entities/customer.entity';
+import { QualityFeedback } from './modules/feedback/entities/quality-feedback.entity';
+import { Customer as OrderCustomerEntity } from './modules/order/entities/customer.entity';
+import { OrderItem } from './modules/order/entities/order-item.entity';
+import { Order } from './modules/order/entities/order.entity';
+import { Product } from './modules/order/entities/product.entity';
+import { DeliveryRecord } from './modules/traceability/entities/delivery-record.entity';
+import { ProductionPlan } from './modules/traceability/entities/production-plan.entity';
+import { User } from './modules/user/entities/user.entity';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,7 +44,22 @@ import { ExportModule } from './modules/export/export.module';
         username: configService.get('DB_USERNAME', 'root'),
         password: configService.get('DB_PASSWORD', ''),
         database: configService.get('DB_DATABASE', 'qianzhang_sales'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        // Explicitly list all entities instead of using glob pattern
+        entities: [
+          ARApply,
+          ARInvoice,
+          ARPayment,
+          AuditLog,
+          CustomerEntity,
+          QualityFeedback,
+          OrderCustomerEntity,
+          OrderItem,
+          Order,
+          Product,
+          DeliveryRecord,
+          ProductionPlan,
+          User,
+        ],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         synchronize: configService.get('DB_SYNC', 'false') === 'true',
         logging: configService.get('DB_LOGGING', 'false') === 'true',
