@@ -165,7 +165,7 @@ export class CeoRadarService {
       WHERE pp.actual_quantity IS NOT NULL
         AND pp.planned_quantity > 0
         AND ABS(pp.actual_quantity - pp.planned_quantity) / pp.planned_quantity * 100 > 2
-        AND pp.production_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        AND pp.production_date >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)
       ORDER BY deviation_pct DESC
       LIMIT 20`,
     );
