@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Request, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, UseGuards, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { OrderService } from '../services/order.service';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -17,8 +17,7 @@ export class OrderController {
   @Post()
   @Roles(Role.ADMIN, Role.OPERATOR)
   async createOrder(@Body() dto: CreateOrderDto, @Request() req) {
-    // 从token中获取createdBy，而不是从DTO中获取
-    const userId = req.user?.id || 1; // TODO: 从JWT token中获取
+    const userId = req.user?.id || 1;
     const createOrderData = {
       orgId: dto.orgId,
       customerId: dto.customerId,
@@ -40,8 +39,7 @@ export class OrderController {
   @Post('review')
   @Roles(Role.ADMIN, Role.OPERATOR)
   async reviewOrder(@Body() dto: ReviewOrderDto, @Request() req) {
-    // 从token中获取reviewedBy，而不是从DTO中获取
-    const userId = req.user?.id || 1; // TODO: 从JWT token中获取
+    const userId = req.user?.id || 1;
     const reviewOrderData = {
       orderId: dto.orderId,
       action: dto.action,
@@ -63,6 +61,15 @@ export class OrderController {
   }
 
   /**
+   * 获取可用的生产批次列表（用于发货时选择）
+   * GET /api/internal/orders/available-batches
+   */
+  @Get('available-batches')
+  async getAvailableBatches() {
+    return this.orderService.getAvailableBatches();
+  }
+
+  /**
    * 获取订单详情
    * GET /api/internal/orders/:id
    * 权限：ADMIN, OPERATOR, AUDITOR（只读）
@@ -76,15 +83,29 @@ export class OrderController {
   /**
    * 履行订单（生成应收发票）
    * POST /api/internal/orders/:id/fulfill
+   * 
+   * P29关键修复：强制要求传入 batchNo 参数
+   * Body: { batchNo: "QZ202501110001" }
    */
   @Post(':id/fulfill')
-  async fulfillOrder(@Param('id') id: number, @Request() req) {
-    // 强制要求 internal token，不允许 fallback
+  async fulfillOrder(
+    @Param('id') id: number,
+    @Body() body: { batchNo: string },
+    @Request() req,
+  ) {
+    // 强制要求 internal token
     if (!req.user?.id) {
       throw new UnauthorizedException('Fulfill order requires internal authentication');
     }
-    
-    const userId = req.user.id; // 必须是 number
-    return this.orderService.fulfillOrder(id, userId);
+
+    // P29: 强制校验 batchNo 参数
+    if (!body?.batchNo || body.batchNo.trim() === '') {
+      throw new BadRequestException(
+        '发货必须在请求体中指定 batchNo（生产批次号），例如: { "batchNo": "QZ202501110001" }'
+      );
+    }
+
+    const userId = req.user.id;
+    return this.orderService.fulfillOrder(id, userId, body.batchNo);
   }
 }

@@ -234,6 +234,25 @@ export class OrderService {
   }
 
   /**
+   * 获取可用的生产批次列表（用于发货时选择）
+   * 返回当前有效的、质检通过的生产批次
+   */
+  async getAvailableBatches() {
+    const rows = await this.dataSource.query(`
+      SELECT pp.batch_no, pp.product_name, pp.production_date, pp.expiry_date,
+             pp.actual_quantity, pp.quality_inspector, pp.quality_result,
+             pp.raw_material, pp.raw_material_batch,
+             (SELECT COUNT(*) FROM orders o WHERE o.batch_no = pp.batch_no AND o.status = 'FULFILLED') as used_count
+      FROM production_plans pp
+      WHERE pp.quality_result = 'PASS'
+        AND pp.expiry_date >= CURDATE()
+      ORDER BY pp.production_date DESC
+      LIMIT 200
+    `);
+    return rows;
+  }
+
+  /**
    * 生成订单编号
    */
   private async generateOrderNo(orgId: number): Promise<string> {
@@ -253,33 +272,50 @@ export class OrderService {
   }
 
   /**
-   * 生成批次号
-   * 格式：QZ + 日期(YYYYMMDD) + 4位序号
-   * 例如：QZ202501110124
-   */
-  private async generateBatchNo(): Promise<string> {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const prefix = `QZ${dateStr}`;
-
-    // 查询当天已有的batch_no数量
-    const rows = await this.dataSource.query(
-      `SELECT COUNT(*) AS cnt FROM orders WHERE batch_no LIKE ?`,
-      [`${prefix}%`],
-    );
-    const count = Number(rows[0]?.cnt || 0);
-    const seq = (count + 1).toString().padStart(4, '0');
-    return `${prefix}${seq}`;
-  }
-
-  /**
    * 履行订单（fulfill）
    * 
-   * P26关键修复：发货时必须将明确的 batch_no 写入 orders 表
+   * P29关键修复：发货时必须传入明确的 batchNo 参数
+   * 后端校验 batchNo 在 production_plans 表中真实存在
    * 
    * 生成应收发票并写入审计日志
    */
-  async fulfillOrder(orderId: number, userId: number) {
+  async fulfillOrder(orderId: number, userId: number, batchNo: string) {
+    // ===== P29: 强制校验 batchNo 参数 =====
+    if (!batchNo || batchNo.trim() === '') {
+      throw new BadRequestException(
+        '发货必须指定生产批次号（batchNo），不允许空值。请从生产计划中选择有效批次。'
+      );
+    }
+
+    // 校验 batchNo 在 production_plans 表中真实存在
+    const batchRows = await this.dataSource.query(
+      `SELECT id, batch_no, product_name, quality_result, expiry_date 
+       FROM production_plans WHERE batch_no = ?`,
+      [batchNo.trim()],
+    );
+
+    if (!batchRows || batchRows.length === 0) {
+      throw new BadRequestException(
+        `生产批次号 ${batchNo} 在 production_plans 表中不存在，拒绝发货。`
+      );
+    }
+
+    const batchInfo = batchRows[0];
+
+    // 校验质检结果必须为 PASS
+    if (batchInfo.quality_result !== 'PASS') {
+      throw new BadRequestException(
+        `生产批次 ${batchNo} 质检结果为 ${batchInfo.quality_result}，只有 PASS 的批次才能发货。`
+      );
+    }
+
+    // 校验批次未过期
+    if (new Date(batchInfo.expiry_date) < new Date()) {
+      throw new BadRequestException(
+        `生产批次 ${batchNo} 已过期（${batchInfo.expiry_date}），不允许发货。`
+      );
+    }
+
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ['items'],
@@ -303,16 +339,11 @@ export class OrderService {
     await queryRunner.startTransaction();
 
     try {
-      // 0. 生成唯一批次号（如果订单尚无batch_no）
-      let batchNo = (order as any).batch_no || (order as any).batchNo;
-      if (!batchNo) {
-        batchNo = await this.generateBatchNo();
-        // 写入orders表的batch_no字段
-        await queryRunner.query(
-          `UPDATE orders SET batch_no = ? WHERE id = ?`,
-          [batchNo, orderId],
-        );
-      }
+      // 0. 写入精确的 batch_no 到 orders 表
+      await queryRunner.query(
+        `UPDATE orders SET batch_no = ? WHERE id = ?`,
+        [batchNo.trim(), orderId],
+      );
 
       // 1. 更新订单状态为FULFILLED
       const oldStatus = order.status;
@@ -333,7 +364,7 @@ export class OrderService {
         invoiceNo,
         orderId: order.id,
         amount: order.totalAmount,
-        taxAmount: 0, // 暂时不考虑税额
+        taxAmount: 0,
         balance: order.totalAmount,
         dueDate,
         status: 'OPEN',
@@ -359,6 +390,8 @@ export class OrderService {
           fulfilledAt: order.fulfilledAt,
           fulfilledBy: order.fulfilledBy,
           batchNo: batchNo,
+          batchProductName: batchInfo.product_name,
+          batchQualityResult: batchInfo.quality_result,
           generatedInvoice: {
             invoiceId: savedInvoice.id,
             invoiceNo: savedInvoice.invoiceNo,
@@ -377,6 +410,12 @@ export class OrderService {
       return {
         order: { ...order, batchNo },
         invoice: savedInvoice,
+        batchInfo: {
+          batchNo: batchInfo.batch_no,
+          productName: batchInfo.product_name,
+          qualityResult: batchInfo.quality_result,
+          expiryDate: batchInfo.expiry_date,
+        },
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();

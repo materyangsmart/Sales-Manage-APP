@@ -12,6 +12,7 @@ import { CommissionModule } from './modules/commission/commission.module';
 import { TraceabilityModule } from './modules/traceability/traceability.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { CeoRadarModule } from './modules/ceo-radar/ceo-radar.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CeoRadarModule } from './modules/ceo-radar/ceo-radar.module';
     TraceabilityModule,
     FeedbackModule,
     CeoRadarModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
