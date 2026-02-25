@@ -6,7 +6,8 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // 确保加载.env文件
-const envPath = path.resolve(__dirname, '../.env');
+// 使用 process.cwd() 而非 __dirname 以确保在编译后也能正确找到 .env 文件
+const envPath = path.resolve(process.cwd(), '.env');
 const result = dotenv.config({ path: envPath });
 
 if (result.error) {
