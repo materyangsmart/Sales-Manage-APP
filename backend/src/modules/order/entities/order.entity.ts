@@ -15,6 +15,7 @@ import { OrderItem } from './order-item.entity';
 @Index('idx_orders_no', ['orderNo'], { unique: true })
 @Index('idx_orders_status', ['status'])
 @Index('idx_orders_batch_no', ['batchNo'])
+@Index('idx_orders_sales_rep', ['salesRepId'])
 export class Order {
   @PrimaryGeneratedColumn()
   id: number;
@@ -64,6 +65,9 @@ export class Order {
 
   @Column({ name: 'created_by', type: 'int', comment: '创建人ID' })
   createdBy: number;
+
+  @Column({ name: 'sales_rep_id', type: 'int', nullable: true, comment: '销售代表ID（用于提成计算）' })
+  salesRepId: number | null;
 
   @Column({ name: 'reviewed_by', type: 'int', nullable: true, comment: '审核人ID' })
   reviewedBy: number | null;

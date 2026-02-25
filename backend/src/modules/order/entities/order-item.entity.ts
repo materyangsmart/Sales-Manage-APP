@@ -23,11 +23,11 @@ export class OrderItem {
   @Column({ name: 'product_id', type: 'int', comment: '产品ID' })
   productId: number;
 
-  @Column({ name: 'product_name', type: 'varchar', length: 200, comment: '产品名称（冗余）' })
-  productName: string;
+  @Column({ name: 'product_name', type: 'varchar', length: 200, nullable: true, comment: '产品名称（冗余）' })
+  productName: string | null;
 
-  @Column({ name: 'sku', type: 'varchar', length: 50, comment: 'SKU编码（冗余）' })
-  sku: string;
+  @Column({ name: 'sku', type: 'varchar', length: 50, nullable: true, comment: 'SKU编码（冗余）' })
+  sku: string | null;
 
   @Column({
     name: 'unit_price',
