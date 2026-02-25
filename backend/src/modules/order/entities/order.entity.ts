@@ -14,6 +14,7 @@ import { OrderItem } from './order-item.entity';
 @Index('idx_orders_customer', ['customerId'])
 @Index('idx_orders_no', ['orderNo'], { unique: true })
 @Index('idx_orders_status', ['status'])
+@Index('idx_orders_batch_no', ['batchNo'])
 export class Order {
   @PrimaryGeneratedColumn()
   id: number;
@@ -78,6 +79,9 @@ export class Order {
 
   @Column({ name: 'fulfilled_at', type: 'datetime', nullable: true, comment: '履行时间' })
   fulfilledAt: Date | null;
+
+  @Column({ name: 'batch_no', type: 'varchar', length: 50, nullable: true, comment: '生产批次号（发货时写入，如QZ202501110124）' })
+  batchNo: string | null;
 
   @CreateDateColumn({ name: 'created_at', comment: '创建时间' })
   createdAt: Date;

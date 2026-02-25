@@ -253,7 +253,30 @@ export class OrderService {
   }
 
   /**
+   * 生成批次号
+   * 格式：QZ + 日期(YYYYMMDD) + 4位序号
+   * 例如：QZ202501110124
+   */
+  private async generateBatchNo(): Promise<string> {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const prefix = `QZ${dateStr}`;
+
+    // 查询当天已有的batch_no数量
+    const rows = await this.dataSource.query(
+      `SELECT COUNT(*) AS cnt FROM orders WHERE batch_no LIKE ?`,
+      [`${prefix}%`],
+    );
+    const count = Number(rows[0]?.cnt || 0);
+    const seq = (count + 1).toString().padStart(4, '0');
+    return `${prefix}${seq}`;
+  }
+
+  /**
    * 履行订单（fulfill）
+   * 
+   * P26关键修复：发货时必须将明确的 batch_no 写入 orders 表
+   * 
    * 生成应收发票并写入审计日志
    */
   async fulfillOrder(orderId: number, userId: number) {
@@ -274,12 +297,23 @@ export class OrderService {
       throw new BadRequestException('Only approved orders can be fulfilled');
     }
 
-    // 使用事务：更新订单状态 + 生成发票 + 写审计日志
+    // 使用事务：更新订单状态 + 写入batch_no + 生成发票 + 写审计日志
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      // 0. 生成唯一批次号（如果订单尚无batch_no）
+      let batchNo = (order as any).batch_no || (order as any).batchNo;
+      if (!batchNo) {
+        batchNo = await this.generateBatchNo();
+        // 写入orders表的batch_no字段
+        await queryRunner.query(
+          `UPDATE orders SET batch_no = ? WHERE id = ?`,
+          [batchNo, orderId],
+        );
+      }
+
       // 1. 更新订单状态为FULFILLED
       const oldStatus = order.status;
       order.status = 'FULFILLED';
@@ -303,7 +337,7 @@ export class OrderService {
         balance: order.totalAmount,
         dueDate,
         status: 'OPEN',
-        remark: `Generated from order ${order.orderNo}`,
+        remark: `Generated from order ${order.orderNo} (batch: ${batchNo})`,
       });
 
       const savedInvoice = await queryRunner.manager.save(invoice);
@@ -318,11 +352,13 @@ export class OrderService {
           status: oldStatus,
           fulfilledAt: null,
           fulfilledBy: null,
+          batchNo: null,
         }),
         newValue: JSON.stringify({
           status: 'FULFILLED',
           fulfilledAt: order.fulfilledAt,
           fulfilledBy: order.fulfilledBy,
+          batchNo: batchNo,
           generatedInvoice: {
             invoiceId: savedInvoice.id,
             invoiceNo: savedInvoice.invoiceNo,
@@ -339,7 +375,7 @@ export class OrderService {
 
       // 返回订单和发票信息
       return {
-        order,
+        order: { ...order, batchNo },
         invoice: savedInvoice,
       };
     } catch (error) {

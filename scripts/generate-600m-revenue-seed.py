@@ -124,6 +124,10 @@ CREATE TABLE IF NOT EXISTS production_plans (
   water_quality VARCHAR(100) DEFAULT NULL,
   workshop_temp DECIMAL(5,2) DEFAULT NULL,
   sterilization_params VARCHAR(200) DEFAULT NULL,
+  quality_inspector VARCHAR(100) DEFAULT NULL,
+  quality_result VARCHAR(50) DEFAULT NULL,
+  production_date DATE DEFAULT NULL,
+  expiry_date DATE DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_batch_no (batch_no),
@@ -340,7 +344,133 @@ CREATE TABLE IF NOT EXISTS commission_rules (
         output.append(",\n".join(batch) + ";")
         output.append("")
     
-    # ========== 生成提成规则 ==========
+    # ========== 生成production_plans和delivery_records数据 ==========
+    print("生成production_plans和delivery_records数据...")
+    pp_values = []
+    dr_values = []
+    pp_id = 1
+    dr_id = 1
+    
+    # 质检员名单
+    INSPECTORS = ['王质检', '李质检', '张质检', '赵质检', '陈质检', '刘质检']
+    WORKSHOPS = ['A车间', 'B车间', 'C车间', 'D车间']
+    DRIVERS = [
+        {'id': 101, 'name': '司机刘', 'phone': '13800001001'},
+        {'id': 102, 'name': '司机陈', 'phone': '13800001002'},
+        {'id': 103, 'name': '司机周', 'phone': '13800001003'},
+        {'id': 104, 'name': '司机吴', 'phone': '13800001004'},
+        {'id': 105, 'name': '司机郑', 'phone': '13800001005'},
+        {'id': 106, 'name': '司机冯', 'phone': '13800001006'},
+        {'id': 107, 'name': '司机褚', 'phone': '13800001007'},
+        {'id': 108, 'name': '司机卫', 'phone': '13800001008'},
+    ]
+    
+    # 按batch_no去重（同一批次号只生成一条production_plan）
+    seen_batch_nos = set()
+    
+    # 重新遍历订单数据生成production_plans和delivery_records
+    order_id_pp = 1
+    customer_id_pp = 1
+    batch_sequence_pp = {}
+    
+    for category, config in CUSTOMER_CONFIG.items():
+        for _ in range(config['count']):
+            for month in range(1, 13):
+                orders_in_month = config['orders_per_month']
+                for _ in range(orders_in_month):
+                    order_date = random_date_in_month(2025, month)
+                    order_date_str = order_date.strftime('%Y-%m-%d')
+                    
+                    if order_date_str not in batch_sequence_pp:
+                        batch_sequence_pp[order_date_str] = 1
+                    else:
+                        batch_sequence_pp[order_date_str] += 1
+                    
+                    batch_no = generate_batch_no(order_date, batch_sequence_pp[order_date_str])
+                    
+                    # 判断订单状态（与上面逻辑一致）
+                    random.seed(42 + order_id_pp)  # 确保与订单状态一致
+                    r = random.random()
+                    if r < 0.80:
+                        status = 'FULFILLED'
+                    elif r < 0.95:
+                        status = 'APPROVED'
+                    else:
+                        status = 'PENDING_REVIEW'
+                    
+                    # 只为FULFILLED订单生成production_plan和delivery_record
+                    if status == 'FULFILLED' and batch_no not in seen_batch_nos:
+                        seen_batch_nos.add(batch_no)
+                        
+                        # production_plan
+                        plan_no = f"PP-{order_date.strftime('%Y%m%d')}-{pp_id:06d}"
+                        product_id = random.randint(1, 4)
+                        planned_qty = random.randint(200, 2000)
+                        # 得率偏差：95%正常(偏差<2%), 5%异常(偏差>2%)
+                        if random.random() < 0.05:
+                            deviation = random.uniform(0.03, 0.15)  # 3-15%偏差
+                            actual_qty = int(planned_qty * (1 + random.choice([-1, 1]) * deviation))
+                        else:
+                            deviation = random.uniform(0, 0.019)  # 0-1.9%偏差
+                            actual_qty = int(planned_qty * (1 + random.choice([-1, 1]) * deviation))
+                        
+                        inspector = random.choice(INSPECTORS)
+                        workshop = random.choice(WORKSHOPS)
+                        soybean_batch = f"DL-{order_date.strftime('%Y%m%d')}-{random.randint(1,20):02d}"
+                        workshop_temp = round(random.uniform(22.0, 28.0), 1)
+                        sterilization = f"{random.randint(115,125)}°C/{random.randint(15,30)}min"
+                        quality_result = 'PASS' if random.random() < 0.97 else 'FAIL'
+                        production_date = order_date_str
+                        expiry_date = (order_date + datetime.timedelta(days=random.randint(7, 30))).strftime('%Y-%m-%d')
+                        
+                        pp_values.append(
+                            f"({pp_id}, {ORG_ID}, '{plan_no}', '{order_date_str}', '{batch_no}', {product_id}, "
+                            f"{planned_qty}, {actual_qty}, 'COMPLETED', '{workshop}', '{soybean_batch}', "
+                            f"'合格', {workshop_temp}, '{sterilization}', '{inspector}', '{quality_result}', "
+                            f"'{production_date}', '{expiry_date}')"
+                        )
+                        pp_id += 1
+                        
+                        # delivery_record
+                        driver = random.choice(DRIVERS)
+                        picking_time = f"{order_date_str} {random.randint(5,7):02d}:{random.randint(0,59):02d}:00"
+                        shipping_time = f"{order_date_str} {random.randint(7,9):02d}:{random.randint(0,59):02d}:00"
+                        delivery_time = f"{order_date_str} {random.randint(9,14):02d}:{random.randint(0,59):02d}:00"
+                        
+                        dr_values.append(
+                            f"({dr_id}, {ORG_ID}, {order_id_pp}, '{batch_no}', {driver['id']}, '{driver['name']}', "
+                            f"'{driver['phone']}', '{picking_time}', '{shipping_time}', '{delivery_time}', 'DELIVERED')"
+                        )
+                        dr_id += 1
+                    
+                    order_id_pp += 1
+            customer_id_pp += 1
+    
+    # 恢复随机种子
+    random.seed(42)
+    
+    # 分批INSERT production_plans
+    total_pp = pp_id - 1
+    output.append(f"-- 插入生产计划数据（{total_pp}条）")
+    for i in range(0, len(pp_values), 500):
+        batch = pp_values[i:i+500]
+        output.append("INSERT INTO production_plans (id, org_id, plan_no, plan_date, batch_no, product_id, planned_quantity, actual_quantity, status, workshop, soybean_batch, water_quality, workshop_temp, sterilization_params, quality_inspector, quality_result, production_date, expiry_date) VALUES")
+        output.append(",\n".join(batch) + ";")
+        output.append("")
+    
+    # 分批INSERT delivery_records
+    total_dr = dr_id - 1
+    output.append(f"-- 插入配送记录数据（{total_dr}条）")
+    for i in range(0, len(dr_values), 500):
+        batch = dr_values[i:i+500]
+        output.append("INSERT INTO delivery_records (id, org_id, order_id, batch_no, driver_id, driver_name, driver_phone, picking_time, shipping_time, delivery_time, status) VALUES")
+        output.append(",\n".join(batch) + ";")
+        output.append("")
+    
+    print(f"   生产计划总数：{total_pp}")
+    print(f"   配送记录总数：{total_dr}")
+    
+    # ========== 生成提成规则 =========="
     output.append("-- 插入提成规则")
     output.append("""INSERT INTO commission_rules (org_id, version, category, rule_json, effective_from, is_active) VALUES
 (1, '2025-V1', 'DEFAULT', '{"baseRate": "0.02", "newCustomerBonus": "500", "overdueDeduction": "0.005", "tiers": [{"min": 0, "max": 500000, "rate": "0.02"}, {"min": 500000, "max": 1000000, "rate": "0.025"}, {"min": 1000000, "max": null, "rate": "0.03"}]}', '2025-01-01', 1),
