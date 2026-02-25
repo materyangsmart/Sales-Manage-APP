@@ -1,0 +1,74 @@
+{
+  "query": "DESCRIBE sales_commission_rules;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute DESCRIBE sales_commission_rules;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "rule_version",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "base_rate",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "new_customer_bonus",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "effective_date",
+      "Type": "varchar(10)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "category",
+      "Type": "enum('WET_MARKET','WHOLESALE_B','SUPERMARKET','ECOMMERCE','DEFAULT')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "DEFAULT",
+      "Extra": ""
+    },
+    {
+      "Field": "rule_json",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint(11)\tNO\tPRI\tNULL\tauto_increment\nrule_version\tvarchar(50)\tNO\t\tNULL\t\nbase_rate\tvarchar(20)\tNO\t\tNULL\t\nnew_customer_bonus\tvarchar(20)\tNO\t\tNULL\t\neffective_date\tvarchar(10)\tNO\t\tNULL\t\ncreated_at\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\ncategory\tenum('WET_MARKET','WHOLESALE_B','SUPERMARKET','ECOMMERCE','DEFAULT')\tNO\t\tDEFAULT\t\nrule_json\ttext\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 1610
+}
