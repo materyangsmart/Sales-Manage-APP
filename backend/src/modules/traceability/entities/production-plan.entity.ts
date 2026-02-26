@@ -23,7 +23,7 @@ export class ProductionPlan {
   @Column({ name: 'plan_date', type: 'date', comment: '计划日期' })
   planDate: Date;
 
-  @Column({ name: 'batch_no', type: 'varchar', length: 50, unique: true, comment: '生产批次号' })
+  @Column({ name: 'batch_no', type: 'varchar', length: 50, comment: '生产批次号' })
   batchNo: string;
 
   @Column({ name: 'product_id', type: 'int', comment: '产品ID' })

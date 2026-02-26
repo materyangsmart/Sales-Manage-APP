@@ -36,7 +36,7 @@ export class Customer {
   @Column({ length: 100 })
   name: string;
 
-  @Column({ name: 'customer_name', length: 100, nullable: true, comment: '客户名称（用于显示）' })
+  @Column({ name: 'customer_name', type: 'varchar', length: 100, nullable: true, comment: '客户名称（用于显示）' })
   customerName: string | null;
 
   @Column({ name: 'customer_code', length: 50, unique: true })

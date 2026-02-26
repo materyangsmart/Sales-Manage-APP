@@ -17,19 +17,47 @@
  * - 确保数据库已创建（如 qianzhang_sales）
  * - 确保 .env 文件中的数据库配置正确
  * - synchronize 会自动创建/更新表结构，但不会删除表
+ * 
+ * 重要：
+ * - 此脚本必须与 app.module.ts 中的 entities 列表保持 100% 一致
+ * - 任何新增的 Entity 都必须在此处显式导入
  */
 
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { ARPayment } from '../src/modules/ar/entities/ar-payment.entity';
-import { ARInvoice } from '../src/modules/ar/entities/ar-invoice.entity';
+
+// ========================================
+// 显式导入所有实体（与 app.module.ts 保持一致）
+// ========================================
 import { ARApply } from '../src/modules/ar/entities/ar-apply.entity';
+import { ARInvoice } from '../src/modules/ar/entities/ar-invoice.entity';
+import { ARPayment } from '../src/modules/ar/entities/ar-payment.entity';
 import { AuditLog } from '../src/modules/ar/entities/audit-log.entity';
+import { Customer as CustomerEntity } from '../src/modules/customer/entities/customer.entity';
+import { QualityFeedback } from '../src/modules/feedback/entities/quality-feedback.entity';
+import { Customer as OrderCustomerEntity } from '../src/modules/order/entities/customer.entity';
+import { OrderItem } from '../src/modules/order/entities/order-item.entity';
+import { Order } from '../src/modules/order/entities/order.entity';
+import { Product } from '../src/modules/order/entities/product.entity';
+import { DeliveryRecord } from '../src/modules/traceability/entities/delivery-record.entity';
+import { ProductionPlan } from '../src/modules/traceability/entities/production-plan.entity';
+import { User } from '../src/modules/user/entities/user.entity';
 
 // 加载 .env 文件
+// 优先尝试 .env.test（测试环境），其次尝试 .env（生产环境）
+const envTestPath = path.resolve(__dirname, '../.env.test');
 const envPath = path.resolve(__dirname, '../.env');
-dotenv.config({ path: envPath });
+
+if (require('fs').existsSync(envTestPath)) {
+  dotenv.config({ path: envTestPath });
+  console.log(`✅ Loaded .env.test from: ${envTestPath}\n`);
+} else if (require('fs').existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+  console.log(`✅ Loaded .env from: ${envPath}\n`);
+} else {
+  console.warn(`⚠️  No .env file found, using default values\n`);
+}
 
 // 数据库配置
 const config = {
@@ -39,7 +67,22 @@ const config = {
   username: process.env.DB_USERNAME || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_DATABASE || 'qianzhang_sales',
-  entities: [ARPayment, ARInvoice, ARApply, AuditLog],
+  // 显式列出所有实体（与 app.module.ts 保持一致）
+  entities: [
+    ARApply,
+    ARInvoice,
+    ARPayment,
+    AuditLog,
+    CustomerEntity,
+    QualityFeedback,
+    OrderCustomerEntity,
+    OrderItem,
+    Order,
+    Product,
+    DeliveryRecord,
+    ProductionPlan,
+    User,
+  ],
   synchronize: true, // 强制开启同步
   logging: true, // 显示SQL日志
 };
@@ -50,7 +93,12 @@ async function syncDatabase() {
   console.log(`   Host: ${config.host}:${config.port}`);
   console.log(`   Database: ${config.database}`);
   console.log(`   Username: ${config.username}`);
-  console.log(`   Entities: ${config.entities.length} entities\n`);
+  console.log(`   Entities: ${config.entities.length} entities`);
+  console.log('\n📦 Entity List:');
+  config.entities.forEach((entity, index) => {
+    console.log(`   ${index + 1}. ${entity.name}`);
+  });
+  console.log('');
 
   let dataSource: DataSource | null = null;
 
@@ -83,9 +131,22 @@ async function syncDatabase() {
 
     console.log('\n🎉 Database synchronization completed successfully!');
     console.log('\n💡 Next steps:');
-    console.log('   1. Start the backend server: npm run start:dev');
-    console.log('   2. Test the API: GET /ar/payments?orgId=2&status=UNAPPLIED&page=1&pageSize=20');
-    console.log('   3. Expected result: 200 OK with empty array\n');
+    console.log('   1. Import seed data: mysql -u root -p qianzhang_sales < scripts/scripts/seed-600m-revenue.sql');
+    console.log('   2. Start the backend server: npm run start:dev');
+    console.log('   3. Test the API endpoints');
+    console.log('\n📝 Core tables created:');
+    console.log('   ✓ orders (订单表)');
+    console.log('   ✓ customers (客户表)');
+    console.log('   ✓ users (用户表)');
+    console.log('   ✓ products (产品表)');
+    console.log('   ✓ production_plans (生产计划表)');
+    console.log('   ✓ delivery_records (配送记录表)');
+    console.log('   ✓ quality_feedback (质量反馈表)');
+    console.log('   ✓ ar_invoices (应收发票表)');
+    console.log('   ✓ ar_payments (应收回款表)');
+    console.log('   ✓ ar_apply (应收核销表)');
+    console.log('   ✓ audit_logs (审计日志表)');
+    console.log('   ✓ order_items (订单明细表)\n');
 
   } catch (error) {
     console.error('\n❌ Database synchronization failed!');
