@@ -417,6 +417,76 @@ export const appRouter = router({
         const userId = ctx.user?.id || 0;
         return myPerformanceAPI.get(userId);
       }),
+
+    /** RC1 Epic 1: 手动触发月末提成结算（Cron Job 入口） */
+    triggerSettlement: protectedProcedure
+      .input(z.object({ period: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const { runMonthlyCommissionSettlement } = await import('./commission-engine-v2');
+        return runMonthlyCommissionSettlement(input.period);
+      }),
+
+    /** RC1 Epic 1: 查询某销售的提成明细列表 */
+    listBySales: protectedProcedure
+      .input(z.object({ salesId: z.number() }))
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const { salesCommissions } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const db = await getDb();
+        if (!db) return [];
+        return db.select().from(salesCommissions).where(eq(salesCommissions.salesId, input.salesId));
+      }),
+
+    /** RC1 Epic 1: 查询某周期的全部提成记录 */
+    listByPeriod: protectedProcedure
+      .input(z.object({ period: z.string() }))
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const { salesCommissions } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const db = await getDb();
+        if (!db) return [];
+        return db.select().from(salesCommissions).where(eq(salesCommissions.period, input.period));
+      }),
+  }),
+
+  /** RC1 Epic 1: 打款凭证路由 */
+  paymentReceipt: router({
+    submit: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        amount: z.number().positive(),
+        paidAt: z.date(),
+        receiptUrl: z.string().optional(),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { paymentReceiptService } = await import('./commission-engine-v2');
+        return paymentReceiptService.submit({
+          ...input,
+          submittedBy: ctx.user.id,
+          submittedByName: ctx.user.name ?? 'Unknown',
+        });
+      }),
+    listByOrder: protectedProcedure
+      .input(z.object({ orderId: z.number() }))
+      .query(async ({ input }) => {
+        const { paymentReceiptService } = await import('./commission-engine-v2');
+        return paymentReceiptService.listByOrder(input.orderId);
+      }),
+    verify: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const { paymentReceiptService } = await import('./commission-engine-v2');
+        return paymentReceiptService.verify(input.id, ctx.user.id, ctx.user.name ?? 'Unknown');
+      }),
+    reject: protectedProcedure
+      .input(z.object({ id: z.number(), rejectReason: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const { paymentReceiptService } = await import('./commission-engine-v2');
+        return paymentReceiptService.reject(input.id, ctx.user.id, ctx.user.name ?? 'Unknown', input.rejectReason);
+      }),
   }),
 
   commissionRules: router({ 

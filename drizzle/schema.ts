@@ -254,3 +254,43 @@ export const commissionRulesV2 = mysqlTable("commission_rules_v2", {
 
 export type CommissionRuleV2 = typeof commissionRulesV2.$inferSelect;
 export type InsertCommissionRuleV2 = typeof commissionRulesV2.$inferInsert;
+
+// RC1 Epic 1: 月度提成明细表 (sales_commissions)
+export const salesCommissions = mysqlTable("sales_commissions", {
+  id: int("id").autoincrement().primaryKey(),
+  salesId: int("salesId").notNull(),
+  salesName: varchar("salesName", { length: 255 }).notNull(),
+  period: varchar("period", { length: 7 }).notNull(), // YYYY-MM 格式
+  grossProfit: decimal("grossProfit", { precision: 15, scale: 2 }).notNull().default("0"),
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 4 }).notNull().default("0"), // 0.0800 = 8%
+  commissionAmount: decimal("commissionAmount", { precision: 15, scale: 2 }).notNull().default("0"),
+  ruleId: int("ruleId"), // 关联 commission_rules_v2.id
+  status: mysqlEnum("status", ["PENDING", "CONFIRMED", "PAID"]).default("PENDING").notNull(),
+  settledAt: timestamp("settledAt"),
+  settledBy: int("settledBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SalesCommission = typeof salesCommissions.$inferSelect;
+export type InsertSalesCommission = typeof salesCommissions.$inferInsert;
+
+// RC1 Epic 1: 打款凭证表 (payment_receipts)
+export const paymentReceipts = mysqlTable("payment_receipts", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  paidAt: timestamp("paidAt").notNull(),
+  receiptUrl: varchar("receiptUrl", { length: 1024 }), // 凭证图片/PDF URL
+  remark: text("remark"),
+  submittedBy: int("submittedBy").notNull(),
+  submittedByName: varchar("submittedByName", { length: 255 }).notNull(),
+  verifiedBy: int("verifiedBy"),
+  verifiedByName: varchar("verifiedByName", { length: 255 }),
+  verifiedAt: timestamp("verifiedAt"),
+  status: mysqlEnum("status", ["PENDING", "VERIFIED", "REJECTED"]).default("PENDING").notNull(),
+  rejectReason: text("rejectReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PaymentReceipt = typeof paymentReceipts.$inferSelect;
+export type InsertPaymentReceipt = typeof paymentReceipts.$inferInsert;

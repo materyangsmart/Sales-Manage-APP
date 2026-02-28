@@ -20,6 +20,10 @@ import OrderDetail from "./pages/OrderDetail";
 import CEORadar from "./pages/CEORadar";
 import EmployeeGovernance from "./pages/EmployeeGovernance";
 import { AntiFraud } from "./pages/AntiFraud";
+import MobileHome from "./pages/MobileHome";
+import QuickSubmit from "./pages/QuickSubmit";
+import MobileNotifications from "./pages/MobileNotifications";
+import MobileProfile from "./pages/MobileProfile";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -41,6 +45,11 @@ function Router() {
       <Route path={"/ceo/radar"} component={CEORadar} />
       <Route path={"/governance/employees"} component={EmployeeGovernance} />
       <Route path={"/governance/anti-fraud"} component={AntiFraud} />
+      {/* Mobile H5 Routes */}
+      <Route path={"/mobile"} component={MobileHome} />
+      <Route path={"/mobile/quick-submit"} component={QuickSubmit} />
+      <Route path={"/mobile/notifications"} component={MobileNotifications} />
+      <Route path={"/mobile/profile"} component={MobileProfile} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

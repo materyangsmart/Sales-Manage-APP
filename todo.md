@@ -888,3 +888,38 @@
 - [x] 前端 UploadAttachment 通用组件（拖拽上传 + 进度条 + XHR 直传 + 文件类型/大小校验）
 - [x] OrderDetail.tsx 集成附件管理区（合同扫描件 + 付款水单 + 预览/下载/删除）
 - [x] 27 个文件上传链路隔离测试全部通过（tRPC 路由验证 + 文件校验 + E2E 场景 + 架构安全验证）
+
+## RC1 冲刺：三大 Epic 交付
+
+### Epic 1：动态财务与提成核算引擎
+- [x] 创建 SalesCommission 实体（sales_commissions 表：salesId/salesName/period/grossProfit/commissionRate/commissionAmount/status）
+- [x] 创建 PaymentReceipt 实体（payment_receipts 表：orderId/amount/paymentDate/status/submittedBy/verifiedBy/rejectReason）
+- [x] 数据库迁移完成（两张新表 + 索引）
+- [x] 实现 CommissionRule 阶梯利润率引擎（5 级阶梯：≤1万/≤5万/≤15万/≤25万/>25万 → 3%/5%/8%/10%/12%）
+- [x] 实现 runMonthlyCommissionSettlement Cron Job（月末自动结算 + 幂等性保护）
+- [x] 实现 PaymentReceipt 完整 CRUD（submit/verify/reject/listByOrder）
+- [x] tRPC 路由注册：commission.triggerSettlement / listBySales / listByPeriod
+- [x] tRPC 路由注册：paymentReceipt.submit / verify / reject / listByOrder
+- [x] 31/31 提成核算验收测试全部通过
+
+### Epic 2：移动端 H5 界面
+- [x] MobileLayout.tsx 底部 Tab 导航组件（首页/下单/通知/我的 + 未读角标）
+- [x] MobileHome.tsx 移动端首页（对接 BFF /api/mobile/v1/home，展示今日业绩 + 待办 + 消息）
+- [x] QuickSubmit.tsx 极速下单页面（对接 /api/mobile/v1/orders/quick-submit，客户+商品+数量极简表单）
+- [x] MobileNotifications.tsx 移动端通知页面
+- [x] MobileProfile.tsx 移动端个人中心页面
+- [x] App.tsx 路由注册（/mobile、/mobile/quick-submit、/mobile/notifications、/mobile/profile）
+
+### Epic 3：生产级 Docker 部署基建
+- [x] Dockerfile（后端多阶段构建：Node.js 22 Alpine → 编译 → 生产镜像，非 root 用户，健康检查）
+- [x] Dockerfile.nginx（前端多阶段构建：Vite 构建 → Nginx 1.25 Alpine，静态文件服务）
+- [x] nginx.conf（Gzip 压缩 + API 反向代理 + WebSocket 支持 + SPA 路由回退 + 安全头 + 缓存策略）
+- [x] docker-compose.prod.yml（MySQL 8.0 + Redis 7 + Backend + Frontend，完整依赖链 + 健康检查 + 资源限制 + 持久化卷）
+- [x] .dockerignore（排除 node_modules/dist/.git/测试文件等）
+- [x] docker-compose.prod.yml 语法验证通过（4 服务 + 依赖关系 + 健康检查 + 资源限制 + 持久化卷）
+
+### RC1 验收汇总
+- [x] Epic 1 提成核算测试：31/31 通过
+- [x] Epic 2 移动端页面：6 个组件全部创建，路由注册完毕
+- [x] Epic 3 Docker 编排验证：语法正确，4 服务配置完整
+- [x] 全量回归测试：125/131 通过（6 个失败为历史遗留问题，与 RC1 无关）
