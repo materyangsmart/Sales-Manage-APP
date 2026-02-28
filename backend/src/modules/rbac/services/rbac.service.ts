@@ -331,4 +331,99 @@ export class RbacService {
       orgIds,
     };
   }
+
+  // ─── 管理接口 ──────────────────────────────────────────────────────────────
+
+  /**
+   * 获取所有角色列表
+   */
+  async getAllRoles(): Promise<Role[]> {
+    return this.roleRepo.find({
+      where: { status: 'ACTIVE' },
+      order: { sortOrder: 'ASC', id: 'ASC' },
+    });
+  }
+
+  /**
+   * 获取用户列表（含角色信息）
+   */
+  async getUserList(params: {
+    orgId?: number;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ items: any[]; total: number }> {
+    const { orgId, page = 1, pageSize = 50 } = params;
+    const qb = this.userRepo.createQueryBuilder('user');
+    if (orgId) {
+      qb.where('user.orgId = :orgId', { orgId });
+    }
+    const total = await qb.getCount();
+    const users = await qb
+      .orderBy('user.id', 'ASC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getMany();
+
+    // 批量查询用户角色
+    const userIds = users.map((u) => u.id);
+    const userRoles = userIds.length > 0
+      ? await this.userRoleRepo.find({
+          where: { userId: In(userIds) },
+          relations: ['role'],
+        })
+      : [];
+
+    // 查询组织信息
+    const orgIds = [...new Set(users.map((u) => u.orgId).filter(Boolean))];
+    const orgs = orgIds.length > 0
+      ? await this.orgRepo.find({ where: { id: In(orgIds) } })
+      : [];
+    const orgMap = new Map(orgs.map((o) => [o.id, o]));
+
+    const rolesByUser = new Map<number, UserRole[]>();
+    for (const ur of userRoles) {
+      if (!rolesByUser.has(ur.userId)) rolesByUser.set(ur.userId, []);
+      rolesByUser.get(ur.userId)!.push(ur);
+    }
+
+    const items = users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      realName: u.realName,
+      email: u.email,
+      phone: u.phone,
+      orgId: u.orgId,
+      orgName: orgMap.get(u.orgId)?.name ?? null,
+      jobPosition: u.jobPosition,
+      status: u.status,
+      createdAt: u.createdAt,
+      roles: (rolesByUser.get(u.id) ?? []).map((ur) => ({
+        id: ur.roleId,
+        code: ur.role?.code,
+        name: ur.role?.name,
+        dataScope: ur.role?.dataScope,
+      })),
+    }));
+
+    return { items, total };
+  }
+
+  /**
+   * 更新用户所属部门
+   */
+  async updateUserOrg(userId: number, orgId: number): Promise<void> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('用户不存在');
+    await this.userRepo.update(userId, { orgId });
+    await this.invalidateUserPermissionsCache(userId);
+    await this.invalidateOrgTreeCache();
+  }
+
+  /**
+   * 移除用户角色
+   */
+  async removeUserRole(userId: number, roleId: number): Promise<void> {
+    await this.userRoleRepo.delete({ userId, roleId });
+    await this.invalidateUserPermissionsCache(userId);
+  }
 }

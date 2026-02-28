@@ -966,3 +966,101 @@ export const feedbackAPI = {
     return request<any[]>(`/api/internal/feedback/list?orderId=${orderId}`, {}, 'Get Feedback List');
   },
 };
+
+/**
+ * ========================================
+ * RBAC 管理 API（权限中台）
+ * ========================================
+ */
+export const rbacAPI = {
+  async getRoles(): Promise<any[]> {
+    return request<any[]>('/api/internal/rbac/roles', {}, 'Get Roles');
+  },
+  async getOrgTree(): Promise<any[]> {
+    return request<any[]>('/api/internal/rbac/organizations', {}, 'Get Org Tree');
+  },
+  async getUsers(params: { orgId?: number; page?: number; pageSize?: number }): Promise<{ items: any[]; total: number }> {
+    const qs = new URLSearchParams();
+    if (params.orgId) qs.set('orgId', String(params.orgId));
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    return request<{ items: any[]; total: number }>(`/api/internal/rbac/users?${qs}`, {}, 'Get Users');
+  },
+  async assignRole(userId: number, roleId: number, orgId?: number): Promise<void> {
+    await request<void>('/api/internal/rbac/assign-role', {
+      method: 'POST',
+      body: JSON.stringify({ userId, roleId, orgId }),
+    }, 'Assign Role');
+  },
+  async removeUserRole(userId: number, roleId: number): Promise<void> {
+    await request<void>(`/api/internal/rbac/users/${userId}/roles/remove`, {
+      method: 'PATCH',
+      body: JSON.stringify({ roleId }),
+    }, 'Remove User Role');
+  },
+  async updateUserOrg(userId: number, orgId: number): Promise<void> {
+    await request<void>(`/api/internal/rbac/users/${userId}/org`, {
+      method: 'PATCH',
+      body: JSON.stringify({ orgId }),
+    }, 'Update User Org');
+  },
+};
+
+/**
+ * ========================================
+ * Workflow 审批 API
+ * ========================================
+ */
+export const workflowAPI = {
+  async getMyTodos(params: { page?: number; pageSize?: number }): Promise<{ items: any[]; total: number }> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    return request<{ items: any[]; total: number }>(`/api/internal/workflow/my-todos?${qs}`, {}, 'Get My Todos');
+  },
+  async approve(instanceId: number, comment: string): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/${instanceId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }, 'Approve Workflow');
+  },
+  async reject(instanceId: number, comment: string): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/${instanceId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }, 'Reject Workflow');
+  },
+  async getInstance(instanceId: number): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/${instanceId}`, {}, 'Get Workflow Instance');
+  },
+  async getInstanceByBusiness(businessType: string, businessId: number): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/by-business?businessType=${businessType}&businessId=${businessId}`, {}, 'Get Workflow Instance By Business');
+  },
+};
+
+/**
+ * ========================================
+ * Notification 消息 API
+ * ========================================
+ */
+export const notificationAPI = {
+  async getUnreadCount(): Promise<{ unreadCount: number }> {
+    return request<{ unreadCount: number }>('/api/internal/notifications/unread-count', {}, 'Get Unread Count');
+  },
+  async getList(params: { page?: number; pageSize?: number }): Promise<any> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    return request<any>(`/api/internal/notifications?${qs}`, {}, 'Get Notifications');
+  },
+  async markAsRead(id: number): Promise<void> {
+    await request<void>(`/api/internal/notifications/${id}/read`, {
+      method: 'PATCH',
+    }, 'Mark As Read');
+  },
+  async markAllAsRead(): Promise<void> {
+    await request<void>('/api/internal/notifications/read-all', {
+      method: 'PATCH',
+    }, 'Mark All As Read');
+  },
+};

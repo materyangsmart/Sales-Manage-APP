@@ -2,12 +2,15 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
   Logger,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RbacService } from '../services/rbac.service';
@@ -58,6 +61,7 @@ export class RbacController {
 
   /**
    * 获取组织树（需要认证）
+   * GET /api/internal/rbac/organizations
    */
   @Get('organizations')
   @UseGuards(JwtAuthGuard)
@@ -65,6 +69,72 @@ export class RbacController {
   @ApiOperation({ summary: '获取完整组织架构树' })
   async getOrgTree() {
     return this.rbacService.getOrgTree();
+  }
+
+  /**
+   * 获取所有角色列表（需要认证）
+   * GET /api/internal/rbac/roles
+   */
+  @Get('roles')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取所有角色列表' })
+  async getRoles() {
+    return this.rbacService.getAllRoles();
+  }
+
+  /**
+   * 获取用户列表（含角色信息，管理员权限）
+   * GET /api/internal/rbac/users?orgId=2&page=1&pageSize=50
+   */
+  @Get('users')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取用户列表（含角色信息）' })
+  async getUsers(
+    @Query('orgId') orgId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.rbacService.getUserList({
+      orgId: orgId ? parseInt(orgId) : undefined,
+      page: page ? parseInt(page) : 1,
+      pageSize: pageSize ? parseInt(pageSize) : 50,
+    });
+  }
+
+  /**
+   * 更新用户所属部门（管理员权限）
+   * PATCH /api/internal/rbac/users/:id/org
+   */
+  @Patch('users/:id/org')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('user:manage')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '更新用户所属部门' })
+  async updateUserOrg(
+    @Param('id', ParseIntPipe) userId: number,
+    @Body() body: { orgId: number },
+  ) {
+    await this.rbacService.updateUserOrg(userId, body.orgId);
+    return { success: true, message: '部门分配成功' };
+  }
+
+  /**
+   * 移除用户角色（管理员权限）
+   * PATCH /api/internal/rbac/users/:id/roles/remove
+   */
+  @Patch('users/:id/roles/remove')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('user:manage')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '移除用户角色' })
+  async removeUserRole(
+    @Param('id', ParseIntPipe) userId: number,
+    @Body() body: { roleId: number },
+  ) {
+    await this.rbacService.removeUserRole(userId, body.roleId);
+    return { success: true, message: '角色移除成功' };
   }
 
   /**
