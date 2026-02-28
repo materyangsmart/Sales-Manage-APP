@@ -23,6 +23,7 @@ import { AntiFraud } from "./pages/AntiFraud";
 import AdminUsers from "./pages/AdminUsers";
 import AdminRoles from "./pages/AdminRoles";
 import WorkflowTodos from "./pages/WorkflowTodos";
+import AdminAuditLogs from "./pages/AdminAuditLogs";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -47,6 +48,7 @@ function Router() {
       <Route path={"/admin/users"} component={AdminUsers} />
       <Route path={"/admin/roles"} component={AdminRoles} />
       <Route path={"/workflow/todos"} component={WorkflowTodos} />
+      <Route path={"/admin/audit-logs"} component={AdminAuditLogs} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -40,6 +40,7 @@ const menuItems = [
   { icon: Clock, label: "我的待办", path: "/workflow/todos" },
   { icon: Users, label: "用户管理", path: "/admin/users" },
   { icon: Shield, label: "角色管理", path: "/admin/roles" },
+  { icon: Shield, label: "操作审计", path: "/admin/audit-logs" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

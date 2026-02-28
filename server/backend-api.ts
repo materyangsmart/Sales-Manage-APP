@@ -274,22 +274,28 @@ export const auditLogsAPI = {
   list: async (params: {
     page?: number;
     pageSize?: number;
+    userId?: number;
     resourceType?: string;
     resourceId?: number;
     action?: string;
+    startDate?: string;
+    endDate?: string;
     startTime?: string;
     endTime?: string;
   }) => {
     const query = new URLSearchParams();
     if (params.page) query.set('page', params.page.toString());
     if (params.pageSize) query.set('pageSize', params.pageSize.toString());
+    if (params.userId) query.set('userId', params.userId.toString());
     if (params.resourceType) query.set('resourceType', params.resourceType);
     if (params.resourceId) query.set('resourceId', params.resourceId.toString());
     if (params.action) query.set('action', params.action);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
     if (params.startTime) query.set('startTime', params.startTime);
     if (params.endTime) query.set('endTime', params.endTime);
     
-    return request<any>(`/audit-logs?${query}`);
+    return request<any>(`/api/internal/audit-logs?${query}`);
   },
   
   /**
@@ -1003,6 +1009,9 @@ export const rbacAPI = {
       method: 'PATCH',
       body: JSON.stringify({ orgId }),
     }, 'Update User Org');
+  },
+  async getWsToken(): Promise<{ token: string; userId: number; expiresIn: string }> {
+    return request<{ token: string; userId: number; expiresIn: string }>('/api/internal/rbac/ws-token', {}, 'Get WS Token');
   },
 };
 

@@ -67,6 +67,33 @@ export class AuditLog {
   })
   userAgent: string | null;
 
+  // ─── 全局审计拦截器自动填充字段 ──────────────────────────────────────────────
+  @Column({
+    name: 'api_path',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: 'API 路径（全局审计拦截器自动填充）',
+  })
+  apiPath: string | null;
+
+  @Column({
+    name: 'request_body',
+    type: 'json',
+    nullable: true,
+    comment: '请求体（敏感字段已脱敏）',
+  })
+  requestBody: any;
+
+  @Column({
+    name: 'http_method',
+    type: 'varchar',
+    length: 10,
+    nullable: true,
+    comment: 'HTTP 方法（POST/PUT/PATCH/DELETE）',
+  })
+  httpMethod: string | null;
+
   @Column({
     name: 'idempotency_key',
     type: 'varchar',

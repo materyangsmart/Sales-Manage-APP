@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { AuditLogMiddleware } from './common/middleware/audit-log.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -60,11 +61,8 @@ import { UserNotification } from './modules/notification/entities/user-notificat
 
     // ─── 事件驱动基础设施（全局注册，供所有模块使用）─────────────────────
     EventEmitterModule.forRoot({
-      // 使用通配符支持 'workflow.*' 等模式监听
       wildcard: false,
-      // 最大监听器数量（防止内存泄漏警告）
       maxListeners: 20,
-      // 异步事件处理（不阻塞主线程）
       verboseMemoryLeak: true,
     }),
 
@@ -80,7 +78,6 @@ import { UserNotification } from './modules/notification/entities/user-notificat
         username: configService.get('DB_USERNAME', 'root'),
         password: configService.get('DB_PASSWORD', ''),
         database: configService.get('DB_DATABASE', 'qianzhang_sales'),
-        // Explicitly list all entities instead of using glob pattern
         entities: [
           // 原有业务实体（13 个）
           ARApply,
@@ -120,6 +117,8 @@ import { UserNotification } from './modules/notification/entities/user-notificat
       }),
       inject: [ConfigService],
     }),
+    // ─── 为全局 AuditLogMiddleware 注册 AuditLog Repository ──────────────────
+    TypeOrmModule.forFeature([AuditLog]),
     ARModule,
     OrderModule,
     HealthModule,
@@ -135,6 +134,26 @@ import { UserNotification } from './modules/notification/entities/user-notificat
     NotificationModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // ─── 审计日志中间件作为 Provider（供 DI 注入）────────────────────────────
+    AuditLogMiddleware,
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  /**
+   * 全局审计日志中间件
+   * 拦截所有 POST/PUT/PATCH/DELETE 请求，在 Guard 之前执行
+   * 通过 response.on('finish') 异步写入审计日志，不影响响应链
+   */
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(AuditLogMiddleware)
+      .forRoutes(
+        { path: '*', method: RequestMethod.POST },
+        { path: '*', method: RequestMethod.PUT },
+        { path: '*', method: RequestMethod.PATCH },
+        { path: '*', method: RequestMethod.DELETE },
+      );
+  }
+}

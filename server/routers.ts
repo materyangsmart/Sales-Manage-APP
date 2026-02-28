@@ -568,9 +568,12 @@ export const appRouter = router({
   auditLogs: router({
     list: protectedProcedure
       .input(z.object({
+        userId: z.number().optional(),
         resourceType: z.string().optional(),
         resourceId: z.number().optional(),
         action: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
         startTime: z.string().optional(),
         endTime: z.string().optional(),
         page: z.number().optional(),
@@ -860,6 +863,14 @@ export const appRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
         }
       }),
+    /** 获取 WebSocket 专用 JWT Token */
+    getWsToken: protectedProcedure.query(async () => {
+      try {
+        return await rbacAPI.getWsToken();
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
   }),
 
   // ─── Workflow 审批工作台 ────────────────────────────────────────────────────

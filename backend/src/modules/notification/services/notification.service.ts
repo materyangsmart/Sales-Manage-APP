@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,6 +9,7 @@ import {
   WorkflowPendingEvent,
   WORKFLOW_EVENTS,
 } from '../events/workflow-pending.event';
+import { NotificationGateway } from '../gateways/notification.gateway';
 
 @Injectable()
 export class NotificationService {
@@ -21,6 +22,8 @@ export class NotificationService {
     private readonly notificationRepo: Repository<Notification>,
     @InjectRepository(UserNotification)
     private readonly userNotificationRepo: Repository<UserNotification>,
+    // @Optional() 避免循环依赖问题：Gateway 在 WebSocket 模块初始化后才可用
+    @Optional() private readonly notificationGateway?: NotificationGateway,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -29,7 +32,7 @@ export class NotificationService {
 
   /**
    * 监听工作流节点待审批事件
-   * 自动为对应角色的所有用户生成站内待办通知
+   * 自动为对应角色的所有用户生成站内待办通知，并通过 WebSocket 实时推送
    */
   @OnEvent(WORKFLOW_EVENTS.NODE_PENDING, { async: true })
   async handleWorkflowPendingEvent(event: WorkflowPendingEvent): Promise<void> {
@@ -116,6 +119,32 @@ export class NotificationService {
       this.logger.log(
         `[NotificationService] ✅ 成功为 ${userIds.length} 个用户生成未读通知 (notificationId=${notification.id})`,
       );
+
+      // 6. WebSocket 实时推送（如果用户在线，毫秒级触达）
+      if (this.notificationGateway) {
+        const pushPayload = {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          content: notification.content,
+          businessType: notification.businessType ?? undefined,
+          businessId: notification.businessId ?? undefined,
+          priority: 'HIGH' as const,
+          createdAt: notification.createdAt,
+        };
+
+        const pushResults = await Promise.allSettled(
+          userIds.map((userId) => this.notificationGateway!.pushToUser(userId, pushPayload)),
+        );
+
+        const onlineCount = pushResults.filter(
+          (r) => r.status === 'fulfilled' && r.value === true,
+        ).length;
+
+        this.logger.log(
+          `[NotificationService] WebSocket 推送完成: ${onlineCount}/${userIds.length} 个用户在线并已推送`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `[NotificationService] 处理 workflow.node.pending 事件失败: ${error.message}`,
@@ -246,7 +275,7 @@ export class NotificationService {
   }
 
   /**
-   * 手动创建系统通知（用于预警、公告等）
+   * 手动创建系统通知（用于预警、公告等），并通过 WebSocket 实时推送
    */
   async createSystemNotification(params: {
     type: 'SYSTEM' | 'APPROVAL' | 'ALERT';
@@ -280,6 +309,28 @@ export class NotificationService {
         }),
       );
       await this.userNotificationRepo.save(userNotifications);
+
+      // WebSocket 实时推送
+      if (this.notificationGateway) {
+        const pushPayload = {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          content: notification.content,
+          businessType: notification.businessType ?? undefined,
+          businessId: notification.businessId ?? undefined,
+          priority: params.priority ?? 'NORMAL',
+          createdAt: notification.createdAt,
+        };
+
+        await Promise.allSettled(
+          params.targetUserIds.map((userId) =>
+            this.notificationGateway!.pushToUser(userId, pushPayload).catch((err) =>
+              this.logger.warn(`[NotificationService] WebSocket 推送失败: ${err.message}`),
+            ),
+          ),
+        );
+      }
     }
 
     return notification;
