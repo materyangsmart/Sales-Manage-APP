@@ -14,6 +14,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { CeoRadarModule } from './modules/ceo-radar/ceo-radar.module';
 import { ExportModule } from './modules/export/export.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { WorkflowModule } from './modules/workflow/workflow.module';
 
 // Explicitly import all entities to ensure TypeORM loads them correctly
 import { ARApply } from './modules/ar/entities/ar-apply.entity';
@@ -35,6 +36,11 @@ import { Role } from './modules/rbac/entities/role.entity';
 import { Permission } from './modules/rbac/entities/permission.entity';
 import { RolePermission } from './modules/rbac/entities/role-permission.entity';
 import { UserRole } from './modules/rbac/entities/user-role.entity';
+// Workflow Entities
+import { WorkflowDefinition } from './modules/workflow/entities/workflow-definition.entity';
+import { WorkflowNode } from './modules/workflow/entities/workflow-node.entity';
+import { WorkflowInstance } from './modules/workflow/entities/workflow-instance.entity';
+import { ApprovalLog } from './modules/workflow/entities/approval-log.entity';
 
 @Module({
   imports: [
@@ -67,12 +73,17 @@ import { UserRole } from './modules/rbac/entities/user-role.entity';
           DeliveryRecord,
           ProductionPlan,
           User,
-          // RBAC 实体（5 个新增）
+          // RBAC 实体（5 个）
           Organization,
           Role,
           Permission,
           RolePermission,
           UserRole,
+          // Workflow 实体（4 个新增）
+          WorkflowDefinition,
+          WorkflowNode,
+          WorkflowInstance,
+          ApprovalLog,
         ],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         synchronize: configService.get('DB_SYNC', 'false') === 'true',
@@ -91,6 +102,7 @@ import { UserRole } from './modules/rbac/entities/user-role.entity';
     CeoRadarModule,
     ExportModule,
     RbacModule,
+    WorkflowModule,
   ],
   controllers: [AppController],
   providers: [AppService],

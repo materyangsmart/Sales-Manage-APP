@@ -36,12 +36,18 @@ import { DeliveryRecord } from '../src/modules/traceability/entities/delivery-re
 import { ProductionPlan } from '../src/modules/traceability/entities/production-plan.entity';
 import { User } from '../src/modules/user/entities/user.entity';
 
-// RBAC 实体（5 个新增）
+// RBAC 实体（5 个）
 import { Organization } from '../src/modules/rbac/entities/organization.entity';
 import { Role } from '../src/modules/rbac/entities/role.entity';
 import { Permission } from '../src/modules/rbac/entities/permission.entity';
 import { RolePermission } from '../src/modules/rbac/entities/role-permission.entity';
 import { UserRole } from '../src/modules/rbac/entities/user-role.entity';
+
+// Workflow 实体（4 个新增）
+import { WorkflowDefinition } from '../src/modules/workflow/entities/workflow-definition.entity';
+import { WorkflowNode } from '../src/modules/workflow/entities/workflow-node.entity';
+import { WorkflowInstance } from '../src/modules/workflow/entities/workflow-instance.entity';
+import { ApprovalLog } from '../src/modules/workflow/entities/approval-log.entity';
 
 // 加载 .env 文件
 // 优先尝试 .env.test（测试环境），其次尝试 .env（生产环境）
@@ -74,12 +80,17 @@ const ALL_ENTITIES = [
   DeliveryRecord,
   ProductionPlan,
   User,
-  // RBAC 实体（5 个新增）
+  // RBAC 实体（5 个）
   Organization,
   Role,
   Permission,
   RolePermission,
   UserRole,
+  // Workflow 实体（4 个新增）
+  WorkflowDefinition,
+  WorkflowNode,
+  WorkflowInstance,
+  ApprovalLog,
 ];
 
 const config = {
@@ -100,7 +111,7 @@ async function syncDatabase() {
   console.log(`   Host: ${config.host}:${config.port}`);
   console.log(`   Database: ${config.database}`);
   console.log(`   Username: ${config.username}`);
-  console.log(`   Entities: ${config.entities.length} entities`);
+  console.log(`   Entities: ${config.entities.length} entities (原有13 + RBAC 5 + Workflow 4)`);
   console.log('\n📦 Entity List:');
   config.entities.forEach((entity, index) => {
     console.log(`   ${index + 1}. ${entity.name}`);

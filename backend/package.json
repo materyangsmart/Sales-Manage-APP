@@ -24,7 +24,8 @@
     "generate:audit-logs": "ts-node -r tsconfig-paths/register scripts/generate-audit-logs.ts",
     "seed": "ts-node -r tsconfig-paths/register scripts/seed.ts",
     "db:sync": "ts-node -r tsconfig-paths/register scripts/db-sync.ts",
-    "test:rbac": "ts-node -r tsconfig-paths/register scripts/test-rbac.ts"
+    "test:rbac": "ts-node -r tsconfig-paths/register scripts/test-rbac.ts",
+    "test:workflow": "ts-node -r tsconfig-paths/register scripts/test-workflow.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

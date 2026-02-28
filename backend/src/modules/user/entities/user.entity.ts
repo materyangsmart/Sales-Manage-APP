@@ -88,9 +88,11 @@ export class User {
 
   @Column({
     type: 'simple-array',
+    nullable: true,
+    default: null,
     comment: '角色列表（自动根据职位映射）',
   })
-  roles: string[];
+  roles: string[] | null;
 
   /**
    * 账号状态

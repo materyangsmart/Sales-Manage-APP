@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Like } from 'typeorm';
 import { Order } from '../entities/order.entity';
@@ -8,6 +8,7 @@ import { Customer } from '../entities/customer.entity';
 import { CreateOrderDto, ReviewOrderDto, QueryOrdersDto } from '../dto/order.dto';
 import { ARInvoice } from '../../ar/entities/ar-invoice.entity';
 import { AuditLog } from '../../ar/entities/audit-log.entity';
+import { WorkflowService } from '../../workflow/services/workflow.service';
 
 @Injectable()
 export class OrderService {
@@ -25,6 +26,7 @@ export class OrderService {
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
     private dataSource: DataSource,
+    @Optional() private workflowService?: WorkflowService,
   ) {}
 
   /**
@@ -150,7 +152,13 @@ export class OrderService {
       throw new BadRequestException('Order is not pending review');
     }
 
-    // 更新订单状态
+    // ── 状态机保护：检查是否有进行中的工作流实例 ──
+    // 如果订单有进行中的审批流程，必须通过工作流接口操作，不能直接修改状态
+    if (this.workflowService && dto.action === 'APPROVED') {
+      await this.workflowService.assertOrderCanBeApproved(dto.orderId);
+    }
+
+    // 更新订单状态态
     order.status = dto.action;
     order.reviewedBy = dto.reviewedBy ?? null;
     order.reviewedAt = new Date();
