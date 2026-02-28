@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { RedisModule } from '../infra/redis.module';
 
 // Entities
 import { Organization } from './entities/organization.entity';
@@ -31,6 +32,7 @@ import { RbacController } from './controllers/rbac.controller';
 @Module({
   imports: [
     ConfigModule,
+    RedisModule, // 提供 CacheManager 和 RedisLockService
     TypeOrmModule.forFeature([
       Organization,
       Role,

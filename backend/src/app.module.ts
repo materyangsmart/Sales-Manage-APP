@@ -15,6 +15,7 @@ import { CeoRadarModule } from './modules/ceo-radar/ceo-radar.module';
 import { ExportModule } from './modules/export/export.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
+import { RedisModule } from './modules/infra/redis.module';
 
 // Explicitly import all entities to ensure TypeORM loads them correctly
 import { ARApply } from './modules/ar/entities/ar-apply.entity';
@@ -41,6 +42,8 @@ import { WorkflowDefinition } from './modules/workflow/entities/workflow-definit
 import { WorkflowNode } from './modules/workflow/entities/workflow-node.entity';
 import { WorkflowInstance } from './modules/workflow/entities/workflow-instance.entity';
 import { ApprovalLog } from './modules/workflow/entities/approval-log.entity';
+// Export Entities
+import { ExportTask } from './modules/export/entities/export-task.entity';
 
 @Module({
   imports: [
@@ -48,6 +51,10 @@ import { ApprovalLog } from './modules/workflow/entities/approval-log.entity';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // ─── Redis 基础设施（全局缓存 + BullMQ + 分布式锁）─────────────────────
+    RedisModule,
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -79,11 +86,13 @@ import { ApprovalLog } from './modules/workflow/entities/approval-log.entity';
           Permission,
           RolePermission,
           UserRole,
-          // Workflow 实体（4 个新增）
+          // Workflow 实体（4 个）
           WorkflowDefinition,
           WorkflowNode,
           WorkflowInstance,
           ApprovalLog,
+          // Export 实体（1 个）
+          ExportTask,
         ],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         synchronize: configService.get('DB_SYNC', 'false') === 'true',

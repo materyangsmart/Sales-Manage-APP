@@ -12,6 +12,7 @@ import { WorkflowNode, NodeType } from '../entities/workflow-node.entity';
 import { WorkflowInstance, InstanceStatus } from '../entities/workflow-instance.entity';
 import { ApprovalLog, ApprovalAction } from '../entities/approval-log.entity';
 import { UserRole } from '../../rbac/entities/user-role.entity';
+import { RedisLockService } from '../../infra/redis-lock.service';
 
 /**
  * 工作流服务 — 状态机核心
@@ -38,6 +39,7 @@ export class WorkflowService {
     @InjectRepository(UserRole)
     private userRoleRepo: Repository<UserRole>,
     private dataSource: DataSource,
+    private readonly redisLockService: RedisLockService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -126,6 +128,40 @@ export class WorkflowService {
    * 创建一个新的 WorkflowInstance，并写入第一条 SUBMIT 日志
    */
   async startInstance(params: {
+    definitionCode: string;
+    businessType: string;
+    businessId: number;
+    businessNo?: string;
+    initiatorId: number;
+    initiatorName?: string;
+    initiatorOrgId?: number;
+    applyReason?: string;
+  }): Promise<WorkflowInstance> {
+    // ─── 分布式锁：防止高并发重复提交 ─────────────────────────────────────
+    const lockKey = `workflow:start:${params.businessType}:${params.businessId}`;
+    const lockToken = await this.redisLockService.acquireLock(lockKey, 15000); // 15 秒锁
+    if (!lockToken) {
+      this.logger.warn(
+        `[分布式锁] 重复提交被拦截: ${params.businessType}#${params.businessId}, 发起人 ${params.initiatorId}`,
+      );
+      throw new BadRequestException(
+        `业务单据 ${params.businessNo ?? params.businessId} 正在处理中，请勿重复提交`,
+      );
+    }
+    this.logger.debug(`[分布式锁] 获取锁成功: ${lockKey}`);
+
+    try {
+      return await this._doStartInstance(params);
+    } finally {
+      await this.redisLockService.releaseLock(lockKey, lockToken);
+      this.logger.debug(`[分布式锁] 释放锁: ${lockKey}`);
+    }
+  }
+
+  /**
+   * 内部实际发起审批逻辑（已在分布式锁保护下执行）
+   */
+  private async _doStartInstance(params: {
     definitionCode: string;
     businessType: string;
     businessId: number;

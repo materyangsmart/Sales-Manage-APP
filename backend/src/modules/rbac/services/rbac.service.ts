@@ -1,7 +1,15 @@
-import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+  Inject,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../../user/entities/user.entity';
@@ -23,6 +31,20 @@ const DATA_SCOPE_PRIORITY: Record<DataScope, number> = {
   [DataScope.ALL]: 4,
 };
 
+/** 缓存 Key 前缀 */
+const CACHE_KEYS = {
+  userPermissions: (userId: number) => `rbac:user_permissions:${userId}`,
+  orgTree: () => `rbac:org_tree`,
+  orgSubIds: (orgId: number) => `rbac:org_sub_ids:${orgId}`,
+};
+
+/** 缓存 TTL（秒） */
+const CACHE_TTL = {
+  userPermissions: 300,   // 5 分钟
+  orgTree: 600,           // 10 分钟
+  orgSubIds: 600,         // 10 分钟
+};
+
 @Injectable()
 export class RbacService {
   private readonly logger = new Logger(RbacService.name);
@@ -39,6 +61,8 @@ export class RbacService {
     @InjectRepository(UserRole)
     private readonly userRoleRepo: Repository<UserRole>,
     private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   // ─── 登录与 JWT 签发 ──────────────────────────────────────────────────────
@@ -55,7 +79,6 @@ export class RbacService {
       throw new UnauthorizedException(`账号已${user.status === 'DISABLED' ? '禁用' : '锁定'}，请联系管理员`);
     }
 
-    // 验证密码
     if (!user.passwordHash) {
       throw new UnauthorizedException('账号未设置密码，请联系管理员');
     }
@@ -64,11 +87,9 @@ export class RbacService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    // 构建 JWT Payload
     const payload = await this.buildJwtPayload(user);
     const token = this.signToken(payload);
 
-    // 更新最后登录时间
     await this.userRepo.update(user.id, { lastLoginAt: new Date() });
 
     this.logger.log(`[Login] 用户 ${user.username} 登录成功，dataScope=${payload.dataScope}`);
@@ -77,9 +98,20 @@ export class RbacService {
 
   /**
    * 构建 JWT Payload（核心：计算 permissions 和 dataScope）
+   * 结果写入 Redis 缓存，TTL = 5 分钟
    */
   async buildJwtPayload(user: User): Promise<JwtPayload> {
-    // 查询用户的所有角色
+    const cacheKey = CACHE_KEYS.userPermissions(user.id);
+
+    // ─── 尝试从缓存读取 ────────────────────────────────────────────────
+    const cached = await this.cacheManager.get<JwtPayload>(cacheKey);
+    if (cached) {
+      this.logger.debug(`[Cache HIT] 用户权限缓存命中: userId=${user.id}`);
+      return cached;
+    }
+    this.logger.debug(`[Cache MISS] 用户权限缓存未命中，查询数据库: userId=${user.id}`);
+
+    // ─── 查询数据库 ────────────────────────────────────────────────────
     const userRoles = await this.userRoleRepo.find({
       where: { userId: user.id },
       relations: ['role'],
@@ -89,7 +121,6 @@ export class RbacService {
     const roleIds = roles.map((r) => r.id);
     const roleCodes = roles.map((r) => r.code);
 
-    // 查询所有角色的权限
     let permissions: string[] = [];
     if (roleIds.length > 0) {
       const rolesWithPerms = await this.roleRepo.find({
@@ -105,7 +136,6 @@ export class RbacService {
       permissions = Array.from(permSet);
     }
 
-    // 计算最高优先级的 dataScope
     let maxDataScope = DataScope.SELF;
     for (const role of roles) {
       const priority = DATA_SCOPE_PRIORITY[role.dataScope] || 0;
@@ -114,7 +144,7 @@ export class RbacService {
       }
     }
 
-    return {
+    const payload: JwtPayload = {
       userId: user.id,
       username: user.username,
       realName: user.realName,
@@ -123,6 +153,12 @@ export class RbacService {
       permissions,
       dataScope: maxDataScope,
     };
+
+    // ─── 写入缓存 ──────────────────────────────────────────────────────
+    await this.cacheManager.set(cacheKey, payload, CACHE_TTL.userPermissions * 1000);
+    this.logger.debug(`[Cache SET] 用户权限已缓存: userId=${user.id}, TTL=${CACHE_TTL.userPermissions}s`);
+
+    return payload;
   }
 
   /**
@@ -133,17 +169,41 @@ export class RbacService {
     return jwt.sign(payload, secret, { expiresIn: '8h' });
   }
 
+  /**
+   * 使用户权限缓存失效（权限变更时调用）
+   */
+  async invalidateUserPermissionsCache(userId: number): Promise<void> {
+    const cacheKey = CACHE_KEYS.userPermissions(userId);
+    await this.cacheManager.del(cacheKey);
+    this.logger.log(`[Cache INVALIDATE] 用户权限缓存已失效: userId=${userId}`);
+  }
+
+  /**
+   * 使组织树缓存失效（部门变更时调用）
+   */
+  async invalidateOrgTreeCache(): Promise<void> {
+    await this.cacheManager.del(CACHE_KEYS.orgTree());
+    this.logger.log(`[Cache INVALIDATE] 组织树缓存已失效`);
+  }
+
   // ─── 组织架构查询 ──────────────────────────────────────────────────────────
 
   /**
    * 获取某组织及其所有子孙组织的 ID 列表
-   * 使用 ancestor_path 实现高效子树查询（O(1) SQL）
+   * 结果写入 Redis 缓存，TTL = 10 分钟
    */
   async getOrgAndSubIds(orgId: number): Promise<number[]> {
+    const cacheKey = CACHE_KEYS.orgSubIds(orgId);
+
+    const cached = await this.cacheManager.get<number[]>(cacheKey);
+    if (cached) {
+      this.logger.debug(`[Cache HIT] 组织子树缓存命中: orgId=${orgId}`);
+      return cached;
+    }
+
     const org = await this.orgRepo.findOne({ where: { id: orgId } });
     if (!org) return [orgId];
 
-    // 利用 ancestor_path 查询所有子孙组织
     const subOrgs = await this.orgRepo
       .createQueryBuilder('org')
       .where('org.ancestor_path LIKE :path', { path: `%/${orgId}/%` })
@@ -151,17 +211,34 @@ export class RbacService {
       .select(['org.id'])
       .getMany();
 
-    return subOrgs.map((o) => o.id);
+    const ids = subOrgs.map((o) => o.id);
+    await this.cacheManager.set(cacheKey, ids, CACHE_TTL.orgSubIds * 1000);
+    this.logger.debug(`[Cache SET] 组织子树已缓存: orgId=${orgId}, count=${ids.length}`);
+    return ids;
   }
 
   /**
    * 获取完整组织树（用于前端展示）
+   * 结果写入 Redis 缓存，TTL = 10 分钟
    */
   async getOrgTree(): Promise<Organization[]> {
-    return this.orgRepo.find({
+    const cacheKey = CACHE_KEYS.orgTree();
+
+    const cached = await this.cacheManager.get<Organization[]>(cacheKey);
+    if (cached) {
+      this.logger.debug(`[Cache HIT] 组织树缓存命中`);
+      return cached;
+    }
+    this.logger.debug(`[Cache MISS] 组织树缓存未命中，查询数据库`);
+
+    const orgs = await this.orgRepo.find({
       where: { status: 'ACTIVE' },
       order: { level: 'ASC', sortOrder: 'ASC' },
     });
+
+    await this.cacheManager.set(cacheKey, orgs, CACHE_TTL.orgTree * 1000);
+    this.logger.debug(`[Cache SET] 组织树已缓存: count=${orgs.length}, TTL=${CACHE_TTL.orgTree}s`);
+    return orgs;
   }
 
   // ─── 用户管理 ──────────────────────────────────────────────────────────────
@@ -202,9 +279,9 @@ export class RbacService {
 
   /**
    * 为用户分配角色
+   * 分配后自动失效该用户的权限缓存
    */
   async assignRole(userId: number, roleId: number, orgId?: number): Promise<void> {
-    // 检查是否已存在
     const existing = await this.userRoleRepo.findOne({
       where: { userId, roleId, orgId: orgId ?? undefined } as any,
     });
@@ -212,6 +289,9 @@ export class RbacService {
 
     const userRole = this.userRoleRepo.create({ userId, roleId, orgId: orgId ?? null });
     await this.userRoleRepo.save(userRole);
+
+    // 自动失效权限缓存
+    await this.invalidateUserPermissionsCache(userId);
   }
 
   /**
@@ -234,13 +314,13 @@ export class RbacService {
 
     let orgIds: number[] = [];
     if (payload.dataScope === DataScope.ALL) {
-      orgIds = []; // 不限制
+      orgIds = [];
     } else if (payload.dataScope === DataScope.DEPT_AND_SUB) {
       orgIds = await this.getOrgAndSubIds(user.orgId);
     } else if (payload.dataScope === DataScope.DEPT) {
       orgIds = [user.orgId];
     } else {
-      orgIds = [user.orgId]; // SELF 用 userId 过滤
+      orgIds = [user.orgId];
     }
 
     return {

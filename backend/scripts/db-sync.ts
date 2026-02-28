@@ -49,6 +49,9 @@ import { WorkflowNode } from '../src/modules/workflow/entities/workflow-node.ent
 import { WorkflowInstance } from '../src/modules/workflow/entities/workflow-instance.entity';
 import { ApprovalLog } from '../src/modules/workflow/entities/approval-log.entity';
 
+// Export 实体（1 个新增）
+import { ExportTask } from '../src/modules/export/entities/export-task.entity';
+
 // 加载 .env 文件
 // 优先尝试 .env.test（测试环境），其次尝试 .env（生产环境）
 const envTestPath = path.resolve(__dirname, '../.env.test');
@@ -91,6 +94,8 @@ const ALL_ENTITIES = [
   WorkflowNode,
   WorkflowInstance,
   ApprovalLog,
+  // Export 实体（1 个新增）
+  ExportTask,
 ];
 
 const config = {
@@ -111,7 +116,7 @@ async function syncDatabase() {
   console.log(`   Host: ${config.host}:${config.port}`);
   console.log(`   Database: ${config.database}`);
   console.log(`   Username: ${config.username}`);
-  console.log(`   Entities: ${config.entities.length} entities (原有13 + RBAC 5 + Workflow 4)`);
+  console.log(`   Entities: ${config.entities.length} entities (原有13 + RBAC 5 + Workflow 4 + Export 1)`);
   console.log('\n📦 Entity List:');
   config.entities.forEach((entity, index) => {
     console.log(`   ${index + 1}. ${entity.name}`);

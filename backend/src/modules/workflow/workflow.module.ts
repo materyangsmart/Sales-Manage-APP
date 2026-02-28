@@ -7,6 +7,7 @@ import { ApprovalLog } from './entities/approval-log.entity';
 import { UserRole } from '../rbac/entities/user-role.entity';
 import { WorkflowService } from './services/workflow.service';
 import { WorkflowController } from './controllers/workflow.controller';
+import { RedisModule } from '../infra/redis.module';
 
 /**
  * 工作流模块
@@ -21,6 +22,7 @@ import { WorkflowController } from './controllers/workflow.controller';
       ApprovalLog,
       UserRole, // 引入 RBAC 的 UserRole 用于权限校验
     ]),
+    RedisModule, // 引入 Redis 模块，提供分布式锁
   ],
   providers: [WorkflowService],
   controllers: [WorkflowController],
