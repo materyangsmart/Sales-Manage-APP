@@ -124,10 +124,21 @@ export const ordersAPI = {
   
   /**
    * 履行订单（生成发票）
+   * P29: 支持传入 batchNo 用于质量追溯
    */
-  fulfill: async (orderId: number) => {
+  fulfill: async (orderId: number, batchNo?: string) => {
     return request<any>(`/api/internal/orders/${orderId}/fulfill`, {
       method: 'POST',
+      body: batchNo ? JSON.stringify({ batchNo }) : undefined,
+    });
+  },
+
+  /**
+   * 获取可用生产批次列表（质检通过且未过期）
+   */
+  getAvailableBatches: async () => {
+    return request<any[]>('/api/internal/orders/available-batches', {
+      method: 'GET',
     });
   },
 };
@@ -495,9 +506,73 @@ export interface CEORadarData {
 export const ceoRadarAPI = {
   /**
    * 获取CEO雷达数据
+   * 后端返回 RadarAlert[] 数组，前端需要转换为 CEORadarData 结构
    */
   async getRadarData(): Promise<CEORadarData> {
-    return request<CEORadarData>('/api/internal/ceo/radar', {}, 'CEO Radar');
+    const alerts = await request<any[]>('/api/internal/ceo/radar', {}, 'CEO Radar');
+
+    // 如果后端已经返回转换后的结构（包含 badDebtRisks 属性），直接返回
+    if (alerts && !Array.isArray(alerts) && (alerts as any).badDebtRisks !== undefined) {
+      return alerts as unknown as CEORadarData;
+    }
+
+    // 后端返回 RadarAlert[] 数组，需要按 type 分类转换
+    const alertList = Array.isArray(alerts) ? alerts : [];
+
+    const badDebtRisks: BadDebtRisk[] = alertList
+      .filter((a: any) => a.type === 'BAD_DEBT')
+      .map((a: any) => ({
+        customerId: a.data?.customerId ?? 0,
+        customerName: a.data?.customerName ?? a.title ?? '',
+        unpaidAmount: a.data?.unpaidAmount ?? a.data?.overdueAmount ?? 0,
+        overdueDays: a.data?.overdueDays ?? 0,
+        creditScore: a.data?.creditScore ?? 0,
+        estimatedLoss: a.data?.estimatedLoss ?? a.data?.overdueAmount ?? 0,
+      }));
+
+    const yieldAnomalies: YieldAnomaly[] = alertList
+      .filter((a: any) => a.type === 'YIELD_ANOMALY')
+      .map((a: any) => ({
+        batchNo: a.data?.batchNo ?? '',
+        soybeanInput: a.data?.soybeanInput ?? 0,
+        productOutput: a.data?.productOutput ?? 0,
+        actualYield: a.data?.actualYield ?? (a.data?.productOutput && a.data?.soybeanInput ? a.data.productOutput / a.data.soybeanInput * 100 : 0),
+        standardYield: a.data?.standardYield ?? (a.data?.expectedOutput && a.data?.soybeanInput ? a.data.expectedOutput / a.data.soybeanInput * 100 : 0),
+        deviation: a.data?.deviation ?? 0,
+        productionDate: a.data?.productionDate ?? new Date().toISOString(),
+      }));
+
+    const churnRisks: ChurnRisk[] = alertList
+      .filter((a: any) => a.type === 'CHURN_RISK')
+      .map((a: any) => ({
+        customerId: a.data?.customerId ?? 0,
+        customerName: a.data?.customerName ?? a.title ?? '',
+        customerCategory: a.data?.customerCategory ?? 'UNKNOWN',
+        daysSinceLastOrder: a.data?.daysSinceLastOrder ?? 0,
+        lastOrderDate: a.data?.lastOrderDate ?? '',
+        avgMonthlyOrders: a.data?.avgMonthlyOrders ?? 0,
+        salesRepName: a.data?.salesRepName ?? '',
+      }));
+
+    const complaintAlerts: ComplaintAlert[] = alertList
+      .filter((a: any) => a.type === 'COMPLAINT')
+      .map((a: any) => ({
+        id: a.data?.complaintId ?? 0,
+        batchNo: a.data?.batchNo ?? '',
+        complainantName: a.data?.complainantName ?? '',
+        complaintContent: a.description ?? a.data?.complaintContent ?? '',
+        severity: a.level ?? a.data?.severity ?? 'MEDIUM',
+        createdAt: a.data?.createdAt ?? new Date().toISOString(),
+      }));
+
+    return {
+      badDebtRisks,
+      yieldAnomalies,
+      churnRisks,
+      complaintAlerts,
+      unreadComplaintCount: alertList.filter((a: any) => a.type === 'COMPLAINT' && (a.data?.status === 'PENDING' || a.level === 'HIGH')).length,
+      lastUpdate: new Date().toISOString(),
+    };
   },
 };
 

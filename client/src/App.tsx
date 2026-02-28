@@ -20,6 +20,7 @@ import OrderDetail from "./pages/OrderDetail";
 import CEORadar from "./pages/CEORadar";
 import EmployeeGovernance from "./pages/EmployeeGovernance";
 import { AntiFraud } from "./pages/AntiFraud";
+import BIDashboard from "./pages/BIDashboard";
 import MobileHome from "./pages/MobileHome";
 import QuickSubmit from "./pages/QuickSubmit";
 import MobileNotifications from "./pages/MobileNotifications";
@@ -45,6 +46,7 @@ function Router() {
       <Route path={"/ceo/radar"} component={CEORadar} />
       <Route path={"/governance/employees"} component={EmployeeGovernance} />
       <Route path={"/governance/anti-fraud"} component={AntiFraud} />
+      <Route path={"/ceo/dashboard"} component={BIDashboard} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />

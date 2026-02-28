@@ -923,3 +923,32 @@
 - [x] Epic 2 移动端页面：6 个组件全部创建，路由注册完毕
 - [x] Epic 3 Docker 编排验证：语法正确，4 服务配置完整
 - [x] 全量回归测试：125/131 通过（6 个失败为历史遗留问题，与 RC1 无关）
+
+## RC2 生产环境压轴冲刺 (Mega-Sprint 2)
+
+### Epic 1：清除技术债与彻底去 Mock 化
+- [x] 重构 InMemoryQueue 为 Redis-backed BullMQ 持久化队列
+- [x] 真实 IM API 接入（企业微信+钉钉，环境变量开关切换 Mock/Real）
+- [x] 修复 OrderFulfill.tsx 2 个 TS 编译错误
+- [x] 修复 backend-connection.test.ts 1 个失败测试
+- [x] 修复 backend-connectivity.test.ts 3 个失败测试
+- [x] 修复 p2-integration.test.ts 2 个失败测试
+- [x] 达成 100% 测试通过率（131/131 PASS）
+
+### Epic 2：构建 CEO 战情指挥室 BI 大屏
+- [x] 开发 /api/internal/bi/dashboard 后端聚合 API（营收趋势+战区排名+商品占比+逾期回款）
+- [x] 前端 /ceo/dashboard 路由（ECharts 可视化 + 深色科技感 UI）
+- [x] BI 大屏截图验收（5 KPI 卡片 + 4 ECharts 图表成功渲染）
+
+### Epic 3：数据库性能调优
+- [x] 审查 Order/Customer/User 实体，补充 17 个联合索引定义
+- [x] 为高频字典接口开启 Redis 查询缓存（createCachedQuery + 慢查询监控）
+
+### Epic 4：CI/CD 流水线建设
+- [x] .github/workflows/production.yml（lint → test → Docker build → push，5 个 Job）
+
+### RC2 验收标准
+- [x] 队列持久化验证（BullMQ + Redis 降级 InMemory 策略验证通过）
+- [x] 测试清零证明（131/131 测试 100% PASS，0 失败）
+- [x] BI 大屏截图（CEO 战情指挥室成功渲染）
+- [x] 推送到 GitHub main 分支

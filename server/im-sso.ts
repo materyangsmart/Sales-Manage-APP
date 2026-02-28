@@ -1,7 +1,14 @@
 /**
- * IM SSO 认证服务
+ * IM SSO 认证服务 (RC2 - 生产级真实 API 接入)
+ * 
  * 支持企业微信（WECOM）和钉钉（DINGTALK）免密登录
- * 本地开发使用 Mock IM OAuth 服务模拟外部 IM 接口
+ * 通过 IM_MODE 环境变量切换 mock/real 模式：
+ *   IM_MODE=real  → 调用真实企业微信/钉钉 API
+ *   IM_MODE=mock  → 使用 Mock 模拟（默认，用于开发/测试）
+ * 
+ * 真实模式所需环境变量：
+ *   WECOM_CORP_ID, WECOM_CORP_SECRET, WECOM_AGENT_ID
+ *   DINGTALK_APP_KEY, DINGTALK_APP_SECRET
  */
 
 import { eq } from "drizzle-orm";
@@ -40,19 +47,179 @@ export interface IMLoginResult {
 }
 
 // ============================================================
-// Mock IM OAuth 服务
-// 在本地开发环境中模拟企业微信/钉钉的 code 换 userinfo 行为
-// 生产环境中替换为真实的 IM SDK 调用
+// 环境模式判断
+// ============================================================
+
+function getIMMode(): "real" | "mock" {
+  return (process.env.IM_MODE === "real") ? "real" : "mock";
+}
+
+// ============================================================
+// 真实企业微信 API
 // ============================================================
 
 /**
- * Mock 企业微信 code 换取用户信息
- * 真实实现：POST https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo
+ * 真实企业微信 OAuth：通过 code 获取用户信息
+ * 
+ * 流程：
+ * 1. 用 corpid + corpsecret 获取 access_token
+ * 2. 用 access_token + code 调用 getuserinfo 获取 UserId
+ * 3. 用 access_token + UserId 调用 user/get 获取完整用户信息
+ * 
+ * 文档：https://developer.work.weixin.qq.com/document/path/91023
  */
+async function realWECOMCodeExchange(code: string): Promise<IMUserInfo> {
+  const corpId = process.env.WECOM_CORP_ID;
+  const corpSecret = process.env.WECOM_CORP_SECRET;
+
+  if (!corpId || !corpSecret) {
+    throw new Error("[WECOM Real] Missing WECOM_CORP_ID or WECOM_CORP_SECRET environment variables");
+  }
+
+  console.log(`[IM-SSO] WECOM Real API: Fetching access_token for corpId=${corpId}`);
+
+  // Step 1: 获取 access_token
+  const tokenResp = await fetch(
+    `https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${corpId}&corpsecret=${corpSecret}`
+  );
+  const tokenData = await tokenResp.json() as any;
+
+  if (tokenData.errcode !== 0) {
+    throw new Error(`[WECOM Real] Token error: errcode=${tokenData.errcode}, errmsg=${tokenData.errmsg}`);
+  }
+
+  const accessToken = tokenData.access_token;
+  console.log(`[IM-SSO] WECOM Real API: access_token obtained, expires_in=${tokenData.expires_in}s`);
+
+  // Step 2: 通过 code 获取 UserId
+  const userInfoResp = await fetch(
+    `https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo?access_token=${accessToken}&code=${code}`
+  );
+  const userInfoData = await userInfoResp.json() as any;
+
+  if (userInfoData.errcode !== 0) {
+    throw new Error(`[WECOM Real] getuserinfo error: errcode=${userInfoData.errcode}, errmsg=${userInfoData.errmsg}`);
+  }
+
+  const userId = userInfoData.userid || userInfoData.UserId;
+  if (!userId) {
+    throw new Error("[WECOM Real] No userid returned from getuserinfo (may be external user)");
+  }
+
+  console.log(`[IM-SSO] WECOM Real API: userId=${userId}`);
+
+  // Step 3: 获取完整用户信息
+  const userDetailResp = await fetch(
+    `https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token=${accessToken}&userid=${userId}`
+  );
+  const userDetail = await userDetailResp.json() as any;
+
+  if (userDetail.errcode !== 0) {
+    throw new Error(`[WECOM Real] user/get error: errcode=${userDetail.errcode}, errmsg=${userDetail.errmsg}`);
+  }
+
+  console.log(`[IM-SSO] WECOM Real API: resolved name=${userDetail.name}, email=${userDetail.email}`);
+
+  return {
+    unionid: userId, // 企业微信内部使用 userid 作为唯一标识
+    name: userDetail.name || userId,
+    email: userDetail.email || undefined,
+    mobile: userDetail.mobile || undefined,
+    avatar: userDetail.avatar || undefined,
+    provider: "WECOM",
+  };
+}
+
+/**
+ * 真实钉钉 OAuth：通过 code 获取用户信息
+ * 
+ * 流程：
+ * 1. 用 appkey + appsecret 获取 access_token
+ * 2. 用 access_token + code 调用 user/getuserinfo 获取 userid
+ * 3. 用 access_token + userid 调用 topapi/v2/user/get 获取完整用户信息
+ * 
+ * 文档：https://open.dingtalk.com/document/orgapp/obtain-the-userid-of-a-user-by-using-the-log-free
+ */
+async function realDINGTALKCodeExchange(code: string): Promise<IMUserInfo> {
+  const appKey = process.env.DINGTALK_APP_KEY;
+  const appSecret = process.env.DINGTALK_APP_SECRET;
+
+  if (!appKey || !appSecret) {
+    throw new Error("[DINGTALK Real] Missing DINGTALK_APP_KEY or DINGTALK_APP_SECRET environment variables");
+  }
+
+  console.log(`[IM-SSO] DINGTALK Real API: Fetching access_token for appKey=${appKey}`);
+
+  // Step 1: 获取 access_token
+  const tokenResp = await fetch(
+    `https://oapi.dingtalk.com/gettoken?appkey=${appKey}&appsecret=${appSecret}`
+  );
+  const tokenData = await tokenResp.json() as any;
+
+  if (tokenData.errcode !== 0) {
+    throw new Error(`[DINGTALK Real] Token error: errcode=${tokenData.errcode}, errmsg=${tokenData.errmsg}`);
+  }
+
+  const accessToken = tokenData.access_token;
+  console.log(`[IM-SSO] DINGTALK Real API: access_token obtained, expires_in=${tokenData.expires_in}s`);
+
+  // Step 2: 通过 code 获取 userid
+  const userInfoResp = await fetch(
+    `https://oapi.dingtalk.com/topapi/v2/user/getuserinfo?access_token=${accessToken}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    }
+  );
+  const userInfoData = await userInfoResp.json() as any;
+
+  if (userInfoData.errcode !== 0) {
+    throw new Error(`[DINGTALK Real] getuserinfo error: errcode=${userInfoData.errcode}, errmsg=${userInfoData.errmsg}`);
+  }
+
+  const userId = userInfoData.result?.userid;
+  if (!userId) {
+    throw new Error("[DINGTALK Real] No userid returned from getuserinfo");
+  }
+
+  console.log(`[IM-SSO] DINGTALK Real API: userId=${userId}`);
+
+  // Step 3: 获取完整用户信息
+  const userDetailResp = await fetch(
+    `https://oapi.dingtalk.com/topapi/v2/user/get?access_token=${accessToken}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userid: userId }),
+    }
+  );
+  const userDetail = await userDetailResp.json() as any;
+
+  if (userDetail.errcode !== 0) {
+    throw new Error(`[DINGTALK Real] user/get error: errcode=${userDetail.errcode}, errmsg=${userDetail.errmsg}`);
+  }
+
+  const detail = userDetail.result || {};
+  console.log(`[IM-SSO] DINGTALK Real API: resolved name=${detail.name}, mobile=${detail.mobile}`);
+
+  return {
+    unionid: detail.unionid || userId,
+    name: detail.name || userId,
+    email: detail.email || undefined,
+    mobile: detail.mobile || undefined,
+    avatar: detail.avatar || undefined,
+    provider: "DINGTALK",
+  };
+}
+
+// ============================================================
+// Mock IM OAuth 服务（开发/测试环境）
+// ============================================================
+
 async function mockWECOMCodeExchange(code: string): Promise<IMUserInfo> {
   console.log(`[IM-SSO] WECOM Mock: exchanging code=${code}`);
 
-  // Mock 数据库：code -> userinfo 映射（模拟企业微信 OAuth 服务器）
   const mockUsers: Record<string, IMUserInfo> = {
     "mock_wecom_code_001": {
       unionid: "wecom_uid_sales_001",
@@ -77,7 +244,6 @@ async function mockWECOMCodeExchange(code: string): Promise<IMUserInfo> {
     },
   };
 
-  // 模拟网络延迟
   await new Promise(resolve => setTimeout(resolve, 50));
 
   const userInfo = mockUsers[code];
@@ -89,10 +255,6 @@ async function mockWECOMCodeExchange(code: string): Promise<IMUserInfo> {
   return userInfo;
 }
 
-/**
- * Mock 钉钉 code 换取用户信息
- * 真实实现：POST https://oapi.dingtalk.com/sns/getuserinfo_bycode
- */
 async function mockDINGTALKCodeExchange(code: string): Promise<IMUserInfo> {
   console.log(`[IM-SSO] DINGTALK Mock: exchanging code=${code}`);
 
@@ -123,14 +285,22 @@ async function mockDINGTALKCodeExchange(code: string): Promise<IMUserInfo> {
   return userInfo;
 }
 
+// ============================================================
+// 统一 code 换取接口（自动路由 real/mock）
+// ============================================================
+
 /**
- * 通过 IM code 换取用户信息（路由到对应的 Mock 服务）
+ * 通过 IM code 换取用户信息
+ * 根据 IM_MODE 环境变量自动选择真实 API 或 Mock
  */
 export async function exchangeIMCode(code: string, provider: IMProvider): Promise<IMUserInfo> {
+  const mode = getIMMode();
+  console.log(`[IM-SSO] exchangeIMCode: provider=${provider}, mode=${mode}`);
+
   if (provider === "WECOM") {
-    return mockWECOMCodeExchange(code);
+    return mode === "real" ? realWECOMCodeExchange(code) : mockWECOMCodeExchange(code);
   } else if (provider === "DINGTALK") {
-    return mockDINGTALKCodeExchange(code);
+    return mode === "real" ? realDINGTALKCodeExchange(code) : mockDINGTALKCodeExchange(code);
   }
   throw new Error(`Unsupported IM provider: ${provider}`);
 }
@@ -143,18 +313,15 @@ export async function exchangeIMCode(code: string, provider: IMProvider): Promis
  * IM 免密登录主方法
  *
  * 流程：
- * 1. 通过 code 向 Mock IM 服务换取 unionid + 用户信息
+ * 1. 通过 code 向 IM 服务换取 unionid + 用户信息
  * 2. 查询数据库是否已有绑定该 unionid 的用户
  * 3. 若存在 → 直接签发 JWT
  * 4. 若不存在 → 自动静默注册（分配 user 角色）→ 签发 JWT
- *
- * @param code - 前端移动端传来的 IM 授权 code
- * @param provider - IM 平台类型（WECOM / DINGTALK）
  */
 export async function imLogin(code: string, provider: IMProvider): Promise<IMLoginResult> {
-  console.log(`[IM-SSO] imLogin called: provider=${provider}, code=${code}`);
+  console.log(`[IM-SSO] imLogin called: provider=${provider}, code=${code}, mode=${getIMMode()}`);
 
-  // Step 1: 通过 Mock IM 服务换取用户信息
+  // Step 1: 通过 IM 服务换取用户信息
   const imUserInfo = await exchangeIMCode(code, provider);
 
   const db = await getDb();
@@ -184,7 +351,6 @@ export async function imLogin(code: string, provider: IMProvider): Promise<IMLog
     console.log(`[IM-SSO] New user, auto-registering: unionid=${imUserInfo.unionid}`);
     isNewUser = true;
 
-    // 生成唯一 openId（IM 平台前缀 + unionid）
     const openId = `${provider.toLowerCase()}_${imUserInfo.unionid}`;
 
     await db.insert(users).values({
@@ -192,7 +358,7 @@ export async function imLogin(code: string, provider: IMProvider): Promise<IMLog
       name: imUserInfo.name,
       email: imUserInfo.email ?? null,
       loginMethod: provider,
-      role: "user", // 默认分配基础角色
+      role: "user",
       imUnionid: imUserInfo.unionid,
       imProvider: provider,
       lastSignedIn: new Date(),
@@ -212,10 +378,10 @@ export async function imLogin(code: string, provider: IMProvider): Promise<IMLog
     console.log(`[IM-SSO] New user registered: id=${user.id}, openId=${user.openId}`);
   }
 
-  // Step 5: 签发 JWT Session Token（复用现有 SDK 的签发机制）
+  // Step 5: 签发 JWT Session Token
   const token = await sdk.createSessionToken(user.openId, {
     name: user.name ?? imUserInfo.name,
-    expiresInMs: 7 * 24 * 60 * 60 * 1000, // 7 天有效期
+    expiresInMs: 7 * 24 * 60 * 60 * 1000,
   });
 
   console.log(`[IM-SSO] JWT issued for user id=${user.id}, isNewUser=${isNewUser}`);

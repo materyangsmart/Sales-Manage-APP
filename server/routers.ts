@@ -4,7 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI, rbacAPI, workflowAPI, notificationAPI, fileStorageAPI } from "./backend-api";
+import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI, rbacAPI, workflowAPI, notificationAPI, fileStorageAPI } from './backend-api';
+import { getBIDashboardData, generateMockDashboardData } from './bi-dashboard';
 import { imLogin } from "./im-sso";
 import { routeIMNotificationSync, getRecentPushLogs } from "./im-notification";
 
@@ -134,9 +135,15 @@ export const appRouter = router({
     fulfill: protectedProcedure
       .input(z.object({
         orderId: z.number(),
+        batchNo: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return ordersAPI.fulfill(input.orderId);
+        return ordersAPI.fulfill(input.orderId, input.batchNo);
+      }),
+
+    getAvailableBatches: protectedProcedure
+      .query(async () => {
+        return ordersAPI.getAvailableBatches();
       }),
     
     get: protectedProcedure
@@ -1163,6 +1170,31 @@ export const appRouter = router({
         } catch (e: any) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
         }
+      }),
+  }),
+  /** BI Dashboard — CEO 战情指挥室聚合 API */
+  biDashboard: router({
+    /** 获取完整的 BI 大屏数据（单次请求聚合） */
+    getData: protectedProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        orgId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return getBIDashboardData(input || {});
+      }),
+    /** 获取 Mock 数据（用于演示和前端开发） */
+    getMockData: publicProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const now = new Date();
+        const startDate = input?.startDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const endDate = input?.endDate || now.toISOString().split('T')[0];
+        return generateMockDashboardData(startDate, endDate);
       }),
   }),
 });
