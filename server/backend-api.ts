@@ -124,20 +124,11 @@ export const ordersAPI = {
   
   /**
    * 履行订单（生成发票）
-   * P29: 强制要求传入 batchNo 参数
    */
-  fulfill: async (orderId: number, batchNo: string) => {
+  fulfill: async (orderId: number) => {
     return request<any>(`/api/internal/orders/${orderId}/fulfill`, {
       method: 'POST',
-      body: JSON.stringify({ batchNo }),
     });
-  },
-
-  /**
-   * 获取可用的生产批次列表（用于发货时选择）
-   */
-  getAvailableBatches: async () => {
-    return request<any[]>(`/api/internal/orders/available-batches`);
   },
 };
 
@@ -283,22 +274,28 @@ export const auditLogsAPI = {
   list: async (params: {
     page?: number;
     pageSize?: number;
+    userId?: number;
     resourceType?: string;
     resourceId?: number;
     action?: string;
+    startDate?: string;
+    endDate?: string;
     startTime?: string;
     endTime?: string;
   }) => {
     const query = new URLSearchParams();
     if (params.page) query.set('page', params.page.toString());
     if (params.pageSize) query.set('pageSize', params.pageSize.toString());
+    if (params.userId) query.set('userId', params.userId.toString());
     if (params.resourceType) query.set('resourceType', params.resourceType);
     if (params.resourceId) query.set('resourceId', params.resourceId.toString());
     if (params.action) query.set('action', params.action);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
     if (params.startTime) query.set('startTime', params.startTime);
     if (params.endTime) query.set('endTime', params.endTime);
     
-    return request<any>(`/audit-logs?${query}`);
+    return request<any>(`/api/internal/audit-logs?${query}`);
   },
   
   /**
@@ -498,79 +495,9 @@ export interface CEORadarData {
 export const ceoRadarAPI = {
   /**
    * 获取CEO雷达数据
-   * 后端返回 RadarAlert[] 数组，需要转换为前端期望的 CEORadarData 结构
    */
   async getRadarData(): Promise<CEORadarData> {
-    // 后端实际路径: /api/internal/ceo-radar/alerts?orgId=2
-    const alerts = await request<any[]>('/api/internal/ceo-radar/alerts?orgId=1', {}, 'CEO Radar');
-    
-    // 将 RadarAlert[] 转换为 CEORadarData 结构
-    const badDebtRisks: BadDebtRisk[] = [];
-    const yieldAnomalies: YieldAnomaly[] = [];
-    const churnRisks: ChurnRisk[] = [];
-    const complaintAlerts: ComplaintAlert[] = [];
-    
-    if (Array.isArray(alerts)) {
-      for (const alert of alerts) {
-        switch (alert.type) {
-          case 'BAD_DEBT':
-            badDebtRisks.push({
-              customerId: alert.data?.customerId || 0,
-              customerName: alert.data?.customerName || alert.title,
-              unpaidAmount: alert.data?.balance || 0,
-              overdueDays: alert.data?.overdueDays || 0,
-              creditScore: 50,
-              estimatedLoss: alert.data?.balance || 0,
-            });
-            break;
-          case 'YIELD_ANOMALY':
-            yieldAnomalies.push({
-              batchNo: alert.data?.batchNo || '',
-              soybeanInput: alert.data?.plannedQuantity || 0,
-              productOutput: alert.data?.actualQuantity || 0,
-              actualYield: alert.data?.actualQuantity && alert.data?.plannedQuantity
-                ? (alert.data.actualQuantity / alert.data.plannedQuantity * 100)
-                : 0,
-              standardYield: 100,
-              deviation: alert.data?.deviationPct
-                ? (alert.data.isOverProduction ? alert.data.deviationPct : -alert.data.deviationPct)
-                : 0,
-              productionDate: alert.data?.productionDate || '',
-            });
-            break;
-          case 'CUSTOMER_CHURN':
-            churnRisks.push({
-              customerId: alert.data?.customerId || 0,
-              customerName: alert.data?.customerName || alert.title,
-              customerCategory: 'N/A',
-              daysSinceLastOrder: alert.data?.daysSinceLastOrder || 0,
-              lastOrderDate: alert.data?.lastOrderDate || '',
-              avgMonthlyOrders: 0,
-              salesRepName: 'N/A',
-            });
-            break;
-          case 'COMPLAINT':
-            complaintAlerts.push({
-              id: alert.data?.complaintId || 0,
-              batchNo: alert.data?.batchNo || '',
-              complainantName: 'N/A',
-              complaintContent: alert.description || '',
-              severity: alert.level || 'MEDIUM',
-              createdAt: alert.data?.createdAt || new Date().toISOString(),
-            });
-            break;
-        }
-      }
-    }
-    
-    return {
-      badDebtRisks,
-      yieldAnomalies,
-      churnRisks,
-      complaintAlerts,
-      unreadComplaintCount: complaintAlerts.length,
-      lastUpdate: new Date().toISOString(),
-    };
+    return request<CEORadarData>('/api/internal/ceo/radar', {}, 'CEO Radar');
   },
 };
 
@@ -1043,5 +970,156 @@ export const feedbackAPI = {
    */
   async list(orderId: number): Promise<any[]> {
     return request<any[]>(`/api/internal/feedback/list?orderId=${orderId}`, {}, 'Get Feedback List');
+  },
+};
+
+/**
+ * ========================================
+ * RBAC 管理 API（权限中台）
+ * ========================================
+ */
+export const rbacAPI = {
+  async getRoles(): Promise<any[]> {
+    return request<any[]>('/api/internal/rbac/roles', {}, 'Get Roles');
+  },
+  async getOrgTree(): Promise<any[]> {
+    return request<any[]>('/api/internal/rbac/organizations', {}, 'Get Org Tree');
+  },
+  async getUsers(params: { orgId?: number; page?: number; pageSize?: number }): Promise<{ items: any[]; total: number }> {
+    const qs = new URLSearchParams();
+    if (params.orgId) qs.set('orgId', String(params.orgId));
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    return request<{ items: any[]; total: number }>(`/api/internal/rbac/users?${qs}`, {}, 'Get Users');
+  },
+  async assignRole(userId: number, roleId: number, orgId?: number): Promise<void> {
+    await request<void>('/api/internal/rbac/assign-role', {
+      method: 'POST',
+      body: JSON.stringify({ userId, roleId, orgId }),
+    }, 'Assign Role');
+  },
+  async removeUserRole(userId: number, roleId: number): Promise<void> {
+    await request<void>(`/api/internal/rbac/users/${userId}/roles/remove`, {
+      method: 'PATCH',
+      body: JSON.stringify({ roleId }),
+    }, 'Remove User Role');
+  },
+  async updateUserOrg(userId: number, orgId: number): Promise<void> {
+    await request<void>(`/api/internal/rbac/users/${userId}/org`, {
+      method: 'PATCH',
+      body: JSON.stringify({ orgId }),
+    }, 'Update User Org');
+  },
+  async getWsToken(): Promise<{ token: string; userId: number; expiresIn: string }> {
+    return request<{ token: string; userId: number; expiresIn: string }>('/api/internal/rbac/ws-token', {}, 'Get WS Token');
+  },
+};
+
+/**
+ * ========================================
+ * Workflow 审批 API
+ * ========================================
+ */
+export const workflowAPI = {
+  async getMyTodos(params: { page?: number; pageSize?: number }): Promise<{ items: any[]; total: number }> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    return request<{ items: any[]; total: number }>(`/api/internal/workflow/my-todos?${qs}`, {}, 'Get My Todos');
+  },
+  async approve(instanceId: number, comment: string): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/${instanceId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }, 'Approve Workflow');
+  },
+  async reject(instanceId: number, comment: string): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/${instanceId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }, 'Reject Workflow');
+  },
+  async getInstance(instanceId: number): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/${instanceId}`, {}, 'Get Workflow Instance');
+  },
+  async getInstanceByBusiness(businessType: string, businessId: number): Promise<any> {
+    return request<any>(`/api/internal/workflow/instances/by-business?businessType=${businessType}&businessId=${businessId}`, {}, 'Get Workflow Instance By Business');
+  },
+};
+
+/**
+ * ========================================
+ * Notification 消息 API
+ * ========================================
+ */
+export const notificationAPI = {
+  async getUnreadCount(): Promise<{ unreadCount: number }> {
+    return request<{ unreadCount: number }>('/api/internal/notifications/unread-count', {}, 'Get Unread Count');
+  },
+  async getList(params: { page?: number; pageSize?: number }): Promise<any> {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    return request<any>(`/api/internal/notifications?${qs}`, {}, 'Get Notifications');
+  },
+  async markAsRead(id: number): Promise<void> {
+    await request<void>(`/api/internal/notifications/${id}/read`, {
+      method: 'PATCH',
+    }, 'Mark As Read');
+  },
+  async markAllAsRead(): Promise<void> {
+    await request<void>('/api/internal/notifications/read-all', {
+      method: 'PATCH',
+    }, 'Mark All As Read');
+  },
+};
+
+/**
+ * ========================================
+ * FileStorage 附件管理 API（预签名 URL 直传架构）
+ * ========================================
+ */
+export const fileStorageAPI = {
+  /** 获取预签名上传 URL（凭证签发，不接收文件流） */
+  async getPresignedUrl(params: {
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    businessType: string;
+    businessId?: number;
+  }): Promise<{ presignedUrl: string; objectKey: string; expiresAt: string; fileRecordId: number }> {
+    return request<any>('/api/internal/files/presigned-url', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }, 'Get Presigned URL');
+  },
+
+  /** 确认上传成功，将 PENDING 改为 CONFIRMED，落库文件元数据 */
+  async confirmUpload(fileRecordId: number): Promise<any> {
+    return request<any>('/api/internal/files/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ fileRecordId }),
+    }, 'Confirm Upload');
+  },
+
+  /** 查询某业务实体的附件列表 */
+  async getFileList(businessType: string, businessId: number): Promise<any[]> {
+    return request<any[]>(
+      `/api/internal/files?businessType=${encodeURIComponent(businessType)}&businessId=${businessId}`,
+      {},
+      'Get File List',
+    );
+  },
+
+  /** 获取单个文件记录详情（含刷新后的下载 URL） */
+  async getFileRecord(id: number): Promise<any> {
+    return request<any>(`/api/internal/files/${id}`, {}, 'Get File Record');
+  },
+
+  /** 软删除文件记录 */
+  async deleteFileRecord(id: number): Promise<void> {
+    await request<void>(`/api/internal/files/${id}`, {
+      method: 'DELETE',
+    }, 'Delete File Record');
   },
 };

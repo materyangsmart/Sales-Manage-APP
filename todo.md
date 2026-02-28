@@ -877,3 +877,14 @@
 - [x] 导出字段包含订单毛利、核销时间戳、关联生产批次号
 - [x] 前端 ExportButton 组件
 - [x] 在订单列表页和收款列表页集成 ExportButton
+
+### 文件存储模块（Presigned URL 直传架构）
+- [x] FileRecord 实体定义（id/fileName/bucket/objectKey/fileSize/mimeType/uploadedBy/businessType/businessId/status）
+- [x] S3 Mock Service（本地开发模拟 OSS 预签名 URL 生成）
+- [x] FileStorageService：getPresignedUrl（文件校验 + 凭证签发）、confirmUpload（落库元数据）
+- [x] FileStorageController：POST /api/internal/files/presigned-url、POST /api/internal/files/confirm、GET /api/internal/files
+- [x] fileStorageAPI 代理层（server/backend-api.ts）
+- [x] tRPC fileStorage 路由（getPresignedUrl / confirmUpload / getFileList / getFileRecord / deleteFileRecord）
+- [x] 前端 UploadAttachment 通用组件（拖拽上传 + 进度条 + XHR 直传 + 文件类型/大小校验）
+- [x] OrderDetail.tsx 集成附件管理区（合同扫描件 + 付款水单 + 预览/下载/删除）
+- [x] 27 个文件上传链路隔离测试全部通过（tRPC 路由验证 + 文件校验 + E2E 场景 + 架构安全验证）
