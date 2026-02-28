@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings, ShoppingCart, Kanban } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,7 +29,9 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: ClipboardCheck, label: "订单审核", path: "/orders/review" },
+  { icon: ShoppingCart, label: "代客下单", path: "/orders/create" },
   { icon: Package, label: "订单履行", path: "/orders/fulfill" },
+  { icon: Kanban, label: "履约看板", path: "/orders/fulfillment" },
   { icon: FileText, label: "发票管理", path: "/ar/invoices" },
   { icon: CreditCard, label: "收款管理", path: "/ar/payments" },
   { icon: Receipt, label: "核销操作", path: "/ar/apply" },

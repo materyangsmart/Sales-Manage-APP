@@ -266,7 +266,7 @@ export const COMPOSITE_INDEX_DEFINITIONS = [
     indexName: 'idx_price_anomalies_status_created',
     columns: ['status', 'createdAt'],
     purpose: '反欺诈监控：待处理异常列表',
-    sql: 'CREATE INDEX IF NOT EXISTS idx_price_anomalies_status_created ON price_anomalies (status, createdAt DESC)',
+    sql: 'CREATE INDEX IF NOT EXISTS idx_price_anomalies_status_created ON price_anomalies (status, created_at DESC)',
   },
 
   // ===== customer_credit_scores 表 =====
@@ -275,7 +275,7 @@ export const COMPOSITE_INDEX_DEFINITIONS = [
     indexName: 'idx_credit_scores_level_score',
     columns: ['creditLevel', 'creditScore'],
     purpose: '信用评级分布统计 + 按等级筛选',
-    sql: 'CREATE INDEX IF NOT EXISTS idx_credit_scores_level_score ON customer_credit_scores (creditLevel, creditScore DESC)',
+    sql: 'CREATE INDEX IF NOT EXISTS idx_credit_scores_level_score ON customer_credit_scores (credit_level, credit_score DESC)',
   },
 
   // ===== sales_commissions 表 =====
@@ -318,7 +318,7 @@ export const COMPOSITE_INDEX_DEFINITIONS = [
     indexName: 'idx_batch_trace_production_quality',
     columns: ['productionDate', 'qualityStatus'],
     purpose: '按生产日期+质检状态筛选批次',
-    sql: 'CREATE INDEX IF NOT EXISTS idx_batch_trace_production_quality ON batch_trace (productionDate, qualityStatus)',
+    sql: 'CREATE INDEX IF NOT EXISTS idx_batch_trace_production_quality ON batch_trace (production_date, quality_status)',
   },
 ];
 

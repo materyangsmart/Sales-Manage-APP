@@ -5,7 +5,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI, rbacAPI, workflowAPI, notificationAPI, fileStorageAPI } from './backend-api';
-import { getBIDashboardData, generateMockDashboardData } from './bi-dashboard';
+import { getBIDashboardData } from './bi-dashboard';
 import { imLogin } from "./im-sso";
 import { routeIMNotificationSync, getRecentPushLogs } from "./im-notification";
 
@@ -1184,18 +1184,167 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return getBIDashboardData(input || {});
       }),
-    /** 获取 Mock 数据（用于演示和前端开发） */
-    getMockData: publicProcedure
+
+  }),
+
+  // ─── RC3 Epic 2: B2B 客户门户 + 代客下单 ─────────────────────────────────
+  portal: router({
+    /** 获取商品列表（客户门户用，复用 product_catalog 本地表） */
+    getProducts: protectedProcedure
       .input(z.object({
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      }).optional())
+        category: z.string().optional(),
+        keyword: z.string().optional(),
+        page: z.number().optional(),
+        pageSize: z.number().optional(),
+      }))
       .query(async ({ input }) => {
-        const now = new Date();
-        const startDate = input?.startDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        const endDate = input?.endDate || now.toISOString().split('T')[0];
-        return generateMockDashboardData(startDate, endDate);
+        const { getDb } = await import('./db');
+        const { productCatalog } = await import('../drizzle/schema');
+        const { eq, and, like: dLike } = await import('drizzle-orm');
+        const db = await getDb();
+        if (!db) return { items: [] };
+
+        const conditions: any[] = [eq(productCatalog.isActive, true)];
+        if (input.category && ['THIN', 'MEDIUM', 'THICK'].includes(input.category)) {
+          conditions.push(eq(productCatalog.category, input.category as any));
+        }
+        if (input.keyword) {
+          conditions.push(dLike(productCatalog.name, `%${input.keyword}%`));
+        }
+        const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+        const items = await db.select().from(productCatalog).where(whereClause).orderBy(productCatalog.category, productCatalog.unitPrice);
+        return {
+          items: items.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            specification: p.specification,
+            unitPrice: parseFloat(p.unitPrice),
+            unit: p.unit,
+            description: p.description,
+            minOrderQuantity: p.minOrderQuantity,
+          })),
+        };
       }),
+
+    /** 客户自助下单（B2B Portal） */
+    submitOrder: protectedProcedure
+      .input(z.object({
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number().min(1),
+          unitPrice: z.number(),
+        })),
+        source: z.string().default('B2B_PORTAL'),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // 使用当前登录用户的 ID 作为 customerId（B2B 场景）
+        const userId = ctx.user?.id || 0;
+        return ordersAPI.create({
+          customerId: userId,
+          items: input.items,
+          source: input.source,
+          remark: input.remark,
+          autoApprove: false, // B2B 订单需要审核
+        });
+      }),
+  }),
+
+  // ─── RC3 Epic 2: 代客下单（销售员用） ──────────────────────────────────────
+  salesOrder: router({
+    /** 获取客户列表（销售选择客户用） */
+    getCustomers: protectedProcedure
+      .input(z.object({ orgId: z.number().default(1) }))
+      .query(async ({ input }) => {
+        return customersAPI.list({ orgId: input.orgId, page: 1, pageSize: 1000 });
+      }),
+
+    /** 代客下单 */
+    createForCustomer: protectedProcedure
+      .input(z.object({
+        customerId: z.number(),
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number().min(1),
+          unitPrice: z.number().optional(),
+        })),
+        discountRate: z.number().min(0).max(100).optional(),
+        remark: z.string().optional(),
+        paymentMethod: z.string().optional(),
+        deliveryType: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return ordersAPI.create({
+          customerId: input.customerId,
+          items: input.items,
+          source: 'SALES_REP',
+          remark: input.remark,
+          salesRepId: ctx.user?.id,
+          discountRate: input.discountRate,
+          paymentMethod: input.paymentMethod,
+          deliveryType: input.deliveryType,
+          autoApprove: false,
+        });
+      }),
+  }),
+
+  // ─── RC3 Epic 3: 订单履约全链路 ───────────────────────────────────────────
+  fulfillment: router({
+    /** 获取履约看板数据（按状态分组） */
+    getDashboard: protectedProcedure
+      .input(z.object({ orgId: z.number().default(1) }))
+      .query(async ({ input }) => {
+        const statuses = ['APPROVED', 'PRODUCTION', 'SHIPPED', 'COMPLETED'];
+        const results: Record<string, any[]> = {};
+        for (const status of statuses) {
+          try {
+            const resp = await ordersAPI.list({ orgId: input.orgId, status, page: 1, pageSize: 100 });
+            results[status] = resp?.items || resp?.data || (Array.isArray(resp) ? resp : []);
+          } catch {
+            results[status] = [];
+          }
+        }
+        return results;
+      }),
+
+    /** 订单状态流转 */
+    updateStatus: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        status: z.enum(['PRODUCTION', 'SHIPPED', 'COMPLETED']),
+        batchNo: z.string().optional(),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // 发货节点强制要求 batchNo
+        if (input.status === 'SHIPPED' && !input.batchNo) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: '发货操作必须录入溯源批次号 (batchNo)',
+          });
+        }
+        return ordersAPI.updateStatus(input.orderId, {
+          status: input.status,
+          batchNo: input.batchNo,
+          remark: input.remark,
+        });
+      }),
+
+    /** 获取可用批次（用于发货时选择） */
+    getAvailableBatches: protectedProcedure.query(async () => {
+      try {
+        return await ordersAPI.getAvailableBatches();
+      } catch {
+        // 降级：从本地 batch_trace 表查询
+        const { getDb } = await import('./db');
+        const { batchTrace } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const db = await getDb();
+        if (!db) return [];
+        return db.select().from(batchTrace).where(eq(batchTrace.qualityStatus, 'PASS'));
+      }
+    }),
   }),
 });
 export type AppRouter = typeof appRouter;

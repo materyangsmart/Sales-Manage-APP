@@ -25,6 +25,9 @@ import MobileHome from "./pages/MobileHome";
 import QuickSubmit from "./pages/QuickSubmit";
 import MobileNotifications from "./pages/MobileNotifications";
 import MobileProfile from "./pages/MobileProfile";
+import CustomerPortal from "./pages/CustomerPortal";
+import SalesCreateOrder from "./pages/SalesCreateOrder";
+import FulfillmentBoard from "./pages/FulfillmentBoard";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -47,6 +50,12 @@ function Router() {
       <Route path={"/governance/employees"} component={EmployeeGovernance} />
       <Route path={"/governance/anti-fraud"} component={AntiFraud} />
       <Route path={"/ceo/dashboard"} component={BIDashboard} />
+      {/* RC3: B2B Customer Portal */}
+      <Route path={"/portal/order"} component={CustomerPortal} />
+      {/* RC3: Sales Create Order */}
+      <Route path={"/orders/create"} component={SalesCreateOrder} />
+      {/* RC3: Fulfillment Board */}
+      <Route path={"/orders/fulfillment"} component={FulfillmentBoard} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />

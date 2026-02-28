@@ -141,6 +141,41 @@ export const ordersAPI = {
       method: 'GET',
     });
   },
+
+  /**
+   * 创建订单（极速下单 / 代客下单 / B2B 门户下单）
+   */
+  create: async (data: {
+    customerId: number;
+    items: Array<{ productId: number; quantity: number; unitPrice?: number | null }>;
+    remark?: string;
+    source?: string;
+    orgId?: number;
+    paymentMethod?: string;
+    deliveryType?: string;
+    autoApprove?: boolean;
+    salesRepId?: number;
+    discountRate?: number;
+  }) => {
+    return request<{ id: number; orderNo: string; status: string }>('/api/internal/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, 'ordersAPI.create');
+  },
+
+  /**
+   * 更新订单状态（履约流转：APPROVED → PRODUCTION → SHIPPED → COMPLETED）
+   */
+  updateStatus: async (orderId: number, data: {
+    status: string;
+    batchNo?: string;
+    remark?: string;
+  }) => {
+    return request<any>(`/api/internal/orders/${orderId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }, 'ordersAPI.updateStatus');
+  },
 };
 
 /**

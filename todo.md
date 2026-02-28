@@ -952,3 +952,36 @@
 - [x] 测试清零证明（131/131 测试 100% PASS，0 失败）
 - [x] BI 大屏截图（CEO 战情指挥室成功渲染）
 - [x] 推送到 GitHub main 分支
+
+## RC3 商业闭环与开放平台大冲刺 (Mega-Sprint 3)
+
+### Epic 4：RC2 技术债清零
+- [x] BI 大屏去 Mock 化（删除 generateMockDashboardData，前端切换到 getData 真实 API）
+- [x] Mobile BFF 去 Mock 化（quick-submit 替换为 ordersAPI.create 真实调用）
+- [x] 执行联合索引 DDL（6 个本地表索引已创建，后端管理表索引待后端执行）
+
+### Epic 1：官网 Open API 网关
+- [x] 全局 TransformInterceptor（统一返回格式 {code:0, data, msg:"OK"}）
+- [x] Rate Limiting（每分钟 60 次限流 + HTTP 429 已验证）
+- [x] CORS 白名单（仅允许 *.manus.space / localhost）
+- [x] GET /api/v1/products（14 个商品，支持 category/keyword/specification 筛选+分页）
+- [x] POST /api/v1/leads（意向线索收集 + leads 表已创建）
+- [x] GET /api/v1/traceability/:batch_no（溯源查询 + 3 条测试数据）
+- [x] Swagger 在线接口文档（/api/v1/docs）
+
+### Epic 2：B2B 客户自助下单门户
+- [x] CUSTOMER 角色登录支持（复用 Manus OAuth + protectedProcedure）
+- [x] /portal/order 客户自助下单页面（购物车 UI + 分类筛选 + 一键提交）
+- [x] /orders/create 代客下单页面（销售选客户+商品+折扣+付款/配送方式）
+
+### Epic 3：内部订单履约全链路工作台
+- [x] /orders/fulfillment 履约看板页面（看板视图 + 流程指示器）
+- [x] 状态流转操作（APPROVED → PRODUCTION → SHIPPED → COMPLETED）
+- [x] 发货节点强制录入 batch_no（溯源闭环 + 选择已有批次或手动输入）
+
+### 验收标准
+- [x] Swagger 界面截图（3 个 Open API → /api/v1/docs）
+- [x] Rate Limiting 429 拦截日志（第 59 次请求触发）
+- [x] 客户自助下单 + 销售履约流转 E2E 验证（tRPC 测试通过）
+- [x] BI 大屏真实 SQL 打印日志（getMockData 已删除，切换到 getData）
+- [x] 140 测试 100% PASS（12 个测试文件）

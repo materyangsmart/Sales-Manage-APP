@@ -195,19 +195,28 @@ async function handleQuickSubmit(req: Request, res: Response) {
   console.log(`[Mobile BFF] Quick submit enriched order:`, JSON.stringify(enrichedOrder, null, 2));
 
   try {
-    // 调用后端下单接口（通过 backend-api 代理）
-    const result = await ordersAPI.list({ orgId: enrichedOrder.orgId, status: 'PENDING_APPROVAL', page: 1, pageSize: 1 }).catch(() => null);
-    // Mock 下单成功响应（生产环境替换为真实的 ordersAPI.create 调用）
-    const mockResult = { id: Math.floor(Math.random() * 90000) + 10000, orderNo: `QS${Date.now()}`, status: 'PENDING_APPROVAL' };
+    // RC3: 真实调用后端下单 API（严禁 Mock）
+    console.log(`[Mobile BFF] SQL: INSERT INTO orders (customer_id, source, org_id, payment_method, delivery_type, remark) VALUES (${enrichedOrder.customerId}, '${enrichedOrder.source}', ${enrichedOrder.orgId}, '${enrichedOrder.paymentMethod}', '${enrichedOrder.deliveryType}', '${enrichedOrder.remark}')`);
+    
+    const createResult = await ordersAPI.create({
+      customerId: enrichedOrder.customerId,
+      items: enrichedOrder.items,
+      remark: enrichedOrder.remark,
+      source: enrichedOrder.source,
+      orgId: enrichedOrder.orgId,
+      paymentMethod: enrichedOrder.paymentMethod,
+      deliveryType: enrichedOrder.deliveryType,
+      autoApprove: enrichedOrder.autoApprove,
+    });
 
-    console.log(`[Mobile BFF] Quick submit success: orderId=${mockResult.id}`);
+    console.log(`[Mobile BFF] Quick submit success (REAL): orderId=${createResult.id}, orderNo=${createResult.orderNo}`);
 
     res.status(201).json({
       success: true,
       data: {
-        orderId: mockResult.id,
-        orderNo: mockResult.orderNo,
-        status: mockResult.status,
+        orderId: createResult.id,
+        orderNo: createResult.orderNo,
+        status: createResult.status || 'PENDING_APPROVAL',
         message: "订单已提交，正在等待审批",
         estimatedApprovalTime: "5分钟内",
       },

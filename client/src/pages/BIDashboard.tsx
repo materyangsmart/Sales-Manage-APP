@@ -51,8 +51,8 @@ export default function BIDashboard() {
     };
   });
 
-  // 使用 Mock 数据（演示模式，无需登录）
-  const { data, isLoading, refetch } = trpc.biDashboard.getMockData.useQuery(dateRange, {
+  // RC3: 100% 真实数据，严禁 Mock
+  const { data, isLoading, refetch } = trpc.biDashboard.getData.useQuery(dateRange, {
     refetchInterval: 60000, // 每分钟自动刷新
   });
 

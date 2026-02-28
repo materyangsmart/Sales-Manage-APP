@@ -1,0 +1,52 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "users"
+    },
+    {
+      "TABLE_NAME": "sales_commission_rules"
+    },
+    {
+      "TABLE_NAME": "price_anomalies"
+    },
+    {
+      "TABLE_NAME": "settlement_audit"
+    },
+    {
+      "TABLE_NAME": "customer_credit_scores"
+    },
+    {
+      "TABLE_NAME": "auto_approval_logs"
+    },
+    {
+      "TABLE_NAME": "role_permissions"
+    },
+    {
+      "TABLE_NAME": "permission_change_logs"
+    },
+    {
+      "TABLE_NAME": "batch_trace"
+    },
+    {
+      "TABLE_NAME": "quality_complaints"
+    },
+    {
+      "TABLE_NAME": "commission_rules_v2"
+    },
+    {
+      "TABLE_NAME": "sales_commissions"
+    },
+    {
+      "TABLE_NAME": "payment_receipts"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\n__drizzle_migrations\nusers\nsales_commission_rules\nprice_anomalies\nsettlement_audit\ncustomer_credit_scores\nauto_approval_logs\nrole_permissions\npermission_change_logs\nbatch_trace\nquality_complaints\ncommission_rules_v2\nsales_commissions\npayment_receipts\n",
+  "stderr": "",
+  "execution_time_ms": 1615
+}

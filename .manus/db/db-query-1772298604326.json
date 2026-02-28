@@ -1,0 +1,260 @@
+{
+  "query": "SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND INDEX_NAME LIKE 'idx_%' ORDER BY TABLE_NAME, INDEX_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND INDEX_NAME LIKE 'idx_%' ORDER BY TABLE_NAME, INDEX_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "auto_approval_logs",
+      "INDEX_NAME": "idx_created_at",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "auto_approval_logs",
+      "INDEX_NAME": "idx_customer_id",
+      "COLUMN_NAME": "customer_id"
+    },
+    {
+      "TABLE_NAME": "auto_approval_logs",
+      "INDEX_NAME": "idx_decision",
+      "COLUMN_NAME": "decision"
+    },
+    {
+      "TABLE_NAME": "auto_approval_logs",
+      "INDEX_NAME": "idx_order_id",
+      "COLUMN_NAME": "order_id"
+    },
+    {
+      "TABLE_NAME": "batch_trace",
+      "INDEX_NAME": "idx_batch_no",
+      "COLUMN_NAME": "batch_no"
+    },
+    {
+      "TABLE_NAME": "batch_trace",
+      "INDEX_NAME": "idx_batch_trace_production_quality",
+      "COLUMN_NAME": "quality_status"
+    },
+    {
+      "TABLE_NAME": "batch_trace",
+      "INDEX_NAME": "idx_batch_trace_production_quality",
+      "COLUMN_NAME": "production_date"
+    },
+    {
+      "TABLE_NAME": "batch_trace",
+      "INDEX_NAME": "idx_production_date",
+      "COLUMN_NAME": "production_date"
+    },
+    {
+      "TABLE_NAME": "batch_trace",
+      "INDEX_NAME": "idx_quality_status",
+      "COLUMN_NAME": "quality_status"
+    },
+    {
+      "TABLE_NAME": "commission_rules_v2",
+      "INDEX_NAME": "idx_effective_from",
+      "COLUMN_NAME": "effective_from"
+    },
+    {
+      "TABLE_NAME": "commission_rules_v2",
+      "INDEX_NAME": "idx_is_active",
+      "COLUMN_NAME": "is_active"
+    },
+    {
+      "TABLE_NAME": "commission_rules_v2",
+      "INDEX_NAME": "idx_rule_type",
+      "COLUMN_NAME": "rule_type"
+    },
+    {
+      "TABLE_NAME": "customer_credit_scores",
+      "INDEX_NAME": "idx_credit_level",
+      "COLUMN_NAME": "credit_level"
+    },
+    {
+      "TABLE_NAME": "customer_credit_scores",
+      "INDEX_NAME": "idx_credit_scores_level_score",
+      "COLUMN_NAME": "credit_score"
+    },
+    {
+      "TABLE_NAME": "customer_credit_scores",
+      "INDEX_NAME": "idx_credit_scores_level_score",
+      "COLUMN_NAME": "credit_level"
+    },
+    {
+      "TABLE_NAME": "customer_credit_scores",
+      "INDEX_NAME": "idx_customer_id",
+      "COLUMN_NAME": "customer_id"
+    },
+    {
+      "TABLE_NAME": "customer_credit_scores",
+      "INDEX_NAME": "idx_payment_rate",
+      "COLUMN_NAME": "payment_rate"
+    },
+    {
+      "TABLE_NAME": "payment_receipts",
+      "INDEX_NAME": "idx_payment_receipts_orderId",
+      "COLUMN_NAME": "orderId"
+    },
+    {
+      "TABLE_NAME": "payment_receipts",
+      "INDEX_NAME": "idx_payment_receipts_order_status",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "payment_receipts",
+      "INDEX_NAME": "idx_payment_receipts_order_status",
+      "COLUMN_NAME": "orderId"
+    },
+    {
+      "TABLE_NAME": "payment_receipts",
+      "INDEX_NAME": "idx_payment_receipts_status",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "permission_change_logs",
+      "INDEX_NAME": "idx_changed_by",
+      "COLUMN_NAME": "changed_by"
+    },
+    {
+      "TABLE_NAME": "permission_change_logs",
+      "INDEX_NAME": "idx_created_at",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "permission_change_logs",
+      "INDEX_NAME": "idx_user_id",
+      "COLUMN_NAME": "user_id"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_created_at",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_customer_id",
+      "COLUMN_NAME": "customer_id"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_order_id",
+      "COLUMN_NAME": "order_id"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_price_anomalies_status_created",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_price_anomalies_status_created",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_sales_rep_id",
+      "COLUMN_NAME": "sales_rep_id"
+    },
+    {
+      "TABLE_NAME": "price_anomalies",
+      "INDEX_NAME": "idx_status",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "quality_complaints",
+      "INDEX_NAME": "idx_batch_no",
+      "COLUMN_NAME": "batch_no"
+    },
+    {
+      "TABLE_NAME": "quality_complaints",
+      "INDEX_NAME": "idx_created_at",
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "TABLE_NAME": "quality_complaints",
+      "INDEX_NAME": "idx_order_id",
+      "COLUMN_NAME": "order_id"
+    },
+    {
+      "TABLE_NAME": "quality_complaints",
+      "INDEX_NAME": "idx_status",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "role_permissions",
+      "INDEX_NAME": "idx_resource_type",
+      "COLUMN_NAME": "resource_type"
+    },
+    {
+      "TABLE_NAME": "role_permissions",
+      "INDEX_NAME": "idx_role_name",
+      "COLUMN_NAME": "role_name"
+    },
+    {
+      "TABLE_NAME": "sales_commission_rules",
+      "INDEX_NAME": "idx_category",
+      "COLUMN_NAME": "category"
+    },
+    {
+      "TABLE_NAME": "sales_commission_rules",
+      "INDEX_NAME": "idx_version",
+      "COLUMN_NAME": "version"
+    },
+    {
+      "TABLE_NAME": "sales_commissions",
+      "INDEX_NAME": "idx_sales_commissions_period",
+      "COLUMN_NAME": "period"
+    },
+    {
+      "TABLE_NAME": "sales_commissions",
+      "INDEX_NAME": "idx_sales_commissions_salesId",
+      "COLUMN_NAME": "salesId"
+    },
+    {
+      "TABLE_NAME": "sales_commissions",
+      "INDEX_NAME": "idx_sales_commissions_sales_period",
+      "COLUMN_NAME": "salesId"
+    },
+    {
+      "TABLE_NAME": "sales_commissions",
+      "INDEX_NAME": "idx_sales_commissions_sales_period",
+      "COLUMN_NAME": "period"
+    },
+    {
+      "TABLE_NAME": "sales_commissions",
+      "INDEX_NAME": "idx_sales_commissions_status_period",
+      "COLUMN_NAME": "status"
+    },
+    {
+      "TABLE_NAME": "sales_commissions",
+      "INDEX_NAME": "idx_sales_commissions_status_period",
+      "COLUMN_NAME": "period"
+    },
+    {
+      "TABLE_NAME": "settlement_audit",
+      "INDEX_NAME": "idx_apply_time",
+      "COLUMN_NAME": "apply_time"
+    },
+    {
+      "TABLE_NAME": "settlement_audit",
+      "INDEX_NAME": "idx_is_suspicious",
+      "COLUMN_NAME": "is_suspicious"
+    },
+    {
+      "TABLE_NAME": "settlement_audit",
+      "INDEX_NAME": "idx_payment_id",
+      "COLUMN_NAME": "payment_id"
+    },
+    {
+      "TABLE_NAME": "settlement_audit",
+      "INDEX_NAME": "idx_sales_rep_id",
+      "COLUMN_NAME": "sales_rep_id"
+    },
+    {
+      "TABLE_NAME": "users",
+      "INDEX_NAME": "idx_users_im_unionid",
+      "COLUMN_NAME": "im_unionid"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tINDEX_NAME\tCOLUMN_NAME\nauto_approval_logs\tidx_created_at\tcreated_at\nauto_approval_logs\tidx_customer_id\tcustomer_id\nauto_approval_logs\tidx_decision\tdecision\nauto_approval_logs\tidx_order_id\torder_id\nbatch_trace\tidx_batch_no\tbatch_no\nbatch_trace\tidx_batch_trace_production_quality\tquality_status\nbatch_trace\tidx_batch_trace_production_quality\tproduction_date\nbatch_trace\tidx_production_date\tproduction_date\nbatch_trace\tidx_quality_status\tquality_status\ncommission_rules_v2\tidx_effective_from\teffective_from\ncommission_rules_v2\tidx_is_active\tis_active\ncommission_rules_v2\tidx_rule_type\trule_type\ncustomer_credit_scores\tidx_credit_level\tcredit_level\ncustomer_credit_scores\tidx_credit_scores_level_score\tcredit_score\ncustomer_credit_scores\tidx_credit_scores_level_score\tcredit_level\ncustomer_credit_scores\tidx_customer_id\tcustomer_id\ncustomer_credit_scores\tidx_payment_rate\tpayment_rate\npayment_receipts\tidx_payment_receipts_orderId\torderId\npayment_receipts\tidx_payment_receipts_order_status\tstatus\npayment_receipts\tidx_payment_receipts_order_status\torderId\npayment_receipts\tidx_payment_receipts_status\tstatus\npermission_change_logs\tidx_changed_by\tchanged_by\npermission_change_logs\tidx_created_at\tcreated_at\npermission_change_logs\tidx_user_id\tuser_id\nprice_anomalies\tidx_created_at\tcreated_at\nprice_anomalies\tidx_customer_id\tcustomer_id\nprice_anomalies\tidx_order_id\torder_id\nprice_anomalies\tidx_price_anomalies_status_created\tstatus\nprice_anomalies\tidx_price_anomalies_status_created\tcreated_at\nprice_anomalies\tidx_sales_rep_id\tsales_rep_id\nprice_anomalies\tidx_status\tstatus\nquality_complaints\tidx_batch_no\tbatch_no\nquality_complaints\tidx_created_at\tcreated_at\nquality_complaints\tidx_order_id\torder_id\nquality_complaints\tidx_status\tstatus\nrole_permissions\tidx_resource_type\tresource_type\nrole_permissions\tidx_role_name\trole_name\nsales_commission_rules\tidx_category\tcategory\nsales_commission_rules\tidx_version\tversion\nsales_commissions\tidx_sales_commissions_period\tperiod\nsales_commissions\tidx_sales_commissions_salesId\tsalesId\nsales_commissions\tidx_sales_commissions_sales_period\tsalesId\nsales_commissions\tidx_sales_commissions_sales_period\tperiod\nsales_commissions\tidx_sales_commissions_status_period\tstatus\nsales_commissions\tidx_sales_commissions_status_period\tperiod\nsettlement_audit\tidx_apply_time\tapply_time\nsettlement_audit\tidx_is_suspicious\tis_suspicious\nsettlement_audit\tidx_payment_id\tpayment_id\nsettlement_audit\tidx_sales_rep_id\tsales_rep_id\nusers\tidx_users_im_unionid\tim_unionid\n",
+  "stderr": "",
+  "execution_time_ms": 1620
+}

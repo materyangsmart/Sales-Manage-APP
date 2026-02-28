@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO batch_trace (batch_no, production_date, soybean_batch, soybean_supplier, soybean_weight, water_quality_report, product_output, yield_rate, workshop_temp, sterilization_params, inspector_id, inspector_name, quality_status) VALUES\n('BT-2026-0101', '2026-01-01', 'SB-2026-001', '安徽六安大豆合作社', 500.00, '水质报告合格-2026Q1', 450.00, 90.00, 25.5, '121°C/30min', 1, '王质检', 'PASS'),\n('BT-2026-0115', '2026-01-15', 'SB-2026-002', '黑龙江绥化大豆基地', 800.00, '水质报告合格-2026Q1', 720.00, 90.00, 24.8, '121°C/30min', 1, '王质检', 'PASS'),\n('BT-2026-0201', '2026-02-01', 'SB-2026-003', '安徽六安大豆合作社', 600.00, '水质报告合格-2026Q1', 540.00, 90.00, 26.0, '121°C/30min', 2, '李质检', 'PASS');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute INSERT INTO batch_trace (batch_no, production_date, soybean_batch, soybean_supplier, soybean_weight, water_quality_report, product_output, yield_rate, workshop_temp, sterilization_params, inspector_id, inspector_name, quality_status) VALUES\n('BT-2026-0101', '2026-01-01', 'SB-2026-001', '安徽六安大豆合作社', 500.00, '水质报告合格-2026Q1', 450.00, 90.00, 25.5, '121°C/30min', 1, '王质检', 'PASS'),\n('BT-2026-0115', '2026-01-15', 'SB-2026-002', '黑龙江绥化大豆基地', 800.00, '水质报告合格-2026Q1', 720.00, 90.00, 24.8, '121°C/30min', 1, '王质检', 'PASS'),\n('BT-2026-0201', '2026-02-01', 'SB-2026-003', '安徽六安大豆合作社', 600.00, '水质报告合格-2026Q1', 540.00, 90.00, 26.0, '121°C/30min', 2, '李质检', 'PASS');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1515
+}

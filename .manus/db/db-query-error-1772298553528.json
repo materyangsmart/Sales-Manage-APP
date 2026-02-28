@@ -1,0 +1,8 @@
+{
+  "query": "CREATE INDEX IF NOT EXISTS idx_price_anomalies_status_created ON price_anomalies (status, createdAt DESC);\nCREATE INDEX IF NOT EXISTS idx_credit_scores_level_score ON customer_credit_scores (creditLevel, creditScore DESC);\nCREATE INDEX IF NOT EXISTS idx_sales_commissions_sales_period ON sales_commissions (salesId, period);\nCREATE INDEX IF NOT EXISTS idx_sales_commissions_status_period ON sales_commissions (status, period DESC);\nCREATE INDEX IF NOT EXISTS idx_payment_receipts_order_status ON payment_receipts (orderId, status);\nCREATE INDEX IF NOT EXISTS idx_batch_trace_production_quality ON batch_trace (productionDate, qualityStatus);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute CREATE INDEX IF NOT EXISTS idx_price_anomalies_status_created ON price_anomalies (status, createdAt DESC);\nCREATE INDEX IF NOT EXISTS idx_credit_scores_level_score ON customer_credit_scores (creditLevel, creditScore DESC);\nCREATE INDEX IF NOT EXISTS idx_sales_commissions_sales_period ON sales_commissions (salesId, period);\nCREATE INDEX IF NOT EXISTS idx_sales_commissions_status_period ON sales_commissions (status, period DESC);\nCREATE INDEX IF NOT EXISTS idx_payment_receipts_order_status ON payment_receipts (orderId, status);\nCREATE INDEX IF NOT EXISTS idx_batch_trace_production_quality ON batch_trace (productionDate, qualityStatus);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1072 (42000) at line 1: column does not exist: createdAt"
+  ]
+}

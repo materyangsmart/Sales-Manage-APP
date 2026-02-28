@@ -190,21 +190,21 @@ export type InsertPermissionChangeLog = typeof permissionChangeLogs.$inferInsert
 // P25: Batch trace table for production tracking
 export const batchTrace = mysqlTable("batch_trace", {
   id: int("id").autoincrement().primaryKey(),
-  batchNo: varchar("batchNo", { length: 50 }).notNull().unique(),
-  productionDate: date("productionDate").notNull(),
-  soybeanBatch: varchar("soybeanBatch", { length: 50 }).notNull(),
-  soybeanSupplier: varchar("soybeanSupplier", { length: 255 }).notNull(),
-  soybeanWeight: decimal("soybeanWeight", { precision: 10, scale: 2 }).notNull(),
-  waterQualityReport: varchar("waterQualityReport", { length: 255 }),
-  productOutput: decimal("productOutput", { precision: 10, scale: 2 }).notNull(),
-  yieldRate: decimal("yieldRate", { precision: 5, scale: 2 }).notNull(),
-  workshopTemp: decimal("workshopTemp", { precision: 5, scale: 2 }),
-  sterilizationParams: varchar("sterilizationParams", { length: 255 }),
-  inspectorId: int("inspectorId").notNull(),
-  inspectorName: varchar("inspectorName", { length: 255 }).notNull(),
-  qualityStatus: mysqlEnum("qualityStatus", ["PASS", "FAIL"]).default("PASS").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  batchNo: varchar("batch_no", { length: 50 }).notNull().unique(),
+  productionDate: date("production_date").notNull(),
+  soybeanBatch: varchar("soybean_batch", { length: 50 }).notNull(),
+  soybeanSupplier: varchar("soybean_supplier", { length: 255 }).notNull(),
+  soybeanWeight: decimal("soybean_weight", { precision: 10, scale: 2 }).notNull(),
+  waterQualityReport: varchar("water_quality_report", { length: 255 }),
+  productOutput: decimal("product_output", { precision: 10, scale: 2 }).notNull(),
+  yieldRate: decimal("yield_rate", { precision: 5, scale: 2 }).notNull(),
+  workshopTemp: decimal("workshop_temp", { precision: 5, scale: 2 }),
+  sterilizationParams: varchar("sterilization_params", { length: 255 }),
+  inspectorId: int("inspector_id").notNull(),
+  inspectorName: varchar("inspector_name", { length: 255 }).notNull(),
+  qualityStatus: mysqlEnum("quality_status", ["PASS", "FAIL"]).default("PASS").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export type BatchTrace = typeof batchTrace.$inferSelect;
@@ -294,3 +294,42 @@ export const paymentReceipts = mysqlTable("payment_receipts", {
 });
 export type PaymentReceipt = typeof paymentReceipts.$inferSelect;
 export type InsertPaymentReceipt = typeof paymentReceipts.$inferInsert;
+
+// RC3 Epic 1: 意向线索表 (leads) - Open API 网关
+ export const leads = mysqlTable("leads", {
+  id: int("id").autoincrement().primaryKey(),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  contactName: varchar("contact_name", { length: 100 }).notNull(),
+  contactPhone: varchar("contact_phone", { length: 20 }).notNull(),
+  contactEmail: varchar("contact_email", { length: 320 }),
+  businessType: mysqlEnum("business_type", ["WET_MARKET", "SUPERMARKET", "WHOLESALE", "ECOMMERCE", "RESTAURANT", "OTHER"]).default("OTHER").notNull(),
+  estimatedMonthlyVolume: varchar("estimated_monthly_volume", { length: 50 }),
+  region: varchar("region", { length: 100 }),
+  message: text("message"),
+  source: varchar("source", { length: 50 }).default("WEBSITE").notNull(),
+  status: mysqlEnum("status", ["NEW", "CONTACTED", "QUALIFIED", "CONVERTED", "CLOSED"]).default("NEW").notNull(),
+  assignedTo: int("assigned_to"),
+  assignedToName: varchar("assigned_to_name", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;
+
+// RC3 Epic 1: 商品目录表 (product_catalog) - Open API 商品查询
+export const productCatalog = mysqlTable("product_catalog", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["THIN", "MEDIUM", "THICK"]).notNull(),
+  specification: varchar("specification", { length: 100 }).notNull(), // e.g. "160g", "500g", "5000g"
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  unit: varchar("unit", { length: 20 }).default("包").notNull(),
+  description: text("description"),
+  imageUrl: varchar("image_url", { length: 1024 }),
+  isActive: boolean("is_active").default(true).notNull(),
+  minOrderQuantity: int("min_order_quantity").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type ProductCatalog = typeof productCatalog.$inferSelect;
+export type InsertProductCatalog = typeof productCatalog.$inferInsert;

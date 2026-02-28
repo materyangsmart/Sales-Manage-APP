@@ -1,0 +1,8 @@
+{
+  "query": "CREATE INDEX IF NOT EXISTS idx_orders_org_status_created ON orders (org_id, status, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_orders_sales_rep_created ON orders (sales_rep_id, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_orders_customer_status ON orders (customer_id, status);\nCREATE INDEX IF NOT EXISTS idx_orders_approval_status ON orders (approval_status, created_at DESC);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute CREATE INDEX IF NOT EXISTS idx_orders_org_status_created ON orders (org_id, status, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_orders_sales_rep_created ON orders (sales_rep_id, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_orders_customer_status ON orders (customer_id, status);\nCREATE INDEX IF NOT EXISTS idx_orders_approval_status ON orders (approval_status, created_at DESC);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table '8qptles6k9fws4zfudglc4.orders' doesn't exist"
+  ]
+}

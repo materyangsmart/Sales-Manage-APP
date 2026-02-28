@@ -1,0 +1,13 @@
+{
+  "query": "SELECT GROUP_CONCAT(TABLE_NAME SEPARATOR ', ') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT GROUP_CONCAT(TABLE_NAME SEPARATOR ', ') AS all_tables FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "rows": [
+    {
+      "all_tables": "__drizzle_migrations, users, sales_commission_rules, price_anomalies, settlement_audit, customer_credit_scores, auto_approval_logs, role_permissions, permission_change_logs, batch_trace, quality_complaints, commission_rules_v2, sales_commissions, payment_receipts"
+    }
+  ],
+  "messages": [],
+  "stdout": "all_tables\n__drizzle_migrations, users, sales_commission_rules, price_anomalies, settlement_audit, customer_credit_scores, auto_approval_logs, role_permissions, permission_change_logs, batch_trace, quality_complaints, commission_rules_v2, sales_commissions, payment_receipts\n",
+  "stderr": "",
+  "execution_time_ms": 1557
+}

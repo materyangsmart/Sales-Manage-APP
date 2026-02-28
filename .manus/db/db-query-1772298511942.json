@@ -1,0 +1,52 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "auto_approval_logs"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "batch_trace"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "commission_rules_v2"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "customer_credit_scores"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "payment_receipts"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "permission_change_logs"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "price_anomalies"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "quality_complaints"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "role_permissions"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "sales_commission_rules"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "sales_commissions"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "settlement_audit"
+    },
+    {
+      "Tables_in_8QpTLEs6K9fws4ZFuDGLC4": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_8QpTLEs6K9fws4ZFuDGLC4\n__drizzle_migrations\nauto_approval_logs\nbatch_trace\ncommission_rules_v2\ncustomer_credit_scores\npayment_receipts\npermission_change_logs\nprice_anomalies\nquality_complaints\nrole_permissions\nsales_commission_rules\nsales_commissions\nsettlement_audit\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1658
+}
