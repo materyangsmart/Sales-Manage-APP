@@ -26,7 +26,8 @@
     "db:sync": "ts-node -r tsconfig-paths/register scripts/db-sync.ts",
     "test:rbac": "ts-node -r tsconfig-paths/register scripts/test-rbac.ts",
     "test:workflow": "ts-node -r tsconfig-paths/register scripts/test-workflow.ts",
-    "test:concurrency": "ts-node -r tsconfig-paths/register scripts/test-concurrency.ts"
+    "test:concurrency": "ts-node -r tsconfig-paths/register scripts/test-concurrency.ts",
+    "test:notification": "ts-node -r tsconfig-paths/register scripts/test-notification.ts"
   },
   "dependencies": {
     "@nestjs/bull": "^11.0.4",
@@ -34,6 +35,7 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.4",
     "@nestjs/typeorm": "^11.0.0",

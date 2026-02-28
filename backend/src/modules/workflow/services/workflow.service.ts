@@ -7,12 +7,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WorkflowDefinition } from '../entities/workflow-definition.entity';
 import { WorkflowNode, NodeType } from '../entities/workflow-node.entity';
 import { WorkflowInstance, InstanceStatus } from '../entities/workflow-instance.entity';
 import { ApprovalLog, ApprovalAction } from '../entities/approval-log.entity';
 import { UserRole } from '../../rbac/entities/user-role.entity';
 import { RedisLockService } from '../../infra/redis-lock.service';
+import {
+  WorkflowPendingEvent,
+  WORKFLOW_EVENTS,
+} from '../../notification/events/workflow-pending.event';
 
 /**
  * 工作流服务 — 状态机核心
@@ -22,6 +27,7 @@ import { RedisLockService } from '../../infra/redis-lock.service';
  * 2. RBAC 绑定：审批权限校验基于 JWT Payload 中的 roles
  * 3. 不可篡改日志：每次流转都写入 ApprovalLog，不更新旧记录
  * 4. 业务解耦：通过 businessType + businessId 关联业务，不直接依赖业务表
+ * 5. 事件驱动：通过 EventEmitter2 触发通知，不直接调用 NotificationService（解耦）
  */
 @Injectable()
 export class WorkflowService {
@@ -40,6 +46,7 @@ export class WorkflowService {
     private userRoleRepo: Repository<UserRole>,
     private dataSource: DataSource,
     private readonly redisLockService: RedisLockService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -126,6 +133,7 @@ export class WorkflowService {
   /**
    * 发起审批流程
    * 创建一个新的 WorkflowInstance，并写入第一条 SUBMIT 日志
+   * 成功后触发 workflow.node.pending 事件（由 NotificationService 监听）
    */
   async startInstance(params: {
     definitionCode: string;
@@ -223,6 +231,34 @@ export class WorkflowService {
 
     // 处理第一步如果是 CC 节点（自动流转）
     await this.autoAdvanceCCNodes(instance, def);
+
+    // ─── 触发 workflow.node.pending 事件（事件驱动，解耦通知逻辑）──────────
+    // 只有实例仍处于 PENDING 状态时才触发（CC 节点自动流转可能已完结）
+    if (instance.status === InstanceStatus.PENDING) {
+      const currentNode = def.nodes.find((n) => n.stepOrder === instance.currentStep);
+      if (currentNode && currentNode.roleId) {
+        const event = new WorkflowPendingEvent({
+          instanceId: instance.id,
+          workflowCode: def.code,
+          workflowName: def.name,
+          currentStep: instance.currentStep,
+          roleId: currentNode.roleId,
+          businessType: params.businessType,
+          businessId: params.businessId,
+          submittedByUserId: params.initiatorId,
+          submittedByName: params.initiatorName ?? `用户#${params.initiatorId}`,
+          submittedAt: new Date(),
+        });
+
+        this.eventEmitter.emit(WORKFLOW_EVENTS.NODE_PENDING, event);
+
+        this.logger.log(
+          `[EventEmitter] 触发事件 ${WORKFLOW_EVENTS.NODE_PENDING}: ` +
+            `instanceId=${instance.id}, roleId=${currentNode.roleId}, ` +
+            `businessType=${params.businessType}#${params.businessId}`,
+        );
+      }
+    }
 
     return instance;
   }
@@ -339,6 +375,32 @@ export class WorkflowService {
     if (instance.status === InstanceStatus.PENDING) {
       const def = await this.findDefinitionByCode(instance.definition?.code ?? '');
       await this.autoAdvanceCCNodes(instance, def);
+
+      // 流转到下一步后，触发新节点的待审批事件
+      if (instance.status === InstanceStatus.PENDING) {
+        const nextNode = await this.nodeRepo.findOne({
+          where: { definitionId: instance.definitionId, stepOrder: instance.currentStep },
+        });
+        if (nextNode && nextNode.roleId) {
+          const event = new WorkflowPendingEvent({
+            instanceId: instance.id,
+            workflowCode: instance.definition?.code ?? '',
+            workflowName: instance.definition?.name ?? '',
+            currentStep: instance.currentStep,
+            roleId: nextNode.roleId,
+            businessType: instance.businessType,
+            businessId: instance.businessId,
+            submittedByUserId: instance.initiatorId,
+            submittedByName: instance.initiatorName ?? `用户#${instance.initiatorId}`,
+            submittedAt: new Date(),
+          });
+          this.eventEmitter.emit(WORKFLOW_EVENTS.NODE_PENDING, event);
+          this.logger.log(
+            `[EventEmitter] 流转后触发事件 ${WORKFLOW_EVENTS.NODE_PENDING}: ` +
+              `instanceId=${instance.id}, step=${instance.currentStep}, roleId=${nextNode.roleId}`,
+          );
+        }
+      }
     }
 
     return instance;

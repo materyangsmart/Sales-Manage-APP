@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ARModule } from './modules/ar/ar.module';
@@ -16,6 +17,7 @@ import { ExportModule } from './modules/export/export.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { RedisModule } from './modules/infra/redis.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 // Explicitly import all entities to ensure TypeORM loads them correctly
 import { ARApply } from './modules/ar/entities/ar-apply.entity';
@@ -44,12 +46,26 @@ import { WorkflowInstance } from './modules/workflow/entities/workflow-instance.
 import { ApprovalLog } from './modules/workflow/entities/approval-log.entity';
 // Export Entities
 import { ExportTask } from './modules/export/entities/export-task.entity';
+// Notification Entities（3 个新增）
+import { MessageTemplate } from './modules/notification/entities/message-template.entity';
+import { Notification } from './modules/notification/entities/notification.entity';
+import { UserNotification } from './modules/notification/entities/user-notification.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+
+    // ─── 事件驱动基础设施（全局注册，供所有模块使用）─────────────────────
+    EventEmitterModule.forRoot({
+      // 使用通配符支持 'workflow.*' 等模式监听
+      wildcard: false,
+      // 最大监听器数量（防止内存泄漏警告）
+      maxListeners: 20,
+      // 异步事件处理（不阻塞主线程）
+      verboseMemoryLeak: true,
     }),
 
     // ─── Redis 基础设施（全局缓存 + BullMQ + 分布式锁）─────────────────────
@@ -93,6 +109,10 @@ import { ExportTask } from './modules/export/entities/export-task.entity';
           ApprovalLog,
           // Export 实体（1 个）
           ExportTask,
+          // Notification 实体（3 个新增，总计 26 个实体）
+          MessageTemplate,
+          Notification,
+          UserNotification,
         ],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         synchronize: configService.get('DB_SYNC', 'false') === 'true',
@@ -112,6 +132,7 @@ import { ExportTask } from './modules/export/entities/export-task.entity';
     ExportModule,
     RbacModule,
     WorkflowModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

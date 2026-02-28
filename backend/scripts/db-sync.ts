@@ -10,7 +10,7 @@
  * 重要：此脚本必须与 app.module.ts 中的 entities 列表保持 100% 一致
  *       任何新增的 Entity 都必须在此处显式导入
  *
- * 当前实体数：18（原有 13 + RBAC 新增 5）
+ * 当前实体数：26（原有 13 + RBAC 5 + Workflow 4 + Export 1 + Notification 3）
  */
 
 import { DataSource } from 'typeorm';
@@ -43,14 +43,19 @@ import { Permission } from '../src/modules/rbac/entities/permission.entity';
 import { RolePermission } from '../src/modules/rbac/entities/role-permission.entity';
 import { UserRole } from '../src/modules/rbac/entities/user-role.entity';
 
-// Workflow 实体（4 个新增）
+// Workflow 实体（4 个）
 import { WorkflowDefinition } from '../src/modules/workflow/entities/workflow-definition.entity';
 import { WorkflowNode } from '../src/modules/workflow/entities/workflow-node.entity';
 import { WorkflowInstance } from '../src/modules/workflow/entities/workflow-instance.entity';
 import { ApprovalLog } from '../src/modules/workflow/entities/approval-log.entity';
 
-// Export 实体（1 个新增）
+// Export 实体（1 个）
 import { ExportTask } from '../src/modules/export/entities/export-task.entity';
+
+// Notification 实体（3 个新增）
+import { MessageTemplate } from '../src/modules/notification/entities/message-template.entity';
+import { Notification } from '../src/modules/notification/entities/notification.entity';
+import { UserNotification } from '../src/modules/notification/entities/user-notification.entity';
 
 // 加载 .env 文件
 // 优先尝试 .env.test（测试环境），其次尝试 .env（生产环境）
@@ -89,13 +94,17 @@ const ALL_ENTITIES = [
   Permission,
   RolePermission,
   UserRole,
-  // Workflow 实体（4 个新增）
+  // Workflow 实体（4 个）
   WorkflowDefinition,
   WorkflowNode,
   WorkflowInstance,
   ApprovalLog,
-  // Export 实体（1 个新增）
+  // Export 实体（1 个）
   ExportTask,
+  // Notification 实体（3 个新增）
+  MessageTemplate,
+  Notification,
+  UserNotification,
 ];
 
 const config = {
@@ -116,7 +125,7 @@ async function syncDatabase() {
   console.log(`   Host: ${config.host}:${config.port}`);
   console.log(`   Database: ${config.database}`);
   console.log(`   Username: ${config.username}`);
-  console.log(`   Entities: ${config.entities.length} entities (原有13 + RBAC 5 + Workflow 4 + Export 1)`);
+  console.log(`   Entities: ${config.entities.length} entities (原有13 + RBAC 5 + Workflow 4 + Export 1 + Notification 3)`);
   console.log('\n📦 Entity List:');
   config.entities.forEach((entity, index) => {
     console.log(`   ${index + 1}. ${entity.name}`);
@@ -154,12 +163,21 @@ async function syncDatabase() {
     console.log('   ✓ orders, customers, users, products');
     console.log('   ✓ production_plans, delivery_records, quality_feedback');
     console.log('   ✓ ar_invoices, ar_payments, ar_apply, audit_logs, order_items');
-    console.log('\n📝 RBAC tables (new):');
+    console.log('\n📝 RBAC tables:');
     console.log('   ✓ organizations (组织架构树)');
     console.log('   ✓ roles (角色表，含数据范围)');
     console.log('   ✓ permissions (权限字典)');
     console.log('   ✓ role_permissions (角色-权限关联)');
     console.log('   ✓ user_roles (用户-角色关联)');
+    console.log('\n📝 Workflow tables:');
+    console.log('   ✓ workflow_definitions (流程定义)');
+    console.log('   ✓ workflow_nodes (流程节点)');
+    console.log('   ✓ workflow_instances (流程实例)');
+    console.log('   ✓ approval_logs (审批日志)');
+    console.log('\n📝 Notification tables (新增):');
+    console.log('   ✓ message_templates (消息模板)');
+    console.log('   ✓ notifications (通知主体)');
+    console.log('   ✓ user_notifications (用户触达记录)');
 
   } catch (error) {
     console.error('\n❌ Database synchronization failed!');

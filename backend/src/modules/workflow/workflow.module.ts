@@ -12,6 +12,7 @@ import { RedisModule } from '../infra/redis.module';
 /**
  * 工作流模块
  * 依赖 RBAC 模块的 UserRole Entity 进行权限校验
+ * EventEmitter2 由 AppModule 的 EventEmitterModule.forRoot() 全局注册，无需在此导入
  */
 @Module({
   imports: [
