@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI } from "./backend-api";
+import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI, rbacAPI, workflowAPI, notificationAPI } from "./backend-api";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -798,6 +798,165 @@ export const appRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
         }
       }),
+  }),
+  // ─── RBAC 权限管理 ──────────────────────────────────────────────────────────
+  rbac: router({
+    /** 获取所有角色列表 */
+    getRoles: protectedProcedure.query(async () => {
+      try {
+        return await rbacAPI.getRoles();
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
+    /** 获取组织树 */
+    getOrgTree: protectedProcedure.query(async () => {
+      try {
+        return await rbacAPI.getOrgTree();
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
+    /** 获取用户列表（含角色信息） */
+    getUsers: protectedProcedure
+      .input(z.object({ orgId: z.number().optional(), page: z.number().optional(), pageSize: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        try {
+          return await rbacAPI.getUsers(input ?? {});
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 为用户分配角色 */
+    assignRole: protectedProcedure
+      .input(z.object({ userId: z.number(), roleId: z.number(), orgId: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        try {
+          await rbacAPI.assignRole(input.userId, input.roleId, input.orgId);
+          return { success: true };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 移除用户角色 */
+    removeUserRole: protectedProcedure
+      .input(z.object({ userId: z.number(), roleId: z.number() }))
+      .mutation(async ({ input }) => {
+        try {
+          await rbacAPI.removeUserRole(input.userId, input.roleId);
+          return { success: true };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 更新用户所属部门 */
+    updateUserOrg: protectedProcedure
+      .input(z.object({ userId: z.number(), orgId: z.number() }))
+      .mutation(async ({ input }) => {
+        try {
+          await rbacAPI.updateUserOrg(input.userId, input.orgId);
+          return { success: true };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+  }),
+
+  // ─── Workflow 审批工作台 ────────────────────────────────────────────────────
+  workflow: router({
+    /** 获取我的待办列表 */
+    getMyTodos: protectedProcedure
+      .input(z.object({ page: z.number().optional(), pageSize: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        try {
+          return await workflowAPI.getMyTodos(input ?? {});
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 审批通过 */
+    approve: protectedProcedure
+      .input(z.object({ instanceId: z.number(), comment: z.string().min(1, '审批意见不能为空') }))
+      .mutation(async ({ input }) => {
+        try {
+          return await workflowAPI.approve(input.instanceId, input.comment);
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 审批拒绝 */
+    reject: protectedProcedure
+      .input(z.object({ instanceId: z.number(), comment: z.string().min(1, '拒绝原因不能为空') }))
+      .mutation(async ({ input }) => {
+        try {
+          return await workflowAPI.reject(input.instanceId, input.comment);
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 获取流程实例详情（含审批日志） */
+    getInstance: protectedProcedure
+      .input(z.object({ instanceId: z.number() }))
+      .query(async ({ input }) => {
+        try {
+          return await workflowAPI.getInstance(input.instanceId);
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 根据业务单据查询流程实例 */
+    getInstanceByBusiness: protectedProcedure
+      .input(z.object({ businessType: z.string(), businessId: z.number() }))
+      .query(async ({ input }) => {
+        try {
+          return await workflowAPI.getInstanceByBusiness(input.businessType, input.businessId);
+        } catch (e: any) {
+          if (e.status === 404) return null;
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+  }),
+
+  // ─── Notification 消息中心 ──────────────────────────────────────────────────
+  notification: router({
+    /** 获取未读消息数 */
+    getUnreadCount: protectedProcedure.query(async () => {
+      try {
+        return await notificationAPI.getUnreadCount();
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
+    /** 获取消息列表 */
+    getList: protectedProcedure
+      .input(z.object({ page: z.number().optional(), pageSize: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        try {
+          return await notificationAPI.getList(input ?? {});
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 标记单条消息为已读 */
+    markAsRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        try {
+          await notificationAPI.markAsRead(input.id);
+          return { success: true };
+        } catch (e: any) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+        }
+      }),
+    /** 全部标记为已读 */
+    markAllAsRead: protectedProcedure.mutation(async () => {
+      try {
+        await notificationAPI.markAllAsRead();
+        return { success: true };
+      } catch (e: any) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: e.message });
+      }
+    }),
   }),
 });
 

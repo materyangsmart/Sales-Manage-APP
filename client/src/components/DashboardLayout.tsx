@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,8 +22,8 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings, Bell, CheckCheck, Clock, Shield } from "lucide-react";
+import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -36,6 +37,9 @@ const menuItems = [
   { icon: TrendingUp, label: "提成查询", path: "/commission/stats" },
   { icon: Settings, label: "提成规则", path: "/commission/rules" },
   { icon: Search, label: "审计日志", path: "/audit/logs" },
+  { icon: Clock, label: "我的待办", path: "/workflow/todos" },
+  { icon: Users, label: "用户管理", path: "/admin/users" },
+  { icon: Shield, label: "角色管理", path: "/admin/roles" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -120,6 +124,40 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+
+  // 消息铃铛状态
+  const [bellOpen, setBellOpen] = useState(false);
+  const utils = trpc.useUtils();
+
+  const { data: unreadData } = trpc.notification.getUnreadCount.useQuery(undefined, {
+    refetchInterval: 30000, // 每 30 秒轮询一次
+    refetchIntervalInBackground: false,
+  });
+  const unreadCount: number = (unreadData as any)?.count ?? 0;
+
+  const { data: notifList, isLoading: notifLoading } = trpc.notification.getList.useQuery(
+    { pageSize: 10 },
+    { enabled: bellOpen }
+  );
+  const notifItems: any[] = (notifList as any)?.items ?? [];
+
+  const markAsReadMut = trpc.notification.markAsRead.useMutation({
+    onSuccess: () => {
+      utils.notification.getUnreadCount.invalidate();
+      utils.notification.getList.invalidate();
+    },
+  });
+
+  const markAllMut = trpc.notification.markAllAsRead.useMutation({
+    onSuccess: () => {
+      utils.notification.getUnreadCount.invalidate();
+      utils.notification.getList.invalidate();
+    },
+  });
+
+  const handleMarkRead = useCallback((id: number) => {
+    markAsReadMut.mutate({ id });
+  }, [markAsReadMut]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -250,7 +288,7 @@ function DashboardLayoutContent({
 
       <SidebarInset>
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">
@@ -261,6 +299,83 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            {/* 消息铃铛 */}
+            <DropdownMenu open={bellOpen} onOpenChange={setBellOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-0" sideOffset={8}>
+                <div className="flex items-center justify-between px-3 py-2 border-b">
+                  <span className="font-medium text-sm">消息通知</span>
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => markAllMut.mutate()}
+                    >
+                      <CheckCheck className="h-3.5 w-3.5 mr-1" />全部已读
+                    </Button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-auto">
+                  {notifLoading ? (
+                    <div className="py-6 text-center text-sm text-muted-foreground">加载中...</div>
+                  ) : notifItems.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">暂无消息</p>
+                    </div>
+                  ) : (
+                    notifItems.map((item: any) => (
+                      <DropdownMenuItem
+                        key={item.id}
+                        className={`flex flex-col items-start gap-1 px-3 py-2.5 cursor-pointer border-b last:border-0 ${
+                          !item.isRead ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                        }`}
+                        onClick={() => {
+                          if (!item.isRead) handleMarkRead(item.id);
+                        }}
+                      >
+                        <div className="flex items-start justify-between w-full gap-2">
+                          <span className="text-sm font-medium leading-tight flex-1">
+                            {!item.isRead && (
+                              <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5 mb-0.5 align-middle" />
+                            )}
+                            {item.notification?.title ?? item.title ?? '无标题'}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                          {item.notification?.content ?? item.content ?? ''}
+                        </p>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </div>
+                {notifItems.length > 0 && (
+                  <div className="border-t px-3 py-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-7 text-xs text-muted-foreground"
+                      onClick={() => { setBellOpen(false); setLocation('/workflow/todos'); }}
+                    >
+                      查看全部待办
+                    </Button>
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
         <main className="flex-1 p-4">{children}</main>

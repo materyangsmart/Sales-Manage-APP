@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Copy, Package, QrCode } from "lucide-react";
+import { ArrowLeft, Copy, Package, QrCode, CheckCircle, XCircle, Clock, User, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 import { OrderQRCode } from "@/components/OrderQRCode";
 
@@ -14,6 +14,12 @@ export default function OrderDetail() {
   const orderId = parseInt(id || "0");
 
   const { data: order, isLoading } = trpc.orders.get.useQuery({ orderId });
+
+  // 审批流转时间轴
+  const { data: workflowInstance } = trpc.workflow.getInstanceByBusiness.useQuery(
+    { businessType: 'ORDER', businessId: orderId },
+    { enabled: orderId > 0, retry: false }
+  );
 
   const handleCopyTraceLink = () => {
     const traceUrl = `${window.location.origin}/public/trace/${orderId}`;
@@ -230,6 +236,107 @@ export default function OrderDetail() {
           </Card>
         </div>
       </div>
+
+      {/* 审批流转时间轴 */}
+      {workflowInstance && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4" /> 审批流转记录
+            </CardTitle>
+            <CardDescription>
+              流程：{workflowInstance.definitionName ?? workflowInstance.workflowCode}
+              　状态：
+              <span className={`font-medium ${
+                workflowInstance.status === 'APPROVED' ? 'text-emerald-600' :
+                workflowInstance.status === 'REJECTED' ? 'text-red-600' :
+                workflowInstance.status === 'RUNNING' ? 'text-blue-600' : 'text-muted-foreground'
+              }`}>
+                {workflowInstance.status === 'APPROVED' ? '已通过' :
+                 workflowInstance.status === 'REJECTED' ? '已拒绝' :
+                 workflowInstance.status === 'RUNNING' ? '审批中' :
+                 workflowInstance.status === 'PENDING' ? '待审批' : workflowInstance.status}
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              {/* 垂直连线 */}
+              <div className="absolute left-5 top-6 bottom-0 w-px bg-border" />
+              <div className="space-y-4">
+                {/* 发起节点 */}
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0 z-10">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium text-sm">发起审批</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {workflowInstance.initiatorName ?? '系统'}于{' '}
+                      {workflowInstance.createdAt
+                        ? new Date(workflowInstance.createdAt).toLocaleString('zh-CN')
+                        : '未知时间'}提交审批申请
+                    </p>
+                  </div>
+                </div>
+
+                {/* 审批日志节点 */}
+                {(workflowInstance.logs ?? []).map((log: any, idx: number) => (
+                  <div key={idx} className="flex gap-4 items-start">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 ${
+                      log.action === 'APPROVE' ? 'bg-emerald-100' :
+                      log.action === 'REJECT' ? 'bg-red-100' :
+                      log.action === 'WITHDRAW' ? 'bg-amber-100' : 'bg-slate-100'
+                    }`}>
+                      {log.action === 'APPROVE' ? (
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      ) : log.action === 'REJECT' ? (
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-slate-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">
+                          {log.action === 'APPROVE' ? '审批通过' :
+                           log.action === 'REJECT' ? '审批拒绝' :
+                           log.action === 'WITHDRAW' ? '撤回申请' : log.action}
+                        </p>
+                        <span className="text-xs text-muted-foreground">— {log.operatorName ?? '审批人'}</span>
+                      </div>
+                      {log.comment && (
+                        <p className="text-sm text-muted-foreground mt-1 bg-muted/50 rounded px-2 py-1">
+                          “{log.comment}”
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {log.nodeName && <span className="mr-2">[{log.nodeName}]</span>}
+                        {log.createdAt ? new Date(log.createdAt).toLocaleString('zh-CN') : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* 当前节点（如果进行中） */}
+                {workflowInstance.status === 'RUNNING' && (
+                  <div className="flex gap-4 items-start">
+                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 z-10 animate-pulse">
+                      <Clock className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-amber-700">待审批</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        当前节点：{workflowInstance.currentNodeName ?? '审批中'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

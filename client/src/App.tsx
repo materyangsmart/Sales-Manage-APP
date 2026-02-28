@@ -20,6 +20,9 @@ import OrderDetail from "./pages/OrderDetail";
 import CEORadar from "./pages/CEORadar";
 import EmployeeGovernance from "./pages/EmployeeGovernance";
 import { AntiFraud } from "./pages/AntiFraud";
+import AdminUsers from "./pages/AdminUsers";
+import AdminRoles from "./pages/AdminRoles";
+import WorkflowTodos from "./pages/WorkflowTodos";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -41,6 +44,9 @@ function Router() {
       <Route path={"/ceo/radar"} component={CEORadar} />
       <Route path={"/governance/employees"} component={EmployeeGovernance} />
       <Route path={"/governance/anti-fraud"} component={AntiFraud} />
+      <Route path={"/admin/users"} component={AdminUsers} />
+      <Route path={"/admin/roles"} component={AdminRoles} />
+      <Route path={"/workflow/todos"} component={WorkflowTodos} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

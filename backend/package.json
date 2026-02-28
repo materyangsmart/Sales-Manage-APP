@@ -27,7 +27,8 @@
     "test:rbac": "ts-node -r tsconfig-paths/register scripts/test-rbac.ts",
     "test:workflow": "ts-node -r tsconfig-paths/register scripts/test-workflow.ts",
     "test:concurrency": "ts-node -r tsconfig-paths/register scripts/test-concurrency.ts",
-    "test:notification": "ts-node -r tsconfig-paths/register scripts/test-notification.ts"
+    "test:notification": "ts-node -r tsconfig-paths/register scripts/test-notification.ts",
+    "test:fullstack-e2e": "ts-node -r tsconfig-paths/register scripts/test-fullstack-e2e.ts"
   },
   "dependencies": {
     "@nestjs/bull": "^11.0.4",
