@@ -45,18 +45,35 @@ export const POSITION_ROLE_MAP: Record<JobPosition, UserRole[]> = {
 @Entity('users')
 @Index(['orgId'])
 @Index(['username'], { unique: true })
+@Index(['email'], { unique: true })
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'org_id', type: 'int', comment: '组织ID' })
+  /**
+   * 所属组织ID（关联 organizations 表）
+   * 决定该用户属于哪个部门/战区/城市/大区
+   */
+  @Column({ name: 'org_id', type: 'int', comment: '所属组织ID（关联 organizations 表）' })
   orgId: number;
 
-  @Column({ length: 50, comment: '用户名' })
+  @Column({ length: 50, comment: '用户名（登录名）' })
   username: string;
 
   @Column({ name: 'real_name', length: 50, comment: '真实姓名' })
   realName: string;
+
+  /**
+   * 邮箱（用于 JWT 登录认证）
+   */
+  @Column({ type: 'varchar', length: 100, nullable: true, unique: true, comment: '邮箱（登录账号）' })
+  email: string | null;
+
+  /**
+   * 密码哈希（bcrypt）
+   */
+  @Column({ name: 'password_hash', type: 'varchar', length: 200, nullable: true, comment: '密码哈希（bcrypt）' })
+  passwordHash: string | null;
 
   @Column({ length: 20, nullable: true, comment: '手机号' })
   phone: string;
@@ -75,13 +92,25 @@ export class User {
   })
   roles: string[];
 
+  /**
+   * 账号状态
+   * ACTIVE   - 正常启用
+   * DISABLED - 已禁用（禁止登录）
+   * LOCKED   - 已锁定（多次登录失败）
+   */
   @Column({
     type: 'enum',
-    enum: ['ACTIVE', 'DISABLED'],
+    enum: ['ACTIVE', 'DISABLED', 'LOCKED'],
     default: 'ACTIVE',
-    comment: '状态',
+    comment: '账号状态：ACTIVE=启用, DISABLED=禁用, LOCKED=锁定',
   })
   status: string;
+
+  /**
+   * 最后登录时间
+   */
+  @Column({ name: 'last_login_at', type: 'datetime', nullable: true, comment: '最后登录时间' })
+  lastLoginAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

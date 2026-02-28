@@ -13,6 +13,7 @@ import { TraceabilityModule } from './modules/traceability/traceability.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { CeoRadarModule } from './modules/ceo-radar/ceo-radar.module';
 import { ExportModule } from './modules/export/export.module';
+import { RbacModule } from './modules/rbac/rbac.module';
 
 // Explicitly import all entities to ensure TypeORM loads them correctly
 import { ARApply } from './modules/ar/entities/ar-apply.entity';
@@ -28,6 +29,12 @@ import { Product } from './modules/order/entities/product.entity';
 import { DeliveryRecord } from './modules/traceability/entities/delivery-record.entity';
 import { ProductionPlan } from './modules/traceability/entities/production-plan.entity';
 import { User } from './modules/user/entities/user.entity';
+// RBAC Entities
+import { Organization } from './modules/rbac/entities/organization.entity';
+import { Role } from './modules/rbac/entities/role.entity';
+import { Permission } from './modules/rbac/entities/permission.entity';
+import { RolePermission } from './modules/rbac/entities/role-permission.entity';
+import { UserRole } from './modules/rbac/entities/user-role.entity';
 
 @Module({
   imports: [
@@ -46,6 +53,7 @@ import { User } from './modules/user/entities/user.entity';
         database: configService.get('DB_DATABASE', 'qianzhang_sales'),
         // Explicitly list all entities instead of using glob pattern
         entities: [
+          // 原有业务实体（13 个）
           ARApply,
           ARInvoice,
           ARPayment,
@@ -59,6 +67,12 @@ import { User } from './modules/user/entities/user.entity';
           DeliveryRecord,
           ProductionPlan,
           User,
+          // RBAC 实体（5 个新增）
+          Organization,
+          Role,
+          Permission,
+          RolePermission,
+          UserRole,
         ],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         synchronize: configService.get('DB_SYNC', 'false') === 'true',
@@ -76,6 +90,7 @@ import { User } from './modules/user/entities/user.entity';
     FeedbackModule,
     CeoRadarModule,
     ExportModule,
+    RbacModule,
   ],
   controllers: [AppController],
   providers: [AppService],
