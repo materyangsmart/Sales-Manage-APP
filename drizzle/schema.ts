@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, date, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, date, boolean, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -20,7 +20,13 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+  /** IM 平台唯一标识（企业微信 unionid / 钉钉 unionid） */
+  imUnionid: varchar("im_unionid", { length: 128 }),
+  /** IM 平台类型：WECOM（企业微信）或 DINGTALK（钉钉） */
+  imProvider: mysqlEnum("im_provider", ["WECOM", "DINGTALK"]),
+}, (table) => ({
+  imUnionidIdx: uniqueIndex("idx_users_im_unionid").on(table.imUnionid),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

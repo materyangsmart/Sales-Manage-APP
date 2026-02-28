@@ -5,6 +5,8 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI, rbacAPI, workflowAPI, notificationAPI, fileStorageAPI } from "./backend-api";
+import { imLogin } from "./im-sso";
+import { routeIMNotificationSync, getRecentPushLogs } from "./im-notification";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -969,6 +971,70 @@ export const appRouter = router({
       }
     }),
   }),
+  /** IM SSO 免密登录 */
+  imAuth: router({
+    /**
+     * 企业微信/钉钉免密登录
+     * 前端传入 IM 授权 code + provider，后端换取 unionid 并签发 JWT
+     */
+    login: publicProcedure
+      .input(z.object({
+        code: z.string().min(1, 'code 不能为空'),
+        provider: z.enum(['WECOM', 'DINGTALK']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const result = await imLogin(input.code, input.provider);
+          // 将 JWT 写入 session cookie（与 Manus OAuth 复用同一 cookie）
+          const { getSessionCookieOptions } = await import('./_core/cookies');
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, result.token, cookieOptions);
+          console.log(`[tRPC imAuth.login] ✓ JWT issued for user id=${result.user.id}, provider=${input.provider}, isNewUser=${result.user.isNewUser}`);
+          return {
+            success: true,
+            user: result.user,
+            isNewUser: result.user.isNewUser,
+          };
+        } catch (err: any) {
+          console.error(`[tRPC imAuth.login] ✗ Failed: ${err.message}`);
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: err.message || 'IM 登录失败',
+          });
+        }
+      }),
+  }),
+
+  /** IM 消息推送路由（管理接口） */
+  imPush: router({
+    /**
+     * 触发 IM 推送（同步，用于测试和紧急场景）
+     * 判断用户是否绑定 IM → 路由到企业微信/钉钉 Webhook
+     */
+    sendAlert: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        event: z.enum(['ORDER_APPROVAL_REQUIRED', 'ORDER_APPROVED', 'ORDER_REJECTED', 'CEO_RADAR_ALERT', 'CREDIT_LIMIT_WARNING', 'PAYMENT_OVERDUE']),
+        title: z.string(),
+        content: z.string(),
+        priority: z.enum(['HIGH', 'NORMAL', 'LOW']).default('NORMAL'),
+        bizId: z.string().optional(),
+        bizType: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await routeIMNotificationSync(input);
+        console.log(`[tRPC imPush.sendAlert] channel=${result.channel}, success=${result.success}`);
+        return result;
+      }),
+
+    /** 获取最近推送日志（用于验收和监控） */
+    getRecentLogs: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return getRecentPushLogs(input?.limit ?? 20);
+      }),
+  }),
+
   /** 附件管理（预签名 URL 直传架构） */
   fileStorage: router({
     /** 第一步：申请预签名上传 URL（凭证签发，不接收文件流） */

@@ -42,6 +42,10 @@ async function startServer() {
   });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Mobile BFF 路由（/api/mobile/v1/*）——为移动端提供聚合 API
+  const { registerMobileBFFRoutes } = await import('../mobile-bff');
+  registerMobileBFFRoutes(app);
   
   console.log('[Server] Mounting /api/trpc router...');
   // tRPC API
