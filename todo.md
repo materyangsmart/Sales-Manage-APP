@@ -985,3 +985,35 @@
 - [x] 客户自助下单 + 销售履约流转 E2E 验证（tRPC 测试通过）
 - [x] BI 大屏真实 SQL 打印日志（getMockData 已删除，切换到 getData）
 - [x] 140 测试 100% PASS（12 个测试文件）
+
+## RC4 V1.0 GA 正式生产版本冲刺 (Mega-Sprint 4)
+
+### Epic 1：智能仓储与防超卖风控 (WMS & Inventory)
+- [x] 创建 Inventory 库存表 + InventoryLog 出入库流水表
+- [x] 高并发防超卖：SELECT FOR UPDATE 行级锁 + 原子库存预扣减
+- [x] /admin/inventory 库存管理页面（低库存报警 + 入库/出库/盘点 + 流水查询）
+- [x] 防超卖压测验证（100并发抢10库存 → 成功10单，可用库存=0，无超卖）
+
+### Epic 2：B2B 账期与信用额度控制体系
+- [x] credit_override_approvals 特批表 + billing_statements 月结账单表
+- [x] 信用风控：下单时校验 订单金额+已用额度 <= 信用额度
+- [x] 超限订单自动拦截 + CREDIT_OVERRIDE_APPROVAL 特批工作流
+- [x] 月结账单生成逻辑（generateMonthlyBillingStatements）
+- [x] 催款通知推送（notifyOwner 集成）
+
+### Epic 3：AI Copilot 智能中台助手
+- [x] 集成 LLM（使用内置 invokeLLM + NL2SQL prompt）
+- [x] CEO 智能决策助手（BI 大屏右下角 AI 问答框）
+- [x] NL2SQL：“查询库存总数” → SELECT SUM(total_stock) FROM inventory → AI 总结
+
+### Epic 4：云原生高可用部署架构
+- [x] k8s/: Deployment(3副本) + Service + Ingress(TLS) + ConfigMap + Secret + HPA + PDB
+- [x] Prometheus /metrics 指标暴露（QPS/延迟直方图/内存/连接数）
+- [x] Grafana Dashboard JSON（9 个面板） + ServiceMonitor + PrometheusRule 告警
+
+### 验收标准
+- [x] 防超卖压测日志（100并发/10库存 → 成功10/失败90/可用库存=0）
+- [x] AI 助手 NL2SQL 交互日志（“查询库存总数” → SQL → 结果 → AI 总结）
+- [x] 信用超限拦截流转日志（4场景全通过）
+- [x] 13 文件 / 164 测试 100% PASS
+- [x] 验收审核报告

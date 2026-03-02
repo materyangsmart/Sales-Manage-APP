@@ -1,0 +1,118 @@
+##############################################################
+# ops-frontend Kubernetes Deployment
+# RC4 Epic 4: 云原生高可用部署架构
+##############################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ops-frontend
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+    version: v1.0.0
+    tier: frontend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ops-frontend
+  template:
+    metadata:
+      labels:
+        app: ops-frontend
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: ops-frontend-sa
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: ops-frontend
+          image: registry.cn-hangzhou.aliyuncs.com/qianzhang/ops-frontend:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: ops-frontend-config
+            - secretRef:
+                name: ops-frontend-secrets
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/mobile/v1/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/mobile/v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /api/mobile/v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+      imagePullSecrets:
+        - name: aliyun-registry-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ops-frontend
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: ops-frontend
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ops-frontend-sa
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend

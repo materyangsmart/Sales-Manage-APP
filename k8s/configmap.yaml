@@ -1,0 +1,48 @@
+##############################################################
+# ops-frontend ConfigMap（非敏感配置）
+##############################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ops-frontend-config
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  # 应用配置
+  VITE_APP_TITLE: "千张销售管理系统"
+  VITE_APP_ID: "<your-app-id>"
+  # 后端 API 地址（集群内部通信）
+  BACKEND_URL: "http://ops-backend.qianzhang-prod.svc.cluster.local:8080"
+  # OAuth 配置
+  OAUTH_SERVER_URL: "https://api.manus.im"
+  VITE_OAUTH_PORTAL_URL: "https://login.manus.im"
+  # 日志级别
+  LOG_LEVEL: "info"
+  # 限流配置
+  RATE_LIMIT_MAX: "60"
+  RATE_LIMIT_WINDOW_MS: "60000"
+---
+##############################################################
+# ops-frontend Secret（敏感配置 - 生产环境使用 SealedSecret 或 Vault）
+##############################################################
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ops-frontend-secrets
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+type: Opaque
+stringData:
+  # 数据库连接（TiDB Cloud / RDS）
+  DATABASE_URL: "mysql://user:password@tidb-cluster.qianzhang-prod.svc.cluster.local:4000/ops_db?ssl=true"
+  # JWT 签名密钥
+  JWT_SECRET: "<generate-with-openssl-rand-base64-32>"
+  # 内部服务通信 Token
+  INTERNAL_SERVICE_TOKEN: "<internal-token>"
+  # Forge API（AI 能力）
+  BUILT_IN_FORGE_API_KEY: "<forge-api-key>"
+  BUILT_IN_FORGE_API_URL: "https://forge.manus.im"

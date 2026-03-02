@@ -112,22 +112,22 @@ export type InsertSettlementAudit = typeof settlementAudit.$inferInsert;
 // P23: Customer credit scores table
 export const customerCreditScores = mysqlTable("customer_credit_scores", {
   id: int("id").autoincrement().primaryKey(),
-  customerId: int("customerId").notNull().unique(),
-  customerName: varchar("customerName", { length: 255 }).notNull(),
-  creditScore: int("creditScore").default(60).notNull(),
-  creditLevel: mysqlEnum("creditLevel", ["S", "A", "B", "C", "D"]).default("C").notNull(),
-  totalOrders: int("totalOrders").default(0).notNull(),
-  totalAmount: decimal("totalAmount", { precision: 15, scale: 2 }).default("0").notNull(),
-  paidAmount: decimal("paidAmount", { precision: 15, scale: 2 }).default("0").notNull(),
-  paymentRate: decimal("paymentRate", { precision: 5, scale: 2 }).default("0").notNull(),
-  overdueCount: int("overdueCount").default(0).notNull(),
-  maxOverdueDays: int("maxOverdueDays").default(0).notNull(),
-  lastOrderDate: date("lastOrderDate"),
-  autoApproveEnabled: boolean("autoApproveEnabled").default(false).notNull(),
-  autoApproveLimit: decimal("autoApproveLimit", { precision: 10, scale: 2 }).default("0").notNull(),
-  lastCalculatedAt: timestamp("lastCalculatedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  customerId: int("customer_id").notNull().unique(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  creditScore: int("credit_score").default(60).notNull(),
+  creditLevel: mysqlEnum("credit_level", ["S", "A", "B", "C", "D"]).default("C").notNull(),
+  totalOrders: int("total_orders").default(0).notNull(),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  paymentRate: decimal("payment_rate", { precision: 5, scale: 2 }).default("0").notNull(),
+  overdueCount: int("overdue_count").default(0).notNull(),
+  maxOverdueDays: int("max_overdue_days").default(0).notNull(),
+  lastOrderDate: date("last_order_date"),
+  autoApproveEnabled: boolean("auto_approve_enabled").default(false).notNull(),
+  autoApproveLimit: decimal("auto_approve_limit", { precision: 10, scale: 2 }).default("0").notNull(),
+  lastCalculatedAt: timestamp("last_calculated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 export type CustomerCreditScore = typeof customerCreditScores.$inferSelect;
@@ -333,3 +333,87 @@ export const productCatalog = mysqlTable("product_catalog", {
 });
 export type ProductCatalog = typeof productCatalog.$inferSelect;
 export type InsertProductCatalog = typeof productCatalog.$inferInsert;
+
+// ============================================================
+// RC4 V1.0 GA Tables
+// ============================================================
+
+// RC4 Epic 1: 库存表 (inventory)
+export const inventory = mysqlTable("inventory", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("product_id").notNull(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  sku: varchar("sku", { length: 100 }).notNull(),
+  totalStock: int("total_stock").default(0).notNull(),
+  reservedStock: int("reserved_stock").default(0).notNull(), // 预扣减锁定量
+  availableStock: int("available_stock").default(0).notNull(), // = total - reserved
+  lowStockThreshold: int("low_stock_threshold").default(10).notNull(),
+  warehouseCode: varchar("warehouse_code", { length: 50 }).default("WH-001").notNull(),
+  unit: varchar("unit", { length: 20 }).default("包").notNull(),
+  lastRestockedAt: timestamp("last_restocked_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Inventory = typeof inventory.$inferSelect;
+export type InsertInventory = typeof inventory.$inferInsert;
+
+// RC4 Epic 1: 出入库流水表 (inventory_log)
+export const inventoryLog = mysqlTable("inventory_log", {
+  id: int("id").autoincrement().primaryKey(),
+  inventoryId: int("inventory_id").notNull(),
+  productId: int("product_id").notNull(),
+  type: mysqlEnum("type", ["INBOUND", "OUTBOUND", "RESERVE", "RELEASE", "ADJUST"]).notNull(),
+  quantity: int("quantity").notNull(), // 正数入库，负数出库
+  beforeStock: int("before_stock").notNull(),
+  afterStock: int("after_stock").notNull(),
+  orderId: int("order_id"),
+  batchNo: varchar("batch_no", { length: 50 }),
+  operatorId: int("operator_id"),
+  operatorName: varchar("operator_name", { length: 255 }),
+  remark: text("remark"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type InventoryLogEntry = typeof inventoryLog.$inferSelect;
+export type InsertInventoryLog = typeof inventoryLog.$inferInsert;
+
+// RC4 Epic 2: 月结对账单 (billing_statements)
+export const billingStatements = mysqlTable("billing_statements", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customer_id").notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  period: varchar("period", { length: 7 }).notNull(), // YYYY-MM
+  totalOrders: int("total_orders").default(0).notNull(),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  outstandingAmount: decimal("outstanding_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  dueDate: date("due_date").notNull(),
+  status: mysqlEnum("status", ["GENERATED", "SENT", "PARTIALLY_PAID", "PAID", "OVERDUE"]).default("GENERATED").notNull(),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type BillingStatement = typeof billingStatements.$inferSelect;
+export type InsertBillingStatement = typeof billingStatements.$inferInsert;
+
+// RC4 Epic 2: 信用超限特批记录 (credit_override_approvals)
+export const creditOverrideApprovals = mysqlTable("credit_override_approvals", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("order_id"),
+  customerId: int("customer_id").notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  orderAmount: decimal("order_amount", { precision: 15, scale: 2 }).notNull(),
+  currentUsedCredit: decimal("current_used_credit", { precision: 15, scale: 2 }).notNull(),
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }).notNull(),
+  exceededAmount: decimal("exceeded_amount", { precision: 15, scale: 2 }).notNull(),
+  requestedBy: int("requested_by"),
+  requestedByName: varchar("requested_by_name", { length: 255 }),
+  approvedBy: int("approved_by"),
+  approvedByName: varchar("approved_by_name", { length: 255 }),
+  status: mysqlEnum("status", ["PENDING", "APPROVED", "REJECTED"]).default("PENDING").notNull(),
+  reason: text("reason"),
+  approvalRemark: text("approval_remark"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type CreditOverrideApproval = typeof creditOverrideApprovals.$inferSelect;
+export type InsertCreditOverrideApproval = typeof creditOverrideApprovals.$inferInsert;

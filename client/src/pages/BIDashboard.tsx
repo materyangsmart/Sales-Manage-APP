@@ -12,6 +12,7 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { trpc } from '@/lib/trpc';
+import AICopilot from '@/components/AICopilot';
 import { Loader2, TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, AlertTriangle, RefreshCw, BarChart3 } from 'lucide-react';
 
 // 注册 ECharts 组件
@@ -113,6 +114,9 @@ export default function BIDashboard() {
           </ChartCard>
         </div>
       </div>
+
+      {/* RC4 Epic 3: AI Copilot 智能决策助手 */}
+      <AICopilot />
     </div>
   );
 }

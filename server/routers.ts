@@ -8,6 +8,9 @@ import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersA
 import { getBIDashboardData } from './bi-dashboard';
 import { imLogin } from "./im-sso";
 import { routeIMNotificationSync, getRecentPushLogs } from "./im-notification";
+import { reserveInventory, releaseInventory, getInventoryList, getInventoryLogs, adjustInventory } from './inventory-service';
+import { checkCreditLimit, approveCreditOverride, rejectCreditOverride, getCreditOverrideList, generateMonthlyBillingStatements, getBillingStatements } from './credit-service';
+import { nl2sql } from './ai-copilot';
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -1345,6 +1348,160 @@ export const appRouter = router({
         return db.select().from(batchTrace).where(eq(batchTrace.qualityStatus, 'PASS'));
       }
     }),
+  }),
+
+  // ─── RC4 Epic 1: 智能仓储与防超卖 ────────────────────────────────────────
+  inventory: router({
+    /** 获取库存列表 */
+    getList: protectedProcedure
+      .input(z.object({ lowStockOnly: z.boolean().optional() }).optional())
+      .query(async ({ input }) => {
+        return getInventoryList(input || {});
+      }),
+
+    /** 获取出入库流水 */
+    getLogs: protectedProcedure
+      .input(z.object({ productId: z.number().optional(), limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return getInventoryLogs(input?.productId, input?.limit);
+      }),
+
+    /** 库存预扣减（下单时调用） */
+    reserve: protectedProcedure
+      .input(z.object({
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number().min(1),
+        })),
+        orderId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return reserveInventory(
+          input.items,
+          input.orderId,
+          ctx.user?.id,
+          ctx.user?.name || 'System',
+        );
+      }),
+
+    /** 释放库存预扣减 */
+    release: protectedProcedure
+      .input(z.object({
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number().min(1),
+        })),
+        orderId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return releaseInventory(input.items, input.orderId, ctx.user?.name || undefined);
+      }),
+
+    /** 手动调整库存（入库/出库/盘点） */
+    adjust: protectedProcedure
+      .input(z.object({
+        productId: z.number(),
+        adjustType: z.enum(['INBOUND', 'OUTBOUND', 'ADJUST']),
+        quantity: z.number().min(1),
+        remark: z.string().optional(),
+        batchNo: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return adjustInventory(
+          input.productId,
+          input.adjustType,
+          input.quantity,
+          ctx.user?.id,
+          ctx.user?.name || 'System',
+          input.remark || undefined,
+          input.batchNo || undefined,
+        );
+      }),
+  }),
+
+  // ─── RC4 Epic 2: B2B 信用额度控制 ────────────────────────────────────────
+  credit: router({
+    /** 信用额度校验（下单前调用） */
+    check: protectedProcedure
+      .input(z.object({
+        customerId: z.number(),
+        orderAmount: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return checkCreditLimit(
+          input.customerId,
+          input.orderAmount,
+          ctx.user?.id,
+          ctx.user?.name || undefined,
+        );
+      }),
+
+    /** 获取信用超限特批列表 */
+    getOverrideList: protectedProcedure
+      .input(z.object({ status: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        return getCreditOverrideList(input?.status);
+      }),
+
+    /** 审批信用超限特批 */
+    approveOverride: protectedProcedure
+      .input(z.object({
+        approvalId: z.number(),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return approveCreditOverride(
+          input.approvalId,
+          ctx.user?.id || 0,
+          ctx.user?.name || 'System',
+          input.remark,
+        );
+      }),
+
+    /** 拒绝信用超限特批 */
+    rejectOverride: protectedProcedure
+      .input(z.object({
+        approvalId: z.number(),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return rejectCreditOverride(
+          input.approvalId,
+          ctx.user?.id || 0,
+          ctx.user?.name || 'System',
+          input.remark,
+        );
+      }),
+  }),
+
+  // ─── RC4 Epic 2: 月结账单 ─────────────────────────────────────────────────
+  billing: router({
+    /** 获取月结账单列表 */
+    getStatements: protectedProcedure
+      .input(z.object({
+        customerId: z.number().optional(),
+        period: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return getBillingStatements(input?.customerId, input?.period);
+      }),
+
+    /** 手动触发月结账单生成 */
+    generate: protectedProcedure.mutation(async () => {
+      return generateMonthlyBillingStatements();
+    }),
+  }),
+
+  // ─── RC4 Epic 3: AI Copilot 智能助手 ──────────────────────────────────────
+  aiCopilot: router({
+    /** NL2SQL 自然语言查询 */
+    ask: protectedProcedure
+      .input(z.object({
+        question: z.string().min(2).max(500),
+      }))
+      .mutation(async ({ input }) => {
+        return nl2sql(input.question);
+      }),
   }),
 });
 export type AppRouter = typeof appRouter;

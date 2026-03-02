@@ -27,7 +27,8 @@ import MobileNotifications from "./pages/MobileNotifications";
 import MobileProfile from "./pages/MobileProfile";
 import CustomerPortal from "./pages/CustomerPortal";
 import SalesCreateOrder from "./pages/SalesCreateOrder";
-import FulfillmentBoard from "./pages/FulfillmentBoard";
+import FulfillmentBoard from './pages/FulfillmentBoard';
+import InventoryManagement from './pages/InventoryManagement';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -56,6 +57,8 @@ function Router() {
       <Route path={"/orders/create"} component={SalesCreateOrder} />
       {/* RC3: Fulfillment Board */}
       <Route path={"/orders/fulfillment"} component={FulfillmentBoard} />
+      {/* RC4: Inventory Management */}
+      <Route path={"/admin/inventory"} component={InventoryManagement} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />
