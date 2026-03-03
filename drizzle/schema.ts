@@ -344,9 +344,12 @@ export const inventory = mysqlTable("inventory", {
   productId: int("product_id").notNull(),
   productName: varchar("product_name", { length: 255 }).notNull(),
   sku: varchar("sku", { length: 100 }).notNull(),
-  totalStock: int("total_stock").default(0).notNull(),
-  reservedStock: int("reserved_stock").default(0).notNull(), // 预扣减锁定量
+  totalStock: int("total_stock").default(0).notNull(),         // 物理库存 (Physical Stock)
+  reservedStock: int("reserved_stock").default(0).notNull(),   // 预扣减锁定量
   availableStock: int("available_stock").default(0).notNull(), // = total - reserved
+  pendingDelivery: int("pending_delivery").default(0).notNull(),   // 待交付量 (Pending Delivery)
+  lockedCapacity: int("locked_capacity").default(0).notNull(),     // 锁定配额 (Locked Capacity) - 大客户预留
+  dailyIdleCapacity: int("daily_idle_capacity").default(0).notNull(), // 剩余闲置产能 (Idle Capacity)
   lowStockThreshold: int("low_stock_threshold").default(10).notNull(),
   warehouseCode: varchar("warehouse_code", { length: 50 }).default("WH-001").notNull(),
   unit: varchar("unit", { length: 20 }).default("包").notNull(),

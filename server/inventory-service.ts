@@ -61,8 +61,9 @@ export async function reserveInventory(
     const failedItems: Array<{ productId: number; quantity: number; availableStock: number; reason: string }> = [];
 
     for (const item of items) {
-      // Step 1: SELECT FOR UPDATE（行级锁）
-      const lockSQL = `SELECT id, product_id, product_name, total_stock, reserved_stock, available_stock 
+      // Step 1: SELECT FOR UPDATE（行级锁）- 包含 ATP 字段
+      const lockSQL = `SELECT id, product_id, product_name, total_stock, reserved_stock, available_stock,
+                              pending_delivery, locked_capacity, daily_idle_capacity
                         FROM inventory 
                         WHERE product_id = ? 
                         FOR UPDATE`;
@@ -86,21 +87,30 @@ export async function reserveInventory(
       }
 
       const inv = rows[0];
-      const currentAvailable = inv.available_stock;
+      // RC5: ATP 可承诺量计算
+      // ATP = 物理库存 + 剩余闲置产能 - 待交付量 - 锁定配额
+      const physicalStock = inv.total_stock;
+      const idleCapacity = inv.daily_idle_capacity || 0;
+      const pendingDelivery = inv.pending_delivery || 0;
+      const lockedCapacity = inv.locked_capacity || 0;
+      const atp = physicalStock + idleCapacity - pendingDelivery - lockedCapacity;
+      const currentAvailable = Math.max(0, atp - inv.reserved_stock); // 还要减去已预扣减的
 
-      // Step 2: 检查可用库存
+      console.log(`[Inventory] ATP计算: 物理库存=${physicalStock} + 闲置产能=${idleCapacity} - 待交付=${pendingDelivery} - 锁定配额=${lockedCapacity} = ATP:${atp}, 已预扣=${inv.reserved_stock}, 可承诺=${currentAvailable}`);
+
+      // Step 2: 检查 ATP 可承诺量
       if (currentAvailable < item.quantity) {
         failedItems.push({
           productId: item.productId,
           quantity: item.quantity,
           availableStock: currentAvailable,
-          reason: `库存不足：${inv.product_name} 可用 ${currentAvailable}，需要 ${item.quantity}`,
+          reason: `ATP不足：${inv.product_name} 可承诺量 ${currentAvailable}，需要 ${item.quantity} (ATP=${atp}, 物理库存=${physicalStock}, 闲置产能=${idleCapacity}, 待交付=${pendingDelivery}, 锁定配额=${lockedCapacity})`,
         });
         await conn.rollback();
-        console.log(`[Inventory] ROLLBACK - insufficient stock for product ${item.productId}: available=${currentAvailable}, needed=${item.quantity}`);
+        console.log(`[Inventory] ROLLBACK - insufficient ATP for product ${item.productId}: atp=${atp}, available=${currentAvailable}, needed=${item.quantity}`);
         return {
           success: false,
-          message: `库存不足：${inv.product_name} 当前可用库存 ${currentAvailable}，需要 ${item.quantity}`,
+          message: `ATP不足：${inv.product_name} 可承诺量 ${currentAvailable}，需要 ${item.quantity}`,
           failedItems,
         };
       }
@@ -218,19 +228,99 @@ export async function releaseInventory(
 // 库存查询
 // ============================================================
 
-export async function getInventoryList(filters?: { lowStockOnly?: boolean; warehouseCode?: string }) {
+export interface ATPInventoryItem {
+  id: number;
+  productId: number;
+  productName: string;
+  sku: string;
+  unit: string;
+  warehouseCode: string;
+  physicalStock: number;      // 物理库存
+  reservedStock: number;      // 预扣减锁定
+  pendingDelivery: number;    // 待交付量
+  lockedCapacity: number;     // 锁定配额
+  dailyIdleCapacity: number;  // 剩余闲置产能
+  atp: number;                // ATP 可承诺量
+  lowStockThreshold: number;
+  isLowStock: boolean;
+  isATPCritical: boolean;     // ATP < 低库存阈值
+}
+
+export async function getInventoryList(filters?: { lowStockOnly?: boolean; warehouseCode?: string }): Promise<ATPInventoryItem[]> {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select().from(inventory);
+  const items = await db.select().from(inventory).orderBy(inventory.productId);
   
+  const atpItems: ATPInventoryItem[] = items.map((i: any) => {
+    const physicalStock = i.totalStock;
+    const idleCapacity = i.dailyIdleCapacity || 0;
+    const pendingDelivery = i.pendingDelivery || 0;
+    const lockedCapacity = i.lockedCapacity || 0;
+    const atp = physicalStock + idleCapacity - pendingDelivery - lockedCapacity;
+    
+    return {
+      id: i.id,
+      productId: i.productId,
+      productName: i.productName,
+      sku: i.sku,
+      unit: i.unit,
+      warehouseCode: i.warehouseCode,
+      physicalStock,
+      reservedStock: i.reservedStock,
+      pendingDelivery,
+      lockedCapacity,
+      dailyIdleCapacity: idleCapacity,
+      atp,
+      lowStockThreshold: i.lowStockThreshold,
+      isLowStock: i.availableStock <= i.lowStockThreshold,
+      isATPCritical: atp <= i.lowStockThreshold,
+    };
+  });
+
   if (filters?.lowStockOnly) {
-    // 可用库存 <= 低库存阈值
-    const items = await db.select().from(inventory);
-    return items.filter((i: any) => i.availableStock <= i.lowStockThreshold);
+    return atpItems.filter(i => i.isATPCritical || i.isLowStock);
   }
 
-  return db.select().from(inventory).orderBy(inventory.productId);
+  return atpItems;
+}
+
+/** 更新 ATP 相关字段（待交付量、锁定配额、闲置产能） */
+export async function updateATPFields(
+  productId: number,
+  fields: { pendingDelivery?: number; lockedCapacity?: number; dailyIdleCapacity?: number },
+  operatorName?: string,
+): Promise<{ success: boolean; message: string }> {
+  const mysql2 = await import('mysql2/promise');
+  const conn = await mysql2.createConnection(process.env.DATABASE_URL!);
+  try {
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    if (fields.pendingDelivery !== undefined) {
+      setClauses.push('pending_delivery = ?');
+      values.push(fields.pendingDelivery);
+    }
+    if (fields.lockedCapacity !== undefined) {
+      setClauses.push('locked_capacity = ?');
+      values.push(fields.lockedCapacity);
+    }
+    if (fields.dailyIdleCapacity !== undefined) {
+      setClauses.push('daily_idle_capacity = ?');
+      values.push(fields.dailyIdleCapacity);
+    }
+    if (setClauses.length === 0) return { success: false, message: '未指定更新字段' };
+    
+    setClauses.push('updated_at = NOW()');
+    values.push(productId);
+    
+    await conn.query(`UPDATE inventory SET ${setClauses.join(', ')} WHERE product_id = ?`, values);
+    console.log(`[Inventory] ATP字段更新: productId=${productId}, fields=${JSON.stringify(fields)}, operator=${operatorName}`);
+    return { success: true, message: 'ATP参数更新成功' };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  } finally {
+    await conn.end();
+  }
 }
 
 export async function getInventoryLogs(productId?: number, limit: number = 50) {

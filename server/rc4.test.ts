@@ -19,9 +19,12 @@ describe('Epic 1: 库存服务 (inventory-service.ts)', () => {
     expect(Array.isArray(result)).toBe(true);
     if (result.length > 0) {
       expect(result[0]).toHaveProperty('productId');
-      expect(result[0]).toHaveProperty('totalStock');
+      expect(result[0]).toHaveProperty('physicalStock');
       expect(result[0]).toHaveProperty('reservedStock');
-      expect(result[0]).toHaveProperty('availableStock');
+      expect(result[0]).toHaveProperty('atp');
+      expect(result[0]).toHaveProperty('pendingDelivery');
+      expect(result[0]).toHaveProperty('lockedCapacity');
+      expect(result[0]).toHaveProperty('dailyIdleCapacity');
     }
   });
 
@@ -55,7 +58,7 @@ describe('Epic 1: 库存服务 (inventory-service.ts)', () => {
       'Test'
     );
     expect(result.success).toBe(false);
-    expect(result.message).toContain('库存不足');
+    expect(result.message).toMatch(/(库存不足|ATP不足)/);
   });
 
   it('adjustInventory INBOUND 应增加库存', async () => {

@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE inventory SET \n  pending_delivery = FLOOR(reserved_stock * 0.8),\n  locked_capacity = CASE \n    WHEN product_name LIKE '%薄千张%' THEN 50\n    WHEN product_name LIKE '%中厚千张%' THEN 30\n    WHEN product_name LIKE '%厚千张%' THEN 20\n    ELSE 10\n  END,\n  daily_idle_capacity = CASE \n    WHEN product_name LIKE '%薄千张%' THEN 200\n    WHEN product_name LIKE '%中厚千张%' THEN 150\n    WHEN product_name LIKE '%厚千张%' THEN 100\n    ELSE 80\n  END;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute UPDATE inventory SET \n  pending_delivery = FLOOR(reserved_stock * 0.8),\n  locked_capacity = CASE \n    WHEN product_name LIKE '%薄千张%' THEN 50\n    WHEN product_name LIKE '%中厚千张%' THEN 30\n    WHEN product_name LIKE '%厚千张%' THEN 20\n    ELSE 10\n  END,\n  daily_idle_capacity = CASE \n    WHEN product_name LIKE '%薄千张%' THEN 200\n    WHEN product_name LIKE '%中厚千张%' THEN 150\n    WHEN product_name LIKE '%厚千张%' THEN 100\n    ELSE 80\n  END;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1571
+}

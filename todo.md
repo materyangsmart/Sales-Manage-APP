@@ -1017,3 +1017,24 @@
 - [x] 信用超限拦截流转日志（4场景全通过）
 - [x] 13 文件 / 164 测试 100% PASS
 - [x] 验收审核报告
+
+## RC5 UX 深度重构 (Mega-Sprint 5)
+
+### Epic 1：代客下单全流程 UX/UI 重构
+- [x] 快捷新建客户：选择客户下拉框旁 + 新建客户按钮 → Modal → 自动选中
+- [x] B2B 数量输入：移除 +/- 按钮，改为 InputNumber 直输 + 批量导入
+- [x] 合规支付方式：移除“现金”，Zod 校验仅允许 CREDIT/BANK_TRANSFER/ONLINE_PAYMENT
+- [x] 动态物流表单引擎：DELIVERY/EXPRESS 展开收货信息，SELF_PICKUP 显示工厂地址
+- [x] 整体 UX 优化：分步式表单 + 实时汇总 + 下单心流不中断
+
+### Epic 2：ATP 可承诺产能与库存看板重构
+- [x] 库存表新增字段：pending_delivery, locked_capacity, daily_idle_capacity
+- [x] ATP 公式计算：ATP = 物理库存 + 剩余闲置产能 - 待交付量 - 锁定配额
+- [x] /admin/inventory 页面重构为 ATP 看板（6 大指标卡片 + 看板/表格双视图）
+- [x] 防超卖逻辑联动：从对比 available_stock 改为对比 ATP 可承诺量
+- [x] ATP 参数管理 UI（待交付量/锁定配额/闲置产能可编辑）
+
+### 验收标准
+- [x] 前端 UI：动态物流表单 + 直输数量 + 快捷新建客户
+- [x] 后端防超卖：基于 ATP 公式校验（日志包含完整 ATP 计算过程）
+- [x] 14 文件 / 174 测试 100% PASS

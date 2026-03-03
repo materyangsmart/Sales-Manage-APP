@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE inventory ADD COLUMN pending_delivery INT NOT NULL DEFAULT 0 AFTER available_stock;\nALTER TABLE inventory ADD COLUMN locked_capacity INT NOT NULL DEFAULT 0 AFTER pending_delivery;\nALTER TABLE inventory ADD COLUMN daily_idle_capacity INT NOT NULL DEFAULT 0 AFTER locked_capacity;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute ALTER TABLE inventory ADD COLUMN pending_delivery INT NOT NULL DEFAULT 0 AFTER available_stock;\nALTER TABLE inventory ADD COLUMN locked_capacity INT NOT NULL DEFAULT 0 AFTER pending_delivery;\nALTER TABLE inventory ADD COLUMN daily_idle_capacity INT NOT NULL DEFAULT 0 AFTER locked_capacity;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2983
+}
