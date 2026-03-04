@@ -10,7 +10,10 @@
  * 重要：此脚本必须与 app.module.ts 中的 entities 列表保持 100% 一致
  *       任何新增的 Entity 都必须在此处显式导入
  *
- * 当前实体数：26（原有 13 + RBAC 5 + Workflow 4 + Export 1 + Notification 3）
+ * 当前实体数：31
+ *   原有业务实体 13 + RBAC 5 + Workflow 4 + Export 1 + Notification 3
+ *   RC3 新增 2（Lead、Inventory）
+ *   RC4 新增 3（InventoryLog、BillingStatement、CreditOverrideApproval）
  */
 
 import { DataSource } from 'typeorm';
@@ -52,10 +55,27 @@ import { ApprovalLog } from '../src/modules/workflow/entities/approval-log.entit
 // Export 实体（1 个）
 import { ExportTask } from '../src/modules/export/entities/export-task.entity';
 
-// Notification 实体（3 个新增）
+// Notification 实体（3 个）
 import { MessageTemplate } from '../src/modules/notification/entities/message-template.entity';
 import { Notification } from '../src/modules/notification/entities/notification.entity';
 import { UserNotification } from '../src/modules/notification/entities/user-notification.entity';
+
+// ========================================
+// RC3-RC6 新增实体（5 个）
+// ========================================
+
+// RC3：线索收集（Open API Gateway）
+import { Lead } from '../src/modules/leads/entities/lead.entity';
+
+// RC4：智能库存管理（WMS + 防超卖）
+import { Inventory } from '../src/modules/inventory/entities/inventory.entity';
+import { InventoryLog } from '../src/modules/inventory/entities/inventory-log.entity';
+
+// RC4：B2B 账期管理（月结账单）
+import { BillingStatement } from '../src/modules/ar/entities/billing-statement.entity';
+
+// RC4：信用超限特批工作流
+import { CreditOverrideApproval } from '../src/modules/workflow/entities/credit-override-approval.entity';
 
 // 加载 .env 文件
 // 优先尝试 .env.test（测试环境），其次尝试 .env（生产环境）
@@ -101,10 +121,16 @@ const ALL_ENTITIES = [
   ApprovalLog,
   // Export 实体（1 个）
   ExportTask,
-  // Notification 实体（3 个新增）
+  // Notification 实体（3 个）
   MessageTemplate,
   Notification,
   UserNotification,
+  // RC3-RC6 新增实体（5 个）
+  Lead,
+  Inventory,
+  InventoryLog,
+  BillingStatement,
+  CreditOverrideApproval,
 ];
 
 const config = {
@@ -125,7 +151,8 @@ async function syncDatabase() {
   console.log(`   Host: ${config.host}:${config.port}`);
   console.log(`   Database: ${config.database}`);
   console.log(`   Username: ${config.username}`);
-  console.log(`   Entities: ${config.entities.length} entities (原有13 + RBAC 5 + Workflow 4 + Export 1 + Notification 3)`);
+  console.log(`   Entities: ${config.entities.length} entities`);
+  console.log('     原有业务 13 + RBAC 5 + Workflow 4 + Export 1 + Notification 3 + RC3-RC6 新增 5');
   console.log('\n📦 Entity List:');
   config.entities.forEach((entity, index) => {
     console.log(`   ${index + 1}. ${entity.name}`);
@@ -178,6 +205,12 @@ async function syncDatabase() {
     console.log('   ✓ message_templates (消息模板)');
     console.log('   ✓ notifications (通知主体)');
     console.log('   ✓ user_notifications (用户触达记录)');
+    console.log('\n📝 RC3-RC6 新增 tables:');
+    console.log('   ✓ leads (Open API 线索收集)');
+    console.log('   ✓ inventory (商品库存主表，含 ATP 可承诺量)');
+    console.log('   ✓ inventory_log (出入库流水，行级锁防超卖)');
+    console.log('   ✓ billing_statements (B2B 月结对账单)');
+    console.log('   ✓ credit_override_approvals (信用超限特批工作流)');
 
   } catch (error) {
     console.error('\n❌ Database synchronization failed!');

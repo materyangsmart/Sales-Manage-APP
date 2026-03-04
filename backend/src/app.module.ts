@@ -47,10 +47,16 @@ import { WorkflowInstance } from './modules/workflow/entities/workflow-instance.
 import { ApprovalLog } from './modules/workflow/entities/approval-log.entity';
 // Export Entities
 import { ExportTask } from './modules/export/entities/export-task.entity';
-// Notification Entities（3 个新增）
+// Notification Entities（3 个）
 import { MessageTemplate } from './modules/notification/entities/message-template.entity';
 import { Notification } from './modules/notification/entities/notification.entity';
 import { UserNotification } from './modules/notification/entities/user-notification.entity';
+// RC3-RC6 新增实体（5 个）
+import { Lead } from './modules/leads/entities/lead.entity';
+import { Inventory } from './modules/inventory/entities/inventory.entity';
+import { InventoryLog } from './modules/inventory/entities/inventory-log.entity';
+import { BillingStatement } from './modules/ar/entities/billing-statement.entity';
+import { CreditOverrideApproval } from './modules/workflow/entities/credit-override-approval.entity';
 
 @Module({
   imports: [
@@ -106,10 +112,16 @@ import { UserNotification } from './modules/notification/entities/user-notificat
           ApprovalLog,
           // Export 实体（1 个）
           ExportTask,
-          // Notification 实体（3 个新增，总计 26 个实体）
+          // Notification 实体（3 个）
           MessageTemplate,
           Notification,
           UserNotification,
+          // RC3-RC6 新增实体（5 个，总计 31 个实体）
+          Lead,
+          Inventory,
+          InventoryLog,
+          BillingStatement,
+          CreditOverrideApproval,
         ],
         migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
         synchronize: configService.get('DB_SYNC', 'false') === 'true',
