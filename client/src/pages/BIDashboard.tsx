@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import ReactEChartsCore from 'echarts-for-react/lib/core';
+import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts/core';
 import { LineChart, BarChart, PieChart, ScatterChart } from 'echarts/charts';
 import {
@@ -281,7 +281,7 @@ function RevenueTrendChart({ data }: { data: any[] }) {
     ],
   }), [data]);
 
-  return <ReactEChartsCore echarts={echarts} option={option} style={{ height: 320 }} />;
+  return <ReactECharts echarts={echarts} option={option} style={{ height: 320 }} />;
 }
 
 function ProductPieChart({ data }: { data: any[] }) {
@@ -323,7 +323,7 @@ function ProductPieChart({ data }: { data: any[] }) {
     }],
   }), [data]);
 
-  return <ReactEChartsCore echarts={echarts} option={option} style={{ height: 320 }} />;
+  return <ReactECharts echarts={echarts} option={option} style={{ height: 320 }} />;
 }
 
 function RegionRankingChart({ data }: { data: any[] }) {
@@ -375,7 +375,7 @@ function RegionRankingChart({ data }: { data: any[] }) {
     }],
   }), [data]);
 
-  return <ReactEChartsCore echarts={echarts} option={option} style={{ height: 320 }} />;
+  return <ReactECharts echarts={echarts} option={option} style={{ height: 320 }} />;
 }
 
 function OverdueAlertTable({ data }: { data: any[] }) {

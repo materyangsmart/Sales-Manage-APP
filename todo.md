@@ -1066,4 +1066,4 @@
 - [x] 高级搜索 API 200 OK：GET /api/v1/products?category=THIN 返回 3 条 THIN 商品
 - [x] 提交失败 Bug 根本原因：discountRate 字段删除 + priceOverride 特批工作流
 - [x] 14 文件 / 174 测试 100% PASS
-- [ ] GitHub 推送
+- [x] GitHub 推送（https://github.com/materyangsmart/ops-frontend）
