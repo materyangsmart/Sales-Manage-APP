@@ -35,6 +35,11 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   
+  // RC4: Prometheus metrics middleware
+  const { metricsMiddleware, registerMetricsRoute } = await import('../metrics');
+  app.use(metricsMiddleware);
+  registerMetricsRoute(app);
+
   // Request logging middleware (Task 2)
   app.use((req, res, next) => {
     console.log(`[Request] ${req.method} ${req.path}`);
@@ -42,6 +47,14 @@ async function startServer() {
   });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Mobile BFF 路由（/api/mobile/v1/*）——为移动端提供聚合 API
+  const { registerMobileBFFRoutes } = await import('../mobile-bff');
+  registerMobileBFFRoutes(app);
+
+  // Open API Gateway 路由（/api/v1/*）——面向外部合作伙伴的公开 API
+  const { registerOpenAPIRoutes } = await import('../open-api');
+  registerOpenAPIRoutes(app);
   
   console.log('[Server] Mounting /api/trpc router...');
   // tRPC API

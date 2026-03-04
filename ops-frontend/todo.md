@@ -877,3 +877,193 @@
 - [x] 导出字段包含订单毛利、核销时间戳、关联生产批次号
 - [x] 前端 ExportButton 组件
 - [x] 在订单列表页和收款列表页集成 ExportButton
+
+### 文件存储模块（Presigned URL 直传架构）
+- [x] FileRecord 实体定义（id/fileName/bucket/objectKey/fileSize/mimeType/uploadedBy/businessType/businessId/status）
+- [x] S3 Mock Service（本地开发模拟 OSS 预签名 URL 生成）
+- [x] FileStorageService：getPresignedUrl（文件校验 + 凭证签发）、confirmUpload（落库元数据）
+- [x] FileStorageController：POST /api/internal/files/presigned-url、POST /api/internal/files/confirm、GET /api/internal/files
+- [x] fileStorageAPI 代理层（server/backend-api.ts）
+- [x] tRPC fileStorage 路由（getPresignedUrl / confirmUpload / getFileList / getFileRecord / deleteFileRecord）
+- [x] 前端 UploadAttachment 通用组件（拖拽上传 + 进度条 + XHR 直传 + 文件类型/大小校验）
+- [x] OrderDetail.tsx 集成附件管理区（合同扫描件 + 付款水单 + 预览/下载/删除）
+- [x] 27 个文件上传链路隔离测试全部通过（tRPC 路由验证 + 文件校验 + E2E 场景 + 架构安全验证）
+
+## RC1 冲刺：三大 Epic 交付
+
+### Epic 1：动态财务与提成核算引擎
+- [x] 创建 SalesCommission 实体（sales_commissions 表：salesId/salesName/period/grossProfit/commissionRate/commissionAmount/status）
+- [x] 创建 PaymentReceipt 实体（payment_receipts 表：orderId/amount/paymentDate/status/submittedBy/verifiedBy/rejectReason）
+- [x] 数据库迁移完成（两张新表 + 索引）
+- [x] 实现 CommissionRule 阶梯利润率引擎（5 级阶梯：≤1万/≤5万/≤15万/≤25万/>25万 → 3%/5%/8%/10%/12%）
+- [x] 实现 runMonthlyCommissionSettlement Cron Job（月末自动结算 + 幂等性保护）
+- [x] 实现 PaymentReceipt 完整 CRUD（submit/verify/reject/listByOrder）
+- [x] tRPC 路由注册：commission.triggerSettlement / listBySales / listByPeriod
+- [x] tRPC 路由注册：paymentReceipt.submit / verify / reject / listByOrder
+- [x] 31/31 提成核算验收测试全部通过
+
+### Epic 2：移动端 H5 界面
+- [x] MobileLayout.tsx 底部 Tab 导航组件（首页/下单/通知/我的 + 未读角标）
+- [x] MobileHome.tsx 移动端首页（对接 BFF /api/mobile/v1/home，展示今日业绩 + 待办 + 消息）
+- [x] QuickSubmit.tsx 极速下单页面（对接 /api/mobile/v1/orders/quick-submit，客户+商品+数量极简表单）
+- [x] MobileNotifications.tsx 移动端通知页面
+- [x] MobileProfile.tsx 移动端个人中心页面
+- [x] App.tsx 路由注册（/mobile、/mobile/quick-submit、/mobile/notifications、/mobile/profile）
+
+### Epic 3：生产级 Docker 部署基建
+- [x] Dockerfile（后端多阶段构建：Node.js 22 Alpine → 编译 → 生产镜像，非 root 用户，健康检查）
+- [x] Dockerfile.nginx（前端多阶段构建：Vite 构建 → Nginx 1.25 Alpine，静态文件服务）
+- [x] nginx.conf（Gzip 压缩 + API 反向代理 + WebSocket 支持 + SPA 路由回退 + 安全头 + 缓存策略）
+- [x] docker-compose.prod.yml（MySQL 8.0 + Redis 7 + Backend + Frontend，完整依赖链 + 健康检查 + 资源限制 + 持久化卷）
+- [x] .dockerignore（排除 node_modules/dist/.git/测试文件等）
+- [x] docker-compose.prod.yml 语法验证通过（4 服务 + 依赖关系 + 健康检查 + 资源限制 + 持久化卷）
+
+### RC1 验收汇总
+- [x] Epic 1 提成核算测试：31/31 通过
+- [x] Epic 2 移动端页面：6 个组件全部创建，路由注册完毕
+- [x] Epic 3 Docker 编排验证：语法正确，4 服务配置完整
+- [x] 全量回归测试：125/131 通过（6 个失败为历史遗留问题，与 RC1 无关）
+
+## RC2 生产环境压轴冲刺 (Mega-Sprint 2)
+
+### Epic 1：清除技术债与彻底去 Mock 化
+- [x] 重构 InMemoryQueue 为 Redis-backed BullMQ 持久化队列
+- [x] 真实 IM API 接入（企业微信+钉钉，环境变量开关切换 Mock/Real）
+- [x] 修复 OrderFulfill.tsx 2 个 TS 编译错误
+- [x] 修复 backend-connection.test.ts 1 个失败测试
+- [x] 修复 backend-connectivity.test.ts 3 个失败测试
+- [x] 修复 p2-integration.test.ts 2 个失败测试
+- [x] 达成 100% 测试通过率（131/131 PASS）
+
+### Epic 2：构建 CEO 战情指挥室 BI 大屏
+- [x] 开发 /api/internal/bi/dashboard 后端聚合 API（营收趋势+战区排名+商品占比+逾期回款）
+- [x] 前端 /ceo/dashboard 路由（ECharts 可视化 + 深色科技感 UI）
+- [x] BI 大屏截图验收（5 KPI 卡片 + 4 ECharts 图表成功渲染）
+
+### Epic 3：数据库性能调优
+- [x] 审查 Order/Customer/User 实体，补充 17 个联合索引定义
+- [x] 为高频字典接口开启 Redis 查询缓存（createCachedQuery + 慢查询监控）
+
+### Epic 4：CI/CD 流水线建设
+- [x] .github/workflows/production.yml（lint → test → Docker build → push，5 个 Job）
+
+### RC2 验收标准
+- [x] 队列持久化验证（BullMQ + Redis 降级 InMemory 策略验证通过）
+- [x] 测试清零证明（131/131 测试 100% PASS，0 失败）
+- [x] BI 大屏截图（CEO 战情指挥室成功渲染）
+- [x] 推送到 GitHub main 分支
+
+## RC3 商业闭环与开放平台大冲刺 (Mega-Sprint 3)
+
+### Epic 4：RC2 技术债清零
+- [x] BI 大屏去 Mock 化（删除 generateMockDashboardData，前端切换到 getData 真实 API）
+- [x] Mobile BFF 去 Mock 化（quick-submit 替换为 ordersAPI.create 真实调用）
+- [x] 执行联合索引 DDL（6 个本地表索引已创建，后端管理表索引待后端执行）
+
+### Epic 1：官网 Open API 网关
+- [x] 全局 TransformInterceptor（统一返回格式 {code:0, data, msg:"OK"}）
+- [x] Rate Limiting（每分钟 60 次限流 + HTTP 429 已验证）
+- [x] CORS 白名单（仅允许 *.manus.space / localhost）
+- [x] GET /api/v1/products（14 个商品，支持 category/keyword/specification 筛选+分页）
+- [x] POST /api/v1/leads（意向线索收集 + leads 表已创建）
+- [x] GET /api/v1/traceability/:batch_no（溯源查询 + 3 条测试数据）
+- [x] Swagger 在线接口文档（/api/v1/docs）
+
+### Epic 2：B2B 客户自助下单门户
+- [x] CUSTOMER 角色登录支持（复用 Manus OAuth + protectedProcedure）
+- [x] /portal/order 客户自助下单页面（购物车 UI + 分类筛选 + 一键提交）
+- [x] /orders/create 代客下单页面（销售选客户+商品+折扣+付款/配送方式）
+
+### Epic 3：内部订单履约全链路工作台
+- [x] /orders/fulfillment 履约看板页面（看板视图 + 流程指示器）
+- [x] 状态流转操作（APPROVED → PRODUCTION → SHIPPED → COMPLETED）
+- [x] 发货节点强制录入 batch_no（溯源闭环 + 选择已有批次或手动输入）
+
+### 验收标准
+- [x] Swagger 界面截图（3 个 Open API → /api/v1/docs）
+- [x] Rate Limiting 429 拦截日志（第 59 次请求触发）
+- [x] 客户自助下单 + 销售履约流转 E2E 验证（tRPC 测试通过）
+- [x] BI 大屏真实 SQL 打印日志（getMockData 已删除，切换到 getData）
+- [x] 140 测试 100% PASS（12 个测试文件）
+
+## RC4 V1.0 GA 正式生产版本冲刺 (Mega-Sprint 4)
+
+### Epic 1：智能仓储与防超卖风控 (WMS & Inventory)
+- [x] 创建 Inventory 库存表 + InventoryLog 出入库流水表
+- [x] 高并发防超卖：SELECT FOR UPDATE 行级锁 + 原子库存预扣减
+- [x] /admin/inventory 库存管理页面（低库存报警 + 入库/出库/盘点 + 流水查询）
+- [x] 防超卖压测验证（100并发抢10库存 → 成功10单，可用库存=0，无超卖）
+
+### Epic 2：B2B 账期与信用额度控制体系
+- [x] credit_override_approvals 特批表 + billing_statements 月结账单表
+- [x] 信用风控：下单时校验 订单金额+已用额度 <= 信用额度
+- [x] 超限订单自动拦截 + CREDIT_OVERRIDE_APPROVAL 特批工作流
+- [x] 月结账单生成逻辑（generateMonthlyBillingStatements）
+- [x] 催款通知推送（notifyOwner 集成）
+
+### Epic 3：AI Copilot 智能中台助手
+- [x] 集成 LLM（使用内置 invokeLLM + NL2SQL prompt）
+- [x] CEO 智能决策助手（BI 大屏右下角 AI 问答框）
+- [x] NL2SQL：“查询库存总数” → SELECT SUM(total_stock) FROM inventory → AI 总结
+
+### Epic 4：云原生高可用部署架构
+- [x] k8s/: Deployment(3副本) + Service + Ingress(TLS) + ConfigMap + Secret + HPA + PDB
+- [x] Prometheus /metrics 指标暴露（QPS/延迟直方图/内存/连接数）
+- [x] Grafana Dashboard JSON（9 个面板） + ServiceMonitor + PrometheusRule 告警
+
+### 验收标准
+- [x] 防超卖压测日志（100并发/10库存 → 成功10/失败90/可用库存=0）
+- [x] AI 助手 NL2SQL 交互日志（“查询库存总数” → SQL → 结果 → AI 总结）
+- [x] 信用超限拦截流转日志（4场景全通过）
+- [x] 13 文件 / 164 测试 100% PASS
+- [x] 验收审核报告
+
+## RC5 UX 深度重构 (Mega-Sprint 5)
+
+### Epic 1：代客下单全流程 UX/UI 重构
+- [x] 快捷新建客户：选择客户下拉框旁 + 新建客户按钮 → Modal → 自动选中
+- [x] B2B 数量输入：移除 +/- 按钮，改为 InputNumber 直输 + 批量导入
+- [x] 合规支付方式：移除“现金”，Zod 校验仅允许 CREDIT/BANK_TRANSFER/ONLINE_PAYMENT
+- [x] 动态物流表单引擎：DELIVERY/EXPRESS 展开收货信息，SELF_PICKUP 显示工厂地址
+- [x] 整体 UX 优化：分步式表单 + 实时汇总 + 下单心流不中断
+
+### Epic 2：ATP 可承诺产能与库存看板重构
+- [x] 库存表新增字段：pending_delivery, locked_capacity, daily_idle_capacity
+- [x] ATP 公式计算：ATP = 物理库存 + 剩余闲置产能 - 待交付量 - 锁定配额
+- [x] /admin/inventory 页面重构为 ATP 看板（6 大指标卡片 + 看板/表格双视图）
+- [x] 防超卖逻辑联动：从对比 available_stock 改为对比 ATP 可承诺量
+- [x] ATP 参数管理 UI（待交付量/锁定配额/闲置产能可编辑）
+
+### 验收标准
+- [x] 前端 UI：动态物流表单 + 直输数量 + 快捷新建客户
+- [x] 后端防超卖：基于 ATP 公式校验（日志包含完整 ATP 计算过程）
+- [x] 14 文件 / 174 测试 100% PASS
+
+## RC6 Mega-Sprint 6 (B2B 业务痛点修复) — 已完成
+
+### Epic 1: 风控、支付与下单链路重构
+- [x] 禁用任意折扣：废弃手动折扣率，改为客户等级自动定价 + PRICE_OVERRIDE_APPROVAL 特批工作流
+- [x] 防抵赖机制：提交前弹出 6 位交易密码 Modal（/^\d{6}$/ 正则校验）
+- [x] 支付方式联动 UI：CREDIT 显示剩余额度 / BANK_TRANSFER 对公转账卡片 / ONLINE_PAYMENT 二维码
+- [x] 下单人姓名/电话必填字段
+- [x] 修复提交失败 Bug（根本原因：discountRate 字段删除，改为 priceOverride 特批工作流）
+- [x] 移动端渲染修复（全面响应式布局）
+- [x] 新建客户后下拉框状态同步 Bug 修复（useState 异步更新后自动选中）
+
+### Epic 2: 履约消息闭环
+- [x] 下单成功即时推送通知（notifyOwner 集成）
+- [x] 客户门户订单编号查询进度（履约时间轴展示）
+
+### Epic 3: 后台高级检索体系
+- [x] 订单审核页：状态 Tab + 多条件搜索（订单号/客户名/时间段）
+- [x] 订单履行页：状态 Tab + 订单号/客户名过滤
+- [x] 发票与核邀页：客户名/订单号搜索 + payments.writeOff 核邀路由
+- [x] 提成查询页：业务员姓名下拉筛选器
+- [x] 审计日志页：订单号/客户名/操作人复杂检索
+
+### 验收标准
+- [x] E2E 验证：修改价格触发拦截 + 支付方式联动 UI（全部通过）
+- [x] 高级搜索 API 200 OK：GET /api/v1/products?category=THIN 返回 3 条 THIN 商品
+- [x] 提交失败 Bug 根本原因：discountRate 字段删除 + priceOverride 特批工作流
+- [x] 14 文件 / 174 测试 100% PASS
+- [x] GitHub 推送（https://github.com/materyangsmart/ops-frontend）

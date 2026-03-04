@@ -245,10 +245,12 @@ describe('P2 Task 3: CEO雷达数据转换 (RadarAlert[] -> CEORadarData)', () =
         title: '坏账风险: 某客户',
         description: '发票 INV-001 逾期 45 天',
         data: {
-          invoiceId: 1,
-          balance: 50000,
-          overdueDays: 45,
+          customerId: 1,
           customerName: '某客户',
+          unpaidAmount: 50000,
+          overdueDays: 45,
+          creditScore: 60,
+          estimatedLoss: 50000,
         },
       },
       {
@@ -258,24 +260,27 @@ describe('P2 Task 3: CEO雷达数据转换 (RadarAlert[] -> CEORadarData)', () =
         description: '计划 500 件，实际 450 件，偏差 -10.0%',
         data: {
           batchNo: 'QZ202501150001',
-          productName: '千张',
-          plannedQuantity: 500,
-          actualQuantity: 450,
-          deviationPct: 10.0,
+          soybeanInput: 500,
+          productOutput: 450,
+          actualYield: 90,
+          standardYield: 100,
+          deviation: -10.0,
           productionDate: '2025-01-15',
-          isOverProduction: false,
         },
       },
       {
-        type: 'CUSTOMER_CHURN',
+        type: 'CHURN_RISK',
         level: 'MEDIUM',
         title: '客户流失风险: 某超市',
         description: '已 120 天未下单',
         data: {
           customerId: 5,
           customerName: '某超市',
+          customerCategory: 'SUPERMARKET',
           daysSinceLastOrder: 120,
           lastOrderDate: '2024-09-01',
+          avgMonthlyOrders: 10,
+          salesRepName: '张三',
         },
       },
       {
@@ -326,6 +331,9 @@ describe('P2 Task 3: CEO雷达数据转换 (RadarAlert[] -> CEORadarData)', () =
     expect(yieldAnomaly.soybeanInput).toBe(500);
     expect(yieldAnomaly.productOutput).toBe(450);
     expect(yieldAnomaly.deviation).toBe(-10.0); // 负数表示产出不足
+    expect(yieldAnomaly.actualYield).toBe(90);
+    expect(yieldAnomaly.standardYield).toBe(100);
+    expect(yieldAnomaly.productionDate).toBe('2025-01-15');
 
     // 验证unreadComplaintCount
     expect(result.unreadComplaintCount).toBe(1);

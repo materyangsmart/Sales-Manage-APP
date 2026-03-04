@@ -1,0 +1,61 @@
+##############################################################
+# ops-frontend Kubernetes Ingress
+# 支持 HTTPS + 自动证书 + 限流
+##############################################################
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ops-frontend
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+  annotations:
+    # HTTPS 自动证书（cert-manager）
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Nginx Ingress 配置
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # 限流：每秒 20 请求，突发 50
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    # 代理超时
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # 请求体大小（文件上传）
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # WebSocket 支持
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://www.qianzhang.com,https://qianzhang.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-Requested-With"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ops.qianzhang.com
+      secretName: ops-frontend-tls
+  rules:
+    - host: ops.qianzhang.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ops-frontend
+                port:
+                  name: http
+          # Open API 独立路径（可选：未来拆分微服务）
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: ops-frontend
+                port:
+                  name: http
