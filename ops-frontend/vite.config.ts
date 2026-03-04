@@ -11,6 +11,16 @@ const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(
 
 export default defineConfig({
   plugins,
+  optimizeDeps: {
+    // 强制预构建 echarts 相关包，解决 pnpm 严格符号链接模式下的模块解析问题
+    include: [
+      'echarts-for-react',
+      'echarts/core',
+      'echarts/charts',
+      'echarts/components',
+      'echarts/renderers',
+    ],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
