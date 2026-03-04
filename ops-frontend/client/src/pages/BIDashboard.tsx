@@ -1,26 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
-import ReactECharts from 'echarts-for-react';
-import * as echarts from 'echarts/core';
-import { LineChart, BarChart, PieChart, ScatterChart } from 'echarts/charts';
+import { useState, useMemo } from 'react';
 import {
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-  DataZoomComponent,
-  ToolboxComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, BarChart,
+} from 'recharts';
 import { trpc } from '@/lib/trpc';
 import AICopilot from '@/components/AICopilot';
 import { Loader2, TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, AlertTriangle, RefreshCw, BarChart3 } from 'lucide-react';
-
-// 注册 ECharts 组件
-echarts.use([
-  LineChart, BarChart, PieChart, ScatterChart,
-  TitleComponent, TooltipComponent, GridComponent, LegendComponent,
-  DataZoomComponent, ToolboxComponent, CanvasRenderer,
-]);
 
 // ==================== 科技感配色 ====================
 const THEME = {
@@ -36,9 +21,6 @@ const THEME = {
   textPrimary: '#e2e8f0',
   textSecondary: '#94a3b8',
   textMuted: '#64748b',
-  gradient1: ['#3b82f6', '#06b6d4'],
-  gradient2: ['#8b5cf6', '#ec4899'],
-  gradient3: ['#10b981', '#06b6d4'],
 };
 
 const CHART_COLORS = ['#3b82f6', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
@@ -193,189 +175,151 @@ function ChartCard({ title, icon, children }: { title: string; icon: React.React
   );
 }
 
-function RevenueTrendChart({ data }: { data: any[] }) {
-  const option = useMemo(() => ({
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(13, 25, 56, 0.95)',
-      borderColor: THEME.cardBorder,
-      textStyle: { color: THEME.textPrimary, fontSize: 12 },
-      formatter: (params: any) => {
-        const date = params[0]?.axisValue || '';
-        let html = `<div style="font-weight:600;margin-bottom:4px">${date}</div>`;
-        for (const p of params) {
-          const value = p.seriesName === '累计营收' ? `¥${(p.value / 10000).toFixed(1)}万` : p.seriesName === '订单数' ? `${p.value}单` : `¥${(p.value / 10000).toFixed(1)}万`;
-          html += `<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color}"></span>${p.seriesName}: <b>${value}</b></div>`;
-        }
-        return html;
-      },
-    },
-    legend: {
-      data: ['日营收', '累计营收', '订单数'],
-      textStyle: { color: THEME.textSecondary, fontSize: 11 },
-      top: 0,
-      right: 0,
-    },
-    grid: { left: 50, right: 50, top: 35, bottom: 30 },
-    xAxis: {
-      type: 'category',
-      data: data.map(d => d.date.slice(5)),
-      axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.2)' } },
-      axisLabel: { color: THEME.textMuted, fontSize: 10 },
-    },
-    yAxis: [
-      {
-        type: 'value',
-        name: '营收(万)',
-        nameTextStyle: { color: THEME.textMuted, fontSize: 10 },
-        axisLabel: { color: THEME.textMuted, fontSize: 10, formatter: (v: number) => `${(v / 10000).toFixed(0)}` },
-        splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.08)' } },
-      },
-      {
-        type: 'value',
-        name: '订单数',
-        nameTextStyle: { color: THEME.textMuted, fontSize: 10 },
-        axisLabel: { color: THEME.textMuted, fontSize: 10 },
-        splitLine: { show: false },
-      },
-    ],
-    series: [
-      {
-        name: '日营收',
-        type: 'bar',
-        data: data.map(d => d.revenue),
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(59, 130, 246, 0.8)' },
-            { offset: 1, color: 'rgba(59, 130, 246, 0.15)' },
-          ]),
-          borderRadius: [3, 3, 0, 0],
-        },
-        barMaxWidth: 20,
-      },
-      {
-        name: '累计营收',
-        type: 'line',
-        data: data.map(d => d.cumulativeRevenue),
-        smooth: true,
-        lineStyle: { color: THEME.glowCyan, width: 2 },
-        itemStyle: { color: THEME.glowCyan },
-        symbol: 'none',
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(6, 182, 212, 0.2)' },
-            { offset: 1, color: 'rgba(6, 182, 212, 0)' },
-          ]),
-        },
-      },
-      {
-        name: '订单数',
-        type: 'line',
-        yAxisIndex: 1,
-        data: data.map(d => d.orderCount),
-        smooth: true,
-        lineStyle: { color: THEME.glowPurple, width: 1.5, type: 'dashed' },
-        itemStyle: { color: THEME.glowPurple },
-        symbol: 'none',
-      },
-    ],
-  }), [data]);
+// ==================== 图表组件（recharts 实现）====================
 
-  return <ReactECharts echarts={echarts} option={option} style={{ height: 320 }} />;
+function RevenueTrendChart({ data }: { data: any[] }) {
+  const chartData = useMemo(() =>
+    data.map(d => ({
+      date: d.date.slice(5),
+      日营收: d.revenue,
+      累计营收: d.cumulativeRevenue,
+      订单数: d.orderCount,
+    })), [data]);
+
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(59,130,246,0.08)" />
+        <XAxis
+          dataKey="date"
+          tick={{ fill: THEME.textMuted, fontSize: 10 }}
+          axisLine={{ stroke: 'rgba(59,130,246,0.2)' }}
+          tickLine={false}
+        />
+        <YAxis
+          yAxisId="left"
+          tick={{ fill: THEME.textMuted, fontSize: 10 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`}
+        />
+        <YAxis
+          yAxisId="right"
+          orientation="right"
+          tick={{ fill: THEME.textMuted, fontSize: 10 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip
+          contentStyle={{ background: 'rgba(13,25,56,0.95)', border: `1px solid ${THEME.cardBorder}`, borderRadius: 8, color: THEME.textPrimary, fontSize: 12 }}
+          formatter={(value: any, name: string) => {
+            if (name === '订单数') return [`${value}单`, name];
+            return [`¥${(value / 10000).toFixed(1)}万`, name];
+          }}
+        />
+        <Legend wrapperStyle={{ color: THEME.textSecondary, fontSize: 11 }} />
+        <Bar yAxisId="left" dataKey="日营收" fill="#3b82f6" fillOpacity={0.75} radius={[3, 3, 0, 0]} maxBarSize={20} />
+        <Line yAxisId="left" type="monotone" dataKey="累计营收" stroke={THEME.glowCyan} strokeWidth={2} dot={false} />
+        <Line yAxisId="right" type="monotone" dataKey="订单数" stroke={THEME.glowPurple} strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
 }
 
 function ProductPieChart({ data }: { data: any[] }) {
-  const option = useMemo(() => ({
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: 'rgba(13, 25, 56, 0.95)',
-      borderColor: THEME.cardBorder,
-      textStyle: { color: THEME.textPrimary, fontSize: 12 },
-      formatter: (p: any) => `<b>${p.name}</b><br/>营收: ¥${(p.value / 10000).toFixed(1)}万<br/>占比: ${p.data.percentage}%`,
-    },
-    series: [{
-      type: 'pie',
-      radius: ['45%', '72%'],
-      center: ['50%', '50%'],
-      avoidLabelOverlap: true,
-      itemStyle: {
-        borderRadius: 6,
-        borderColor: THEME.bg,
-        borderWidth: 2,
-      },
-      label: {
-        show: true,
-        color: THEME.textSecondary,
-        fontSize: 10,
-        formatter: '{b}\n{d}%',
-      },
-      labelLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.3)' } },
-      emphasis: {
-        label: { show: true, fontSize: 13, fontWeight: 'bold', color: THEME.textPrimary },
-        itemStyle: { shadowBlur: 20, shadowColor: 'rgba(59, 130, 246, 0.4)' },
-      },
-      data: data.map((d, i) => ({
-        name: d.category,
-        value: d.revenue,
-        percentage: d.percentage,
-        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
-      })),
-    }],
-  }), [data]);
+  const chartData = useMemo(() =>
+    data.map((d, i) => ({
+      name: d.category,
+      value: d.revenue,
+      percentage: d.percentage,
+      fill: CHART_COLORS[i % CHART_COLORS.length],
+    })), [data]);
 
-  return <ReactECharts echarts={echarts} option={option} style={{ height: 320 }} />;
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, percentage }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 1.35;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    return (
+      <text x={x} y={y} fill={THEME.textSecondary} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={10}>
+        {`${name} ${percentage}%`}
+      </text>
+    );
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <PieChart>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="50%"
+          innerRadius="45%"
+          outerRadius="65%"
+          paddingAngle={3}
+          dataKey="value"
+          labelLine={false}
+          label={renderCustomLabel}
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} stroke={THEME.bg} strokeWidth={2} />
+          ))}
+        </Pie>
+        <Tooltip
+          contentStyle={{ background: 'rgba(13,25,56,0.95)', border: `1px solid ${THEME.cardBorder}`, borderRadius: 8, color: THEME.textPrimary, fontSize: 12 }}
+          formatter={(value: any, _name: string, props: any) => [`¥${(value / 10000).toFixed(1)}万 (${props.payload.percentage}%)`, props.payload.name]}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  );
 }
 
 function RegionRankingChart({ data }: { data: any[] }) {
-  const option = useMemo(() => ({
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(13, 25, 56, 0.95)',
-      borderColor: THEME.cardBorder,
-      textStyle: { color: THEME.textPrimary, fontSize: 12 },
-      formatter: (params: any) => {
-        const p = params[0];
-        const region = data.find(d => d.regionName === p.name);
-        return `<b>${p.name}</b><br/>营收: ¥${(p.value / 10000).toFixed(1)}万<br/>订单: ${region?.orderCount || 0}单<br/>新客: ${region?.newCustomers || 0}<br/>增长: ${region?.growthRate > 0 ? '+' : ''}${region?.growthRate}%`;
-      },
-    },
-    grid: { left: 100, right: 40, top: 10, bottom: 10 },
-    xAxis: {
-      type: 'value',
-      axisLabel: { color: THEME.textMuted, fontSize: 10, formatter: (v: number) => `${(v / 10000).toFixed(0)}万` },
-      splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.08)' } },
-    },
-    yAxis: {
-      type: 'category',
-      data: data.slice(0, 8).map(d => d.regionName).reverse(),
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { color: THEME.textSecondary, fontSize: 11 },
-    },
-    series: [{
-      type: 'bar',
-      data: data.slice(0, 8).map((d, i) => ({
-        value: d.revenue,
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: i < 3 ? 'rgba(59, 130, 246, 0.9)' : 'rgba(59, 130, 246, 0.5)' },
-            { offset: 1, color: i < 3 ? 'rgba(6, 182, 212, 0.9)' : 'rgba(6, 182, 212, 0.3)' },
-          ]),
-          borderRadius: [0, 4, 4, 0],
-        },
-      })).reverse(),
-      barMaxWidth: 24,
-      label: {
-        show: true,
-        position: 'right',
-        color: THEME.textSecondary,
-        fontSize: 10,
-        formatter: (p: any) => `¥${(p.value / 10000).toFixed(1)}万`,
-      },
-    }],
-  }), [data]);
+  const chartData = useMemo(() =>
+    data.slice(0, 8).map(d => ({
+      name: d.regionName,
+      营收: d.revenue,
+      orderCount: d.orderCount,
+      growthRate: d.growthRate,
+    })).reverse(), [data]);
 
-  return <ReactECharts echarts={echarts} option={option} style={{ height: 320 }} />;
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(59,130,246,0.08)" horizontal={false} />
+        <XAxis
+          type="number"
+          tick={{ fill: THEME.textMuted, fontSize: 10 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`}
+        />
+        <YAxis
+          type="category"
+          dataKey="name"
+          tick={{ fill: THEME.textSecondary, fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          width={80}
+        />
+        <Tooltip
+          contentStyle={{ background: 'rgba(13,25,56,0.95)', border: `1px solid ${THEME.cardBorder}`, borderRadius: 8, color: THEME.textPrimary, fontSize: 12 }}
+          formatter={(value: any, _name: string, props: any) => [
+            `¥${(value / 10000).toFixed(1)}万 | ${props.payload.orderCount}单 | ${props.payload.growthRate > 0 ? '+' : ''}${props.payload.growthRate}%`,
+            '营收',
+          ]}
+        />
+        <Bar dataKey="营收" radius={[0, 4, 4, 0]} maxBarSize={22} label={{ position: 'right', fill: THEME.textSecondary, fontSize: 10, formatter: (v: number) => `¥${(v / 10000).toFixed(1)}万` }}>
+          {chartData.map((entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={index >= chartData.length - 3 ? '#3b82f6' : 'rgba(59,130,246,0.5)'}
+            />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
 }
 
 function OverdueAlertTable({ data }: { data: any[] }) {
