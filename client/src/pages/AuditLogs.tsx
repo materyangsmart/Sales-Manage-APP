@@ -39,6 +39,11 @@ export default function AuditLogs() {
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("ALL");
   const [actionFilter, setActionFilter] = useState<string>("ALL");
   const [resourceIdFilter, setResourceIdFilter] = useState<string>("");
+  // RC6 Epic 3: 复杂检索字段
+  const [searchOrderNo, setSearchOrderNo] = useState("");
+  const [searchCustomer, setSearchCustomer] = useState("");
+  const [searchOperator, setSearchOperator] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState({ orderNo: "", customer: "", operator: "" });
 
   // 使用tRPC查询审计日志
   const { data: logsData, isLoading: loading } = trpc.auditLogs.list.useQuery({
@@ -81,12 +86,45 @@ export default function AuditLogs() {
 
         <Card>
           <CardHeader>
-            <CardTitle>筛选条件</CardTitle>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <CardTitle>高级检索</CardTitle>
+            </div>
             <CardDescription>
-              按资源类型、操作类型或资源ID筛选日志
+              支持订单号 / 客户名称 / 操作人 / 资源类型 / 操作类型组合检索
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* RC6 新增：订单号/客户名称/操作人 */}
+            <div className="grid gap-4 md:grid-cols-3 mb-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">订单号</Label>
+                <Input
+                  placeholder="输入订单号追溯"
+                  value={searchOrderNo}
+                  onChange={(e) => setSearchOrderNo(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && setAppliedSearch({ orderNo: searchOrderNo, customer: searchCustomer, operator: searchOperator })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">客户名称</Label>
+                <Input
+                  placeholder="输入客户名称"
+                  value={searchCustomer}
+                  onChange={(e) => setSearchCustomer(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && setAppliedSearch({ orderNo: searchOrderNo, customer: searchCustomer, operator: searchOperator })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">操作人</Label>
+                <Input
+                  placeholder="输入操作人姓名"
+                  value={searchOperator}
+                  onChange={(e) => setSearchOperator(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && setAppliedSearch({ orderNo: searchOrderNo, customer: searchCustomer, operator: searchOperator })}
+                />
+              </div>
+            </div>
             <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="resourceType">资源类型</Label>
@@ -138,9 +176,9 @@ export default function AuditLogs() {
               </div>
 
               <div className="flex items-end">
-                <Button onClick={() => {}} className="w-full">
+                <Button onClick={() => setAppliedSearch({ orderNo: searchOrderNo, customer: searchCustomer, operator: searchOperator })} className="w-full">
                   <Search className="h-4 w-4 mr-2" />
-                  查询
+                  检索
                 </Button>
               </div>
             </div>

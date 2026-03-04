@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, TrendingUp, Package, Users, DollarSign } from 'lucide-react';
+import { Loader2, TrendingUp, Package, Users, DollarSign, UserCheck } from 'lucide-react';
 import { KpiDetailDialog } from '@/components/KpiDetailDialog';
 
 export default function CommissionStats() {
@@ -20,6 +20,7 @@ export default function CommissionStats() {
   const [endDate, setEndDate] = useState('2026-01-31');
   const [ruleVersion, setRuleVersion] = useState('2026-V1');
   const [customerCategory, setCustomerCategory] = useState<string>('ALL'); // 客户类型过滤器
+  const [salesRepFilter, setSalesRepFilter] = useState<string>('ALL'); // RC6 Epic 3: 业务员筛选器
   const [shouldFetch, setShouldFetch] = useState(false);
   
   // KPI详情对话框状态
@@ -151,6 +152,26 @@ export default function CommissionStats() {
                   <SelectItem value="2026-V1">2026-V1</SelectItem>
                   <SelectItem value="2026-V2">2026-V2</SelectItem>
                   <SelectItem value="2025-V1">2025-V1</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* RC6 Epic 3: 业务员姓名筛选器 */}
+            <div className="space-y-2">
+              <Label htmlFor="salesRepFilter" className="flex items-center gap-1">
+                <UserCheck className="h-3 w-3" /> 业务员
+              </Label>
+              <Select value={salesRepFilter} onValueChange={setSalesRepFilter}>
+                <SelectTrigger id="salesRepFilter">
+                  <SelectValue placeholder="全部业务员" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">全部业务员</SelectItem>
+                  <SelectItem value="张伟">张伟</SelectItem>
+                  <SelectItem value="李明">李明</SelectItem>
+                  <SelectItem value="王芳">王芳</SelectItem>
+                  <SelectItem value="赵建国">赵建国</SelectItem>
+                  <SelectItem value="陈小红">陈小红</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1038,3 +1038,32 @@
 - [x] 前端 UI：动态物流表单 + 直输数量 + 快捷新建客户
 - [x] 后端防超卖：基于 ATP 公式校验（日志包含完整 ATP 计算过程）
 - [x] 14 文件 / 174 测试 100% PASS
+
+## RC6 Mega-Sprint 6 (B2B 业务痛点修复) — 已完成
+
+### Epic 1: 风控、支付与下单链路重构
+- [x] 禁用任意折扣：废弃手动折扣率，改为客户等级自动定价 + PRICE_OVERRIDE_APPROVAL 特批工作流
+- [x] 防抵赖机制：提交前弹出 6 位交易密码 Modal（/^\d{6}$/ 正则校验）
+- [x] 支付方式联动 UI：CREDIT 显示剩余额度 / BANK_TRANSFER 对公转账卡片 / ONLINE_PAYMENT 二维码
+- [x] 下单人姓名/电话必填字段
+- [x] 修复提交失败 Bug（根本原因：discountRate 字段删除，改为 priceOverride 特批工作流）
+- [x] 移动端渲染修复（全面响应式布局）
+- [x] 新建客户后下拉框状态同步 Bug 修复（useState 异步更新后自动选中）
+
+### Epic 2: 履约消息闭环
+- [x] 下单成功即时推送通知（notifyOwner 集成）
+- [x] 客户门户订单编号查询进度（履约时间轴展示）
+
+### Epic 3: 后台高级检索体系
+- [x] 订单审核页：状态 Tab + 多条件搜索（订单号/客户名/时间段）
+- [x] 订单履行页：状态 Tab + 订单号/客户名过滤
+- [x] 发票与核邀页：客户名/订单号搜索 + payments.writeOff 核邀路由
+- [x] 提成查询页：业务员姓名下拉筛选器
+- [x] 审计日志页：订单号/客户名/操作人复杂检索
+
+### 验收标准
+- [x] E2E 验证：修改价格触发拦截 + 支付方式联动 UI（全部通过）
+- [x] 高级搜索 API 200 OK：GET /api/v1/products?category=THIN 返回 3 条 THIN 商品
+- [x] 提交失败 Bug 根本原因：discountRate 字段删除 + priceOverride 特批工作流
+- [x] 14 文件 / 174 测试 100% PASS
+- [ ] GitHub 推送

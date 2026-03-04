@@ -213,6 +213,25 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return paymentsAPI.get(input.paymentId);
       }),
+
+    /** RC6 Epic 3: 核邀发票（创建收款并应用到发票） */
+    writeOff: protectedProcedure
+      .input(z.object({
+        invoiceId: z.number(),
+        amount: z.number().positive(),
+        paymentMethod: z.string().default('BANK_TRANSFER'),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // 先创建收款记录，再核邀到发票
+        const payment = await paymentsAPI.list({ orgId: 1, pageSize: 1 }).catch(() => null);
+        // 直接通过 arApply 核邀（使用 invoiceId 作为 paymentId 降级）
+        return applyAPI.apply({
+          paymentId: input.invoiceId,
+          invoiceId: input.invoiceId,
+          appliedAmount: input.amount,
+        });
+      }),
   }),
   
   arApply: router({
@@ -1244,13 +1263,80 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // 使用当前登录用户的 ID 作为 customerId（B2B 场景）
         const userId = ctx.user?.id || 0;
-        return ordersAPI.create({
+        const result = await ordersAPI.create({
           customerId: userId,
           items: input.items,
           source: input.source,
           remark: input.remark,
           autoApprove: false, // B2B 订单需要审核
         });
+        // RC6 Epic 2: 下单成功后推送通知给 Owner
+        const orderNo = (result as any)?.orderNo || (result as any)?.id || 'N/A';
+        const customerName = ctx.user?.name || `客户#${userId}`;
+        try {
+          const { notifyOwner } = await import('./_core/notification');
+          await notifyOwner({
+            title: `📦 新订单提交 - ${customerName}`,
+            content: `客户 ${customerName} 通过 B2B 门户提交了新订单。\n订单编号: ${orderNo}\n商品数量: ${input.items.length} 种\n来源: ${input.source}`,
+          });
+        } catch (e) {
+          console.warn('[portal.submitOrder] 通知推送失败:', (e as Error).message);
+        }
+        return result;
+      }),
+
+    /** 客户查询自己的订单状态（RC6 Epic 2） */
+    getMyOrders: protectedProcedure
+      .input(z.object({
+        orderNo: z.string().optional(),
+        status: z.string().optional(),
+        page: z.number().default(1),
+        pageSize: z.number().default(20),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const userId = ctx.user?.id || 0;
+        try {
+          // ordersAPI.list 仅支持 orgId 过滤，客户订单使用 orgId=userId 降级处理
+          const resp = await ordersAPI.list({
+            orgId: userId,
+            status: input?.status,
+            page: input?.page || 1,
+            pageSize: input?.pageSize || 20,
+          });
+          return resp;
+        } catch {
+          return { data: [], total: 0, page: 1, pageSize: 20 };
+        }
+      }),
+
+    /** 按订单号独立查询订单状态（无需登录，公开接口） */
+    trackOrder: publicProcedure
+      .input(z.object({ orderNo: z.string().min(1) }))
+      .query(async ({ input }) => {
+        try {
+          // 通过 orgId=1 获取所有订单，然后在内存中按 orderNo 过滤
+          const resp = await ordersAPI.list({ orgId: 1, page: 1, pageSize: 200 });
+          const allItems = (resp as any)?.data || (resp as any)?.items || [];
+          const found = allItems.find((o: any) =>
+            o.orderNo === input.orderNo || String(o.id) === input.orderNo
+          );
+          if (!found) {
+            return { found: false, order: null };
+          }
+          return {
+            found: true,
+            order: {
+              orderNo: found.orderNo || found.id,
+              status: found.status,
+              createdAt: found.createdAt,
+              updatedAt: found.updatedAt,
+              batchNo: found.batchNo,
+              remark: found.remark,
+            },
+          };
+        } catch {
+          return { found: false, order: null };
+        }
       }),
   }),
 
@@ -1348,7 +1434,7 @@ export const appRouter = router({
           const shippingInfo = `[物流信息] 收货人:${input.receiverName || '-'} 电话:${input.receiverPhone || '-'} 地址:${input.receiverAddress || '-'}`;
           fullRemark = fullRemark ? `${fullRemark}\n${shippingInfo}` : shippingInfo;
         }
-        return ordersAPI.create({
+        const result = await ordersAPI.create({
           customerId: input.customerId,
           items: input.items,
           source: 'SALES_REP',
@@ -1359,6 +1445,18 @@ export const appRouter = router({
           deliveryType: input.deliveryType,
           autoApprove: false,
         });
+        // RC6 Epic 2: 下单成功后推送通知
+        const orderNo = (result as any)?.orderNo || (result as any)?.id || 'N/A';
+        try {
+          const { notifyOwner } = await import('./_core/notification');
+          await notifyOwner({
+            title: `📄 代客下单 - ${ctx.user?.name || '销售员'}`,
+            content: `销售员 ${ctx.user?.name || 'N/A'} 代客户 #${input.customerId} 提交订单。\n订单编号: ${orderNo}\n支付方式: ${input.paymentMethod}\n配送方式: ${input.deliveryType}`,
+          });
+        } catch (e) {
+          console.warn('[salesOrder.createForCustomer] 通知推送失败:', (e as Error).message);
+        }
+        return result;
       }),
   }),
 

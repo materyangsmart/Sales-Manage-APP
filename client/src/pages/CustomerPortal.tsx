@@ -50,6 +50,11 @@ export default function CustomerPortal() {
   const [showCart, setShowCart] = useState(false);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submittedOrderNo, setSubmittedOrderNo] = useState("");
+  // RC6 Epic 2: 订单查询
+  const [activeView, setActiveView] = useState<"shop" | "track">("shop");
+  const [trackOrderNo, setTrackOrderNo] = useState("");
+  const [trackResult, setTrackResult] = useState<any>(null);
+  const [isTracking, setIsTracking] = useState(false);
 
   // 获取商品列表（使用 Open API）
   const { data: productsData, isLoading: productsLoading } = trpc.portal.getProducts.useQuery(
@@ -195,10 +200,33 @@ export default function CustomerPortal() {
               <Package className="w-6 h-6 text-blue-600" />
               <span className="font-semibold text-lg">千张 B2B 采购门户</span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden sm:block">
                 欢迎, {user.name || "客户"}
               </span>
+              {/* RC6 Epic 2: 订单查询 Tab */}
+              <div className="flex rounded-lg border overflow-hidden">
+                <button
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeView === "shop"
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setActiveView("shop")}
+                >
+                  采购下单
+                </button>
+                <button
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeView === "track"
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setActiveView("track")}
+                >
+                  订单查询
+                </button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -219,7 +247,111 @@ export default function CustomerPortal() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6">
+        {/* RC6 Epic 2: 订单查询视图 */}
+        {activeView === "track" && (
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5 text-blue-600" />
+                  订单进度查询
+                </CardTitle>
+                <CardDescription>输入订单编号，查询订单状态和生产履约进度</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="输入订单编号，如 ORD-2026-001"
+                    value={trackOrderNo}
+                    onChange={e => setTrackOrderNo(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && trackOrderNo.trim()) {
+                        setIsTracking(true);
+                        setTrackResult(null);
+                        // 模拟查询结果
+                        setTimeout(() => {
+                          setTrackResult({
+                            orderNo: trackOrderNo,
+                            status: 'PRODUCTION',
+                            statusLabel: '生产中',
+                            createdAt: new Date().toLocaleDateString(),
+                            items: [{ name: '山地优质千张', qty: 100, unit: '张' }],
+                            timeline: [
+                              { time: '2026-03-01 09:00', event: '订单已提交', done: true },
+                              { time: '2026-03-01 14:00', event: '审核通过', done: true },
+                              { time: '2026-03-02 08:00', event: '已安排生产', done: true },
+                              { time: '预计 2026-03-04', event: '完成生产', done: false },
+                              { time: '预计 2026-03-05', event: '安排发货', done: false },
+                            ]
+                          });
+                          setIsTracking(false);
+                        }, 800);
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={() => {
+                      if (!trackOrderNo.trim()) return;
+                      setIsTracking(true);
+                      setTrackResult(null);
+                      setTimeout(() => {
+                        setTrackResult({
+                          orderNo: trackOrderNo,
+                          status: 'PRODUCTION',
+                          statusLabel: '生产中',
+                          createdAt: new Date().toLocaleDateString(),
+                          items: [{ name: '山地优质千张', qty: 100, unit: '张' }],
+                          timeline: [
+                            { time: '2026-03-01 09:00', event: '订单已提交', done: true },
+                            { time: '2026-03-01 14:00', event: '审核通过', done: true },
+                            { time: '2026-03-02 08:00', event: '已安排生产', done: true },
+                            { time: '预计 2026-03-04', event: '完成生产', done: false },
+                            { time: '预计 2026-03-05', event: '安排发货', done: false },
+                          ]
+                        });
+                        setIsTracking(false);
+                      }, 800);
+                    }}
+                    disabled={isTracking || !trackOrderNo.trim()}
+                  >
+                    {isTracking ? <ArrowLeft className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    查询
+                  </Button>
+                </div>
+                {trackResult && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{trackResult.orderNo}</p>
+                        <p className="text-sm text-muted-foreground">下单日期: {trackResult.createdAt}</p>
+                      </div>
+                      <Badge className="bg-amber-100 text-amber-800">{trackResult.statusLabel}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-2">履约进度</p>
+                      <div className="space-y-2">
+                        {trackResult.timeline.map((step: any, i: number) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className={`w-4 h-4 rounded-full mt-0.5 flex-shrink-0 ${
+                              step.done ? 'bg-green-500' : 'bg-gray-200'
+                            }`} />
+                            <div>
+                              <p className={`text-sm ${
+                                step.done ? 'text-foreground font-medium' : 'text-muted-foreground'
+                              }`}>{step.event}</p>
+                              <p className="text-xs text-muted-foreground">{step.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        <div className="flex gap-6" style={{ display: activeView === 'track' ? 'none' : 'flex' }}>
           {/* 商品列表 */}
           <div className={`flex-1 ${showCart ? "lg:w-2/3" : "w-full"}`}>
             {/* 搜索和筛选 */}
