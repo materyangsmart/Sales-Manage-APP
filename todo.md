@@ -1131,3 +1131,10 @@
 - [ ] 全部 E2E 100% PASS
 - [ ] 推送到 GitHub materyangsmart/Sales-Manage-APP
 - [ ] 输出详细评审报告
+
+## Mega-Sprint 9 工业级 ERP 三大核心护城河
+
+- [ ] MS9 Epic 1: BOM/MRP 物料需求引擎 (Material/BOM/PurchaseOrder + MRP 计算)
+- [ ] MS9 Epic 2: SRM 供应商穿透追溯 (Supplier/MaterialReceipt/SupplierPenalty + 客诉穿透)
+- [ ] MS9 Epic 3: AR 账龄分析与现金流预测 (账龄分桶算法 + 财务看板可视化)
+- [ ] MS9 强制沙箱 E2E 验收 (3 tests: MRP短缺计算、客诉扣款穿透、账龄分桶精确性)

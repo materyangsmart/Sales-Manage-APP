@@ -2019,6 +2019,131 @@ export const appRouter = router({
         return getCustomerProfitabilityDashboard({ limit: input?.limit });
       }),
   }),
+  /** MS9 Epic 1: MRP 物料需求引擎路由 */
+  mrp: router({
+    /** 运行 MRP 计算：BOM 展开 + 库存比对 + 自动生成采购建议 */
+    run: protectedProcedure
+      .input(z.object({
+        orderNo: z.string(),
+        productCode: z.string(),
+        productName: z.string(),
+        requiredQty: z.number().positive(),
+      }))
+      .mutation(async ({ input }) => {
+        const { runMrp } = await import('./mrp-service');
+        return runMrp(input);
+      }),
+    /** 注册/更新原材料 */
+    upsertMaterial: protectedProcedure
+      .input(z.object({
+        materialCode: z.string(),
+        materialName: z.string(),
+        unit: z.string(),
+        stockQty: z.number().min(0),
+        safetyStock: z.number().min(0).optional(),
+        unitCost: z.number().min(0).optional(),
+        supplierId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { upsertMaterial } = await import('./mrp-service');
+        const id = await upsertMaterial(input);
+        return { id };
+      }),
+    /** 注册 BOM 条目 */
+    upsertBomItem: protectedProcedure
+      .input(z.object({
+        productCode: z.string(),
+        productName: z.string(),
+        materialId: z.number(),
+        materialName: z.string(),
+        qtyPerUnit: z.number().positive(),
+        unit: z.string(),
+        wasteRate: z.number().min(0).max(1).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { upsertBomItem } = await import('./mrp-service');
+        const id = await upsertBomItem(input);
+        return { id };
+      }),
+    /** 查询 DRAFT 状态的采购建议单 */
+    getDraftPurchaseOrders: protectedProcedure
+      .query(async () => {
+        const { getDraftPurchaseOrders } = await import('./mrp-service');
+        return getDraftPurchaseOrders();
+      }),
+  }),
+  /** MS9 Epic 2: SRM 供应商闭环路由 */
+  srm: router({
+    /** 创建供应商 */
+    createSupplier: protectedProcedure
+      .input(z.object({
+        supplierCode: z.string(),
+        supplierName: z.string(),
+        contactPerson: z.string().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { createSupplier } = await import('./srm-service');
+        const id = await createSupplier(input);
+        return { id };
+      }),
+    /** 记录原料入库批次 */
+    recordReceipt: protectedProcedure
+      .input(z.object({
+        supplierId: z.number(),
+        supplierName: z.string(),
+        materialId: z.number(),
+        materialName: z.string(),
+        batchNo: z.string(),
+        receivedQty: z.number().positive(),
+        unit: z.string(),
+        unitCost: z.number().min(0),
+        productionDate: z.string().optional(),
+        expiryDate: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { recordMaterialReceipt } = await import('./srm-service');
+        return recordMaterialReceipt(input);
+      }),
+    /** 客诉穿透：确认原料责任 → 自动生成供应商扣款单 */
+    triggerPenalty: protectedProcedure
+      .input(z.object({
+        afterSalesTicketId: z.number(),
+        rawMaterialBatchNo: z.string(),
+        penaltyAmount: z.number().positive(),
+        penaltyReason: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { triggerSupplierPenaltyFromAfterSales } = await import('./srm-service');
+        return triggerSupplierPenaltyFromAfterSales(input);
+      }),
+    /** 确认供应商扣款单 */
+    confirmPenalty: protectedProcedure
+      .input(z.object({ penaltyId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { confirmSupplierPenalty } = await import('./srm-service');
+        await confirmSupplierPenalty(input.penaltyId);
+        return { success: true };
+      }),
+    /** 查询供应商扣款单列表 */
+    getPenalties: protectedProcedure
+      .input(z.object({ supplierId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { getSupplierPenalties } = await import('./srm-service');
+        return getSupplierPenalties(input?.supplierId);
+      }),
+  }),
+  /** MS9 Epic 3: AR 账龄分析路由 */
+  arAging: router({
+    /** 生成 AR 账龄分析报告 */
+    getReport: protectedProcedure
+      .input(z.object({ asOfDate: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const { generateArAgingReport } = await import('./ar-aging-service');
+        return generateArAgingReport(input?.asOfDate);
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;
-// MS8 routes added above
+// MS9 routes added above

@@ -584,3 +584,126 @@ export const customerCostConfig = mysqlTable("customer_cost_config", {
 });
 export type CustomerCostConfig = typeof customerCostConfig.$inferSelect;
 export type InsertCustomerCostConfig = typeof customerCostConfig.$inferInsert;
+
+// ============================================================
+// MS9 Epic 1: BOM/MRP 物料需求引擎
+// ============================================================
+
+// 原材料主档 (materials)
+export const materials = mysqlTable("materials", {
+  id: int("id").autoincrement().primaryKey(),
+  materialCode: varchar("material_code", { length: 64 }).notNull().unique(),
+  materialName: varchar("material_name", { length: 255 }).notNull(),
+  unit: varchar("unit", { length: 32 }).notNull(),
+  stockQty: decimal("stock_qty", { precision: 12, scale: 3 }).default("0.000").notNull(),
+  safetyStock: decimal("safety_stock", { precision: 12, scale: 3 }).default("0.000").notNull(),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 4 }).default("0.0000").notNull(),
+  supplierId: int("supplier_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = typeof materials.$inferInsert;
+
+// 物料清单 (bom_items)
+export const bomItems = mysqlTable("bom_items", {
+  id: int("id").autoincrement().primaryKey(),
+  productCode: varchar("product_code", { length: 64 }).notNull(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  materialId: int("material_id").notNull(),
+  materialName: varchar("material_name", { length: 255 }).notNull(),
+  qtyPerUnit: decimal("qty_per_unit", { precision: 10, scale: 4 }).notNull(),
+  unit: varchar("unit", { length: 32 }).notNull(),
+  wasteRate: decimal("waste_rate", { precision: 5, scale: 4 }).default("0.0000").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type BomItem = typeof bomItems.$inferSelect;
+export type InsertBomItem = typeof bomItems.$inferInsert;
+
+// 采购订单 (purchase_orders)
+export const purchaseOrders = mysqlTable("purchase_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  poNo: varchar("po_no", { length: 64 }).notNull().unique(),
+  supplierId: int("supplier_id"),
+  supplierName: varchar("supplier_name", { length: 255 }),
+  materialId: int("material_id").notNull(),
+  materialName: varchar("material_name", { length: 255 }).notNull(),
+  requiredQty: decimal("required_qty", { precision: 12, scale: 3 }).notNull(),
+  unit: varchar("unit", { length: 32 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 4 }).default("0.0000").notNull(),
+  totalAmount: decimal("total_amount", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  status: mysqlEnum("status", ["DRAFT", "SUBMITTED", "APPROVED", "RECEIVED", "CANCELLED"]).default("DRAFT").notNull(),
+  triggerSource: varchar("trigger_source", { length: 255 }),
+  expectedDelivery: date("expected_delivery"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type InsertPurchaseOrder = typeof purchaseOrders.$inferInsert;
+
+// ============================================================
+// MS9 Epic 2: SRM 供应商闭环与客诉穿透
+// ============================================================
+
+// 供应商主档 (suppliers)
+export const suppliers = mysqlTable("suppliers", {
+  id: int("id").autoincrement().primaryKey(),
+  supplierCode: varchar("supplier_code", { length: 64 }).notNull().unique(),
+  supplierName: varchar("supplier_name", { length: 255 }).notNull(),
+  contactPerson: varchar("contact_person", { length: 128 }),
+  phone: varchar("phone", { length: 32 }),
+  address: text("address"),
+  qualityRating: decimal("quality_rating", { precision: 3, scale: 1 }).default("5.0"),
+  status: mysqlEnum("status", ["ACTIVE", "SUSPENDED", "BLACKLISTED"]).default("ACTIVE").notNull(),
+  totalPenaltyAmount: decimal("total_penalty_amount", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = typeof suppliers.$inferInsert;
+
+// 原料入库批次 (material_receipts)
+export const materialReceipts = mysqlTable("material_receipts", {
+  id: int("id").autoincrement().primaryKey(),
+  receiptNo: varchar("receipt_no", { length: 64 }).notNull().unique(),
+  supplierId: int("supplier_id").notNull(),
+  supplierName: varchar("supplier_name", { length: 255 }).notNull(),
+  materialId: int("material_id").notNull(),
+  materialName: varchar("material_name", { length: 255 }).notNull(),
+  batchNo: varchar("batch_no", { length: 128 }).notNull(),
+  productionDate: date("production_date"),
+  expiryDate: date("expiry_date"),
+  receivedQty: decimal("received_qty", { precision: 12, scale: 3 }).notNull(),
+  unit: varchar("unit", { length: 32 }).notNull(),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 4 }).notNull(),
+  qualityStatus: mysqlEnum("quality_status", ["PASS", "PENDING", "REJECTED"]).default("PENDING").notNull(),
+  inspectionNotes: text("inspection_notes"),
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type MaterialReceipt = typeof materialReceipts.$inferSelect;
+export type InsertMaterialReceipt = typeof materialReceipts.$inferInsert;
+
+// 供应商扣款单 (supplier_penalties)
+export const supplierPenalties = mysqlTable("supplier_penalties", {
+  id: int("id").autoincrement().primaryKey(),
+  penaltyNo: varchar("penalty_no", { length: 64 }).notNull().unique(),
+  supplierId: int("supplier_id").notNull(),
+  supplierName: varchar("supplier_name", { length: 255 }).notNull(),
+  materialReceiptId: int("material_receipt_id").notNull(),
+  afterSalesTicketId: int("after_sales_ticket_id").notNull(),
+  batchNo: varchar("batch_no", { length: 128 }).notNull(),
+  penaltyReason: text("penalty_reason").notNull(),
+  penaltyAmount: decimal("penalty_amount", { precision: 12, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["DRAFT", "CONFIRMED", "PAID", "DISPUTED"]).default("DRAFT").notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type SupplierPenalty = typeof supplierPenalties.$inferSelect;
+export type InsertSupplierPenalty = typeof supplierPenalties.$inferInsert;
