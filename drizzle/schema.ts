@@ -800,3 +800,93 @@ export const orderSourceLog = mysqlTable("order_source_log", {
 });
 export type OrderSourceLog = typeof orderSourceLog.$inferSelect;
 export type InsertOrderSourceLog = typeof orderSourceLog.$inferInsert;
+
+// ============================================================
+// MS11 Epic 1: 反作弊引擎表
+// ============================================================
+
+// 设备/IP 指纹记录表 (order_fingerprints)
+export const orderFingerprints = mysqlTable("order_fingerprints", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("order_id").notNull().unique(),
+  orderNo: varchar("order_no", { length: 64 }).notNull(),
+  source: varchar("source", { length: 50 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 64 }).notNull(),
+  userAgent: varchar("user_agent", { length: 512 }),
+  deviceId: varchar("device_id", { length: 255 }),
+  salesId: int("sales_id"),
+  customerId: int("customer_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type OrderFingerprint = typeof orderFingerprints.$inferSelect;
+export type InsertOrderFingerprint = typeof orderFingerprints.$inferInsert;
+
+// 销售员登录 IP 记录表 (sales_login_ips)
+export const salesLoginIps = mysqlTable("sales_login_ips", {
+  id: int("id").autoincrement().primaryKey(),
+  salesId: int("sales_id").notNull(),
+  ipAddress: varchar("ip_address", { length: 64 }).notNull(),
+  loginAt: timestamp("login_at").defaultNow().notNull(),
+});
+export type SalesLoginIp = typeof salesLoginIps.$inferSelect;
+export type InsertSalesLoginIp = typeof salesLoginIps.$inferInsert;
+
+// 作弊告警记录表 (fraud_alerts)
+export const fraudAlerts = mysqlTable("fraud_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("order_id").notNull(),
+  orderNo: varchar("order_no", { length: 64 }).notNull(),
+  fraudType: mysqlEnum("fraud_type", ["IP_OVERLAP", "IP_BURST", "DEVICE_OVERLAP"]).notNull(),
+  fraudDetail: text("fraud_detail").notNull(),
+  originalMultiplier: decimal("original_multiplier", { precision: 4, scale: 2 }).notNull(),
+  penaltyMultiplier: decimal("penalty_multiplier", { precision: 4, scale: 2 }).default("0.50").notNull(),
+  discountRevoked: boolean("discount_revoked").default(true).notNull(),
+  salesId: int("sales_id"),
+  customerId: int("customer_id"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type FraudAlert = typeof fraudAlerts.$inferSelect;
+export type InsertFraudAlert = typeof fraudAlerts.$inferInsert;
+
+// ============================================================
+// MS11 Epic 2: ROI 里程碑裂变奖励表
+// ============================================================
+
+// 被推荐人累计付款追踪表 (referee_payment_milestones)
+export const refereePaymentMilestones = mysqlTable("referee_payment_milestones", {
+  id: int("id").autoincrement().primaryKey(),
+  refereeId: int("referee_id").notNull().unique(),
+  refereeName: varchar("referee_name", { length: 255 }).notNull(),
+  referrerId: int("referrer_id").notNull(),
+  totalPaidAmount: decimal("total_paid_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  milestoneReached: boolean("milestone_reached").default(false).notNull(),
+  milestoneAmount: decimal("milestone_amount", { precision: 10, scale: 2 }).default("500.00").notNull(),
+  rewardTriggeredAt: timestamp("reward_triggered_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type RefereePaymentMilestone = typeof refereePaymentMilestones.$inferSelect;
+export type InsertRefereePaymentMilestone = typeof refereePaymentMilestones.$inferInsert;
+
+// ============================================================
+// MS11 Epic 3: 流失挽回弹药库表
+// ============================================================
+
+// 挽回券表 (winback_coupons)
+export const winbackCoupons = mysqlTable("winback_coupons", {
+  id: int("id").autoincrement().primaryKey(),
+  churnAlertId: int("churn_alert_id").notNull(),
+  customerId: int("customer_id").notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  salesId: int("sales_id").notNull(),
+  couponCode: varchar("coupon_code", { length: 64 }).notNull().unique(),
+  discountRate: decimal("discount_rate", { precision: 4, scale: 2 }).default("0.85").notNull(),
+  status: mysqlEnum("status", ["ACTIVE", "USED", "EXPIRED"]).default("ACTIVE").notNull(),
+  usedOrderId: int("used_order_id"),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type WinbackCoupon = typeof winbackCoupons.$inferSelect;
+export type InsertWinbackCoupon = typeof winbackCoupons.$inferInsert;

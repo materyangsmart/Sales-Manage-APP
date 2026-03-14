@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE `fraud_alerts` \n  ADD COLUMN IF NOT EXISTS `fraud_detail` TEXT,\n  ADD COLUMN IF NOT EXISTS `discount_revoked` TINYINT(1) NOT NULL DEFAULT 1,\n  ADD COLUMN IF NOT EXISTS `resolved_at` DATETIME;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute \nALTER TABLE `fraud_alerts` \n  ADD COLUMN IF NOT EXISTS `fraud_detail` TEXT,\n  ADD COLUMN IF NOT EXISTS `discount_revoked` TINYINT(1) NOT NULL DEFAULT 1,\n  ADD COLUMN IF NOT EXISTS `resolved_at` DATETIME;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2067
+}

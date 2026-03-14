@@ -2269,6 +2269,127 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+  /** MS11 Epic 1: 反作弊引擎路由 */
+  fraudEngine: router({
+    recordFingerprint: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        orderNo: z.string(),
+        source: z.string(),
+        ipAddress: z.string(),
+        userAgent: z.string().optional(),
+        deviceId: z.string().optional(),
+        salesId: z.number().optional(),
+        customerId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { recordOrderFingerprint } = await import('./services/anti-fraud-service');
+        await recordOrderFingerprint(input);
+        return { success: true };
+      }),
+    recordSalesIp: protectedProcedure
+      .input(z.object({ salesId: z.number(), ipAddress: z.string() }))
+      .mutation(async ({ input }) => {
+        const { recordSalesLoginIp } = await import('./services/anti-fraud-service');
+        await recordSalesLoginIp(input.salesId, input.ipAddress);
+        return { success: true };
+      }),
+    detectFraud: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        orderNo: z.string(),
+        source: z.string(),
+        ipAddress: z.string(),
+        salesId: z.number().optional(),
+        customerId: z.number().optional(),
+        originalMultiplier: z.number(),
+        originalDiscountAmount: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const { detectFraud } = await import('./services/anti-fraud-service');
+        return detectFraud(input);
+      }),
+    listAlerts: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { listFraudAlerts } = await import('./services/anti-fraud-service');
+        return listFraudAlerts(input?.limit);
+      }),
+  }),
+
+  /** MS11 Epic 2: ROI 里程碑裂变奖励路由 */
+  roiReferral: router({
+    initMilestone: protectedProcedure
+      .input(z.object({ refereeId: z.number(), refereeName: z.string(), referrerId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { initRefereeMilestone } = await import('./services/roi-referral-service');
+        return initRefereeMilestone(input.refereeId, input.refereeName, input.referrerId);
+      }),
+    onPaidOrder: protectedProcedure
+      .input(z.object({ refereeId: z.number(), paidAmount: z.number() }))
+      .mutation(async ({ input }) => {
+        const { onRefereePaidOrder } = await import('./services/roi-referral-service');
+        return onRefereePaidOrder(input.refereeId, input.paidAmount);
+      }),
+    getMilestone: protectedProcedure
+      .input(z.object({ refereeId: z.number() }))
+      .query(async ({ input }) => {
+        const { getRefereeMilestone } = await import('./services/roi-referral-service');
+        return getRefereeMilestone(input.refereeId);
+      }),
+    listMilestones: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { listRefereeMilestones } = await import('./services/roi-referral-service');
+        return listRefereeMilestones(input?.limit);
+      }),
+  }),
+
+  /** MS11 Epic 3: 流失挽回弹药库路由 */
+  winback: router({
+    createCoupon: protectedProcedure
+      .input(z.object({
+        churnAlertId: z.number(),
+        customerId: z.number(),
+        customerName: z.string(),
+        salesId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const { createWinbackCoupon } = await import('./services/winback-service');
+        return createWinbackCoupon(input);
+      }),
+    redeemCoupon: protectedProcedure
+      .input(z.object({ couponCode: z.string(), orderId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { redeemWinbackCoupon } = await import('./services/winback-service');
+        return redeemWinbackCoupon(input.couponCode, input.orderId);
+      }),
+    resolveCustomerAlerts: protectedProcedure
+      .input(z.object({ customerId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { resolveCustomerChurnAlerts } = await import('./services/winback-service');
+        const count = await resolveCustomerChurnAlerts(input.customerId);
+        return { resolved: count };
+      }),
+    getActiveCoupon: protectedProcedure
+      .input(z.object({ customerId: z.number() }))
+      .query(async ({ input }) => {
+        const { getActiveCouponForCustomer } = await import('./services/winback-service');
+        return getActiveCouponForCustomer(input.customerId);
+      }),
+    listCoupons: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { listWinbackCoupons } = await import('./services/winback-service');
+        return listWinbackCoupons(input?.limit);
+      }),
+    expireStale: protectedProcedure
+      .mutation(async () => {
+        const { expireStaleWinbackCoupons } = await import('./services/winback-service');
+        const count = await expireStaleWinbackCoupons();
+        return { expired: count };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;
-// MS10 routes added above
+// MS11 routes added above
