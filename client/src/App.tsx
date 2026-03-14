@@ -31,6 +31,7 @@ import FulfillmentBoard from './pages/FulfillmentBoard';
 import InventoryManagement from './pages/InventoryManagement';
 import ExpenseClaim from './pages/ExpenseClaim';
 import SalesPerformance from './pages/SalesPerformance';
+import FinanceExpenses from './pages/FinanceExpenses';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -64,6 +65,8 @@ function Router() {
       {/* MS7: Expense Claim & Sales KPI */}
       <Route path={"/expense/claim"} component={ExpenseClaim} />
       <Route path={"/admin/sales-performance"} component={SalesPerformance} />
+      {/* MS8: Finance Expense Portal */}
+      <Route path={"/finance/expenses"} component={FinanceExpenses} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />

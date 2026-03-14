@@ -518,3 +518,69 @@ export const salesTargets = mysqlTable("sales_targets", {
 });
 export type SalesTarget = typeof salesTargets.$inferSelect;
 export type InsertSalesTarget = typeof salesTargets.$inferInsert;
+
+// ============================================================
+// Mega-Sprint 8 新增表与字段扩展
+// ============================================================
+
+// MS8 Epic 1: 出差申请表 (business_trips)
+export const businessTrips = mysqlTable("business_trips", {
+  id: int("id").autoincrement().primaryKey(),
+  tripNo: varchar("trip_no", { length: 50 }).notNull().unique(),
+  applicantId: int("applicant_id").notNull(),
+  applicantName: varchar("applicant_name", { length: 255 }).notNull(),
+  destination: varchar("destination", { length: 500 }).notNull(),
+  visitedCustomers: text("visited_customers"), // JSON array of customer IDs
+  plannedWork: text("planned_work").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  estimatedAccommodation: decimal("estimated_accommodation", { precision: 15, scale: 2 }).default("0").notNull(),
+  estimatedMeals: decimal("estimated_meals", { precision: 15, scale: 2 }).default("0").notNull(),
+  estimatedTransport: decimal("estimated_transport", { precision: 15, scale: 2 }).default("0").notNull(),
+  estimatedTotal: decimal("estimated_total", { precision: 15, scale: 2 }).default("0").notNull(),
+  coTravelerId: int("co_traveler_id"), // 同行人 ID，用于财务核对避免重复报销酒店
+  coTravelerName: varchar("co_traveler_name", { length: 255 }),
+  status: mysqlEnum("status", ["PENDING", "APPROVED", "REJECTED", "COMPLETED"]).default("PENDING").notNull(),
+  approverId: int("approver_id"),
+  approverName: varchar("approver_name", { length: 255 }),
+  approvalRemark: text("approval_remark"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type BusinessTrip = typeof businessTrips.$inferSelect;
+export type InsertBusinessTrip = typeof businessTrips.$inferInsert;
+
+// MS8 Epic 1: 扩展 expense_claims 表（新增 business_trip_id 强关联 + PAID 状态）
+// 注意：由于 Drizzle 不支持 ALTER TABLE 修改 enum，我们创建一个新的扩展记录表
+// 实际上通过 SQL 直接添加字段到 expense_claims 表
+export const expenseClaimsExtension = mysqlTable("expense_claims_extension", {
+  id: int("id").autoincrement().primaryKey(),
+  expenseClaimId: int("expense_claim_id").notNull().unique(), // 1:1 关联 expense_claims
+  businessTripId: int("business_trip_id"), // 关联出差申请（TRAVEL 类型必填）
+  businessTripNo: varchar("business_trip_no", { length: 50 }),
+  paidAt: timestamp("paid_at"), // 财务打款时间
+  paidBy: int("paid_by"), // 财务审核人 ID
+  paidByName: varchar("paid_by_name", { length: 255 }),
+  financeRemark: text("finance_remark"),
+  isPaid: boolean("is_paid").default(false).notNull(), // 是否已打款
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type ExpenseClaimExtension = typeof expenseClaimsExtension.$inferSelect;
+export type InsertExpenseClaimExtension = typeof expenseClaimsExtension.$inferInsert;
+
+// MS8 Epic 3: 客户管理成本费率扩展表 (customer_cost_config)
+export const customerCostConfig = mysqlTable("customer_cost_config", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customer_id").notNull().unique(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  managementCostRate: decimal("management_cost_rate", { precision: 5, scale: 4 }).default("0.0100").notNull(), // 默认 1%，商超 5%
+  overdueInterestRate: decimal("overdue_interest_rate", { precision: 5, scale: 4 }).default("0.0600").notNull(), // 年化 6%
+  customerType: mysqlEnum("customer_type", ["WET_MARKET", "WHOLESALE_B", "SUPERMARKET", "ECOMMERCE", "OTHER"]).default("OTHER").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type CustomerCostConfig = typeof customerCostConfig.$inferSelect;
+export type InsertCustomerCostConfig = typeof customerCostConfig.$inferInsert;

@@ -1870,6 +1870,155 @@ export const appRouter = router({
         return getRegionSummary(input?.period);
       }),
   }),
+
+  // ============================================================
+  // Mega-Sprint 8 Routes
+  // ============================================================
+  businessTrips: router({
+    /** 提交出差申请 */
+    submit: protectedProcedure
+      .input(z.object({
+        destination: z.string().min(1),
+        visitedCustomers: z.string().optional(),
+        plannedWork: z.string().min(1),
+        startDate: z.string(),
+        endDate: z.string(),
+        estimatedAccommodation: z.number().optional(),
+        estimatedMeals: z.number().optional(),
+        estimatedTransport: z.number().optional(),
+        coTravelerId: z.number().optional(),
+        coTravelerName: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { submitBusinessTrip } = await import('./business-trip-service');
+        return submitBusinessTrip({
+          applicantId: ctx.user.id,
+          applicantName: ctx.user.name ?? ctx.user.openId,
+          ...input,
+        });
+      }),
+
+    /** 审批出差申请 */
+    review: protectedProcedure
+      .input(z.object({
+        tripId: z.number(),
+        approved: z.boolean(),
+        approvalRemark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { reviewBusinessTrip } = await import('./business-trip-service');
+        return reviewBusinessTrip({
+          tripId: input.tripId,
+          approverId: ctx.user.id,
+          approverName: ctx.user.name ?? ctx.user.openId,
+          approved: input.approved,
+          approvalRemark: input.approvalRemark,
+        });
+      }),
+
+    /** 查询出差申请列表 */
+    list: protectedProcedure
+      .input(z.object({
+        status: z.enum(["PENDING", "APPROVED", "REJECTED", "COMPLETED"]).optional(),
+        myOnly: z.boolean().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const { listBusinessTrips } = await import('./business-trip-service');
+        return listBusinessTrips({
+          applicantId: input?.myOnly ? ctx.user.id : undefined,
+          status: input?.status,
+        });
+      }),
+
+    /** 提交差旅报销（带风控校验） */
+    submitTravelExpense: protectedProcedure
+      .input(z.object({
+        associatedCustomerId: z.number().optional(),
+        associatedCustomerName: z.string().optional(),
+        amount: z.number().positive(),
+        description: z.string().min(1),
+        invoiceImageUrl: z.string().optional(),
+        invoiceImageKey: z.string().optional(),
+        expenseDate: z.string(),
+        businessTripId: z.number().optional(),
+        expenseType: z.enum(["TRAVEL", "ENTERTAINMENT", "LOGISTICS_SUBSIDY", "OTHER"]).default("TRAVEL"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { submitTravelExpenseClaim } = await import('./business-trip-service');
+        return submitTravelExpenseClaim({
+          submittedBy: ctx.user.id,
+          submittedByName: ctx.user.name ?? ctx.user.openId,
+          ...input,
+        });
+      }),
+  }),
+
+  financeExpenses: router({
+    /** 财务审核通过（PAID 打款） */
+    financeApprove: protectedProcedure
+      .input(z.object({
+        claimId: z.number(),
+        financeRemark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { financeApproveClaim } = await import('./business-trip-service');
+        return financeApproveClaim({
+          claimId: input.claimId,
+          paidBy: ctx.user.id,
+          paidByName: ctx.user.name ?? ctx.user.openId,
+          financeRemark: input.financeRemark,
+        });
+      }),
+
+    /** 查询报销单列表（含出差申请详情） */
+    listWithTrip: protectedProcedure
+      .input(z.object({
+        status: z.string().optional(),
+        myOnly: z.boolean().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const { listExpenseClaimsWithTrip } = await import('./business-trip-service');
+        return listExpenseClaimsWithTrip({
+          status: input?.status,
+          submittedBy: input?.myOnly ? ctx.user.id : undefined,
+        });
+      }),
+  }),
+  /** MS8 Epic 3: 单客精细化成本核算路由 */
+  customerPnL: router({
+    /** 设置/更新客户成本配置（管理费率） */
+    setConfig: protectedProcedure
+      .input(z.object({
+        customerId: z.number(),
+        customerName: z.string(),
+        managementCostRate: z.number().min(0).max(1),
+        overdueInterestRate: z.number().min(0).max(1).optional(),
+        customerType: z.enum(["WET_MARKET", "WHOLESALE_B", "SUPERMARKET", "ECOMMERCE", "OTHER"]).optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { setCustomerCostConfig } = await import('./customer-pnl-service');
+        return setCustomerCostConfig(input);
+      }),
+    /** 查询单客精细化净利（含管理成本 + 逾期资金占用成本） */
+    getDetailedPnL: protectedProcedure
+      .input(z.object({
+        customerId: z.number(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { getCustomerDetailedPnL } = await import('./customer-pnl-service');
+        return getCustomerDetailedPnL(input.customerId, input.startDate, input.endDate);
+      }),
+    /** 批量查询所有客户利润大盘 */
+    getDashboard: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { getCustomerProfitabilityDashboard } = await import('./customer-pnl-service');
+        return getCustomerProfitabilityDashboard({ limit: input?.limit });
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;
-// This line intentionally left blank - routes appended below by MS7
+// MS8 routes added above

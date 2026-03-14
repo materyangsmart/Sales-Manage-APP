@@ -1100,3 +1100,34 @@
 - [x] 全部 3 个 E2E 脚本 100% PASS
 - [x] 推送到 GitHub main 分支
 - [x] 输出详细测试结果报告
+
+## Mega-Sprint 8 差旅风控闭环与精细化成本基建
+
+### Epic 1：出差申请与防浪费风控 (Pre-Trip Approval)
+- [ ] Schema 新增 business_trips 表（BusinessTrip，含 co_traveler_id）
+- [ ] Schema 扩展 expense_claims 表（新增 business_trip_id 强关联字段）
+- [ ] Schema 扩展 expense_claims 表（新增 PAID 状态）
+- [ ] Schema 扩展 customers 表（新增 management_cost_rate 字段）
+- [ ] 后端：出差申请提交/审批工作流服务（business-trip-service.ts）
+- [ ] 后端：报销强校验（TRAVEL 类型必须关联 APPROVED 状态的 BusinessTrip）
+- [ ] tRPC：businessTrips 路由（submit/approve/reject/list）
+
+### Epic 2：财务报销审核工作台 (Finance Expense Portal)
+- [ ] 前端：/finance/expenses 页面（仅 FINANCE/ADMIN 角色可访问）
+- [ ] 前端：报销单列表（展示关联出差申请详情）
+- [ ] 前端：发票/水单附件预览与下载
+- [ ] 前端：财务审核通过 → 状态变更 PAID
+- [ ] tRPC：expenses.financeApprove（PAID 状态变更）
+
+### Epic 3：单客精细化成本基建 (Customer P&L Foundation)
+- [ ] 后端：管理成本费率计入单客净利（总销售额 × management_cost_rate）
+- [ ] 后端：逾期资金占用成本（年化 6% × 逾期天数/365 × 逾期金额）
+- [ ] 后端：重构利润大盘接口（净利 = 毛利 - 售后损失 - 报销费用 - 管理成本 - 资金占用成本）
+
+### 强制沙箱 E2E 验收
+- [ ] T1：风控拦截测试（无出差申请提交差旅报销 → 400/403 拦截）
+- [ ] T2：全链路测试（出差申请 → 审批 → 报销含发票 → 财务审核 → PAID）
+- [ ] T3：成本核算精确性测试（5% 管理费率 + 逾期成本 → 净利公式验证）
+- [ ] 全部 E2E 100% PASS
+- [ ] 推送到 GitHub materyangsmart/Sales-Manage-APP
+- [ ] 输出详细评审报告
