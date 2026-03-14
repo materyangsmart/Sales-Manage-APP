@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings, ShoppingCart, Kanban, Warehouse } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings, ShoppingCart, Kanban, Warehouse, BadgeDollarSign, Trophy } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -39,6 +39,8 @@ const menuItems = [
   { icon: TrendingUp, label: "提成查询", path: "/commission/stats" },
   { icon: Settings, label: "提成规则", path: "/commission/rules" },
   { icon: Search, label: "审计日志", path: "/audit/logs" },
+  { icon: BadgeDollarSign, label: "费用报销", path: "/expense/claim" },
+  { icon: Trophy, label: "销售KPI看板", path: "/admin/sales-performance" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -29,6 +29,8 @@ import CustomerPortal from "./pages/CustomerPortal";
 import SalesCreateOrder from "./pages/SalesCreateOrder";
 import FulfillmentBoard from './pages/FulfillmentBoard';
 import InventoryManagement from './pages/InventoryManagement';
+import ExpenseClaim from './pages/ExpenseClaim';
+import SalesPerformance from './pages/SalesPerformance';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -59,6 +61,9 @@ function Router() {
       <Route path={"/orders/fulfillment"} component={FulfillmentBoard} />
       {/* RC4: Inventory Management */}
       <Route path={"/admin/inventory"} component={InventoryManagement} />
+      {/* MS7: Expense Claim & Sales KPI */}
+      <Route path={"/expense/claim"} component={ExpenseClaim} />
+      <Route path={"/admin/sales-performance"} component={SalesPerformance} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />

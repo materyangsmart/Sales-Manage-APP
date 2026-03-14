@@ -55,6 +55,10 @@ async function startServer() {
   // Open API Gateway 路由（/api/v1/*）——面向外部合作伙伴的公开 API
   const { registerOpenAPIRoutes } = await import('../open-api');
   registerOpenAPIRoutes(app);
+
+  // WeChat B2B Portal BFF 路由（/portal/wechat/*）——微信下沉市场订货网关
+  const { registerWechatBFFRoutes } = await import('../wechat-bff');
+  registerWechatBFFRoutes(app);
   
   console.log('[Server] Mounting /api/trpc router...');
   // tRPC API

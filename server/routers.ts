@@ -1691,5 +1691,185 @@ export const appRouter = router({
         return nl2sql(input.question);
       }),
   }),
+
+  // ─── MS7 Epic 2: 售后处理引擎 ─────────────────────────────────────────────────
+  afterSales: router({
+    /** 创建售后工单 */
+    createTicket: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        orderNo: z.string(),
+        customerId: z.number(),
+        customerName: z.string(),
+        issueType: z.enum(["DAMAGE", "QUALITY", "SHORT_DELIVERY", "WRONG_ITEM", "OTHER"]),
+        description: z.string().min(5),
+        evidenceImages: z.string().optional(),
+        claimAmount: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { createAfterSalesTicket } = await import('./after-sales-service');
+        return createAfterSalesTicket({
+          ...input,
+          reportedBy: ctx.user?.id,
+          reportedByName: ctx.user?.name || undefined,
+        });
+      }),
+
+    /** 品质部审核工单 */
+    reviewTicket: protectedProcedure
+      .input(z.object({
+        ticketId: z.number(),
+        approved: z.boolean(),
+        reviewRemark: z.string().optional(),
+        replacementItems: z.array(z.object({
+          productId: z.number(),
+          productName: z.string(),
+          quantity: z.number().min(1),
+        })).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { reviewAfterSalesTicket } = await import('./after-sales-service');
+        return reviewAfterSalesTicket({
+          ticketId: input.ticketId,
+          reviewedBy: ctx.user?.id || 0,
+          reviewedByName: ctx.user?.name || 'System',
+          approved: input.approved,
+          reviewRemark: input.reviewRemark,
+          replacementItems: input.replacementItems,
+        });
+      }),
+
+    /** 查询售后工单列表 */
+    listTickets: protectedProcedure
+      .input(z.object({
+        customerId: z.number().optional(),
+        status: z.string().optional(),
+        page: z.number().default(1),
+        pageSize: z.number().default(20),
+      }).optional())
+      .query(async ({ input }) => {
+        const { listAfterSalesTickets } = await import('./after-sales-service');
+        return listAfterSalesTickets(input);
+      }),
+
+    /** 查询补发订单列表 */
+    listReplacements: protectedProcedure
+      .input(z.object({
+        customerId: z.number().optional(),
+        afterSalesTicketId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const { listReplacementOrders } = await import('./after-sales-service');
+        return listReplacementOrders(input);
+      }),
+  }),
+
+  // ─── MS7 Epic 3: 费用报销与单客P&L ────────────────────────────────────────────
+  expenses: router({
+    /** 提交报销单 */
+    submit: protectedProcedure
+      .input(z.object({
+        associatedCustomerId: z.number().optional(),
+        associatedCustomerName: z.string().optional(),
+        expenseType: z.enum(["TRAVEL", "ENTERTAINMENT", "LOGISTICS_SUBSIDY", "OTHER"]),
+        amount: z.number().positive(),
+        description: z.string().min(2),
+        invoiceImageUrl: z.string().optional(),
+        invoiceImageKey: z.string().optional(),
+        expenseDate: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { submitExpenseClaim } = await import('./expense-service');
+        return submitExpenseClaim({
+          ...input,
+          submittedBy: ctx.user?.id || 0,
+          submittedByName: ctx.user?.name || 'Unknown',
+        });
+      }),
+
+    /** 审批报销单 */
+    approve: protectedProcedure
+      .input(z.object({
+        claimId: z.number(),
+        approved: z.boolean(),
+        approvalRemark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { approveExpenseClaim } = await import('./expense-service');
+        return approveExpenseClaim({
+          claimId: input.claimId,
+          approvedBy: ctx.user?.id || 0,
+          approvedByName: ctx.user?.name || 'System',
+          approved: input.approved,
+          approvalRemark: input.approvalRemark,
+        });
+      }),
+
+    /** 查询报销列表 */
+    list: protectedProcedure
+      .input(z.object({
+        submittedBy: z.number().optional(),
+        associatedCustomerId: z.number().optional(),
+        status: z.string().optional(),
+        page: z.number().default(1),
+        pageSize: z.number().default(20),
+      }).optional())
+      .query(async ({ input }) => {
+        const { listExpenseClaims } = await import('./expense-service');
+        return listExpenseClaims(input);
+      }),
+
+    /** 单客真实毛利核算（订单毛利 - 售后赔款 - 归属费用） */
+    getCustomerPnL: protectedProcedure
+      .input(z.object({
+        customerId: z.number(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { getCustomerPnL } = await import('./expense-service');
+        return getCustomerPnL(input.customerId, input.startDate, input.endDate);
+      }),
+  }),
+
+  // ─── MS7 Epic 4: 销售KPI看板 ──────────────────────────────────────────────────
+  salesKPI: router({
+    /** 设置/更新月度销售目标 */
+    setTarget: protectedProcedure
+      .input(z.object({
+        salesRepId: z.number(),
+        salesRepName: z.string(),
+        regionName: z.string().optional(),
+        period: z.string().regex(/^\d{4}-\d{2}$/),
+        revenueTarget: z.number().positive(),
+        collectionTarget: z.number().positive(),
+        newCustomerTarget: z.number().int().positive(),
+      }))
+      .mutation(async ({ input }) => {
+        const { setSalesTarget } = await import('./sales-kpi-service');
+        return setSalesTarget(input);
+      }),
+
+    /** 查询销售KPI实时进度 */
+    getPerformance: protectedProcedure
+      .input(z.object({
+        period: z.string().optional(),
+        salesRepId: z.number().optional(),
+        regionName: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const { getSalesPerformance } = await import('./sales-kpi-service');
+        return getSalesPerformance(input?.period, input?.salesRepId, input?.regionName);
+      }),
+
+    /** 查询战区汇总数据 */
+    getRegionSummary: protectedProcedure
+      .input(z.object({ period: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const { getRegionSummary } = await import('./sales-kpi-service');
+        return getRegionSummary(input?.period);
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;
+// This line intentionally left blank - routes appended below by MS7

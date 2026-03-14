@@ -1067,3 +1067,36 @@
 - [x] 提交失败 Bug 根本原因：discountRate 字段删除 + priceOverride 特批工作流
 - [x] 14 文件 / 174 测试 100% PASS
 - [x] GitHub 推送（https://github.com/materyangsmart/ops-frontend）
+
+## Mega-Sprint 7 全渠道触达与业财深度一体化
+
+### Epic 1：微信下沉市场订货网关 (WeChat B2B Portal)
+- [x] BFF 新增 /portal/wechat/quick-order 路由（免密 Token + OpenID 识别）
+- [x] 极简 H5 UI：大字体大图片一键复购页面（/wechat/order）
+- [x] 结算页：挂账（显示可用额度）+ 微信支付二维码展示
+- [x] 一键复购逻辑：自动拉取历史订单常买商品
+
+### Epic 2：逆向物流与售后处理引擎 (RMA & After-Sales)
+- [x] Schema 新增 after_sales_tickets 表（AfterSalesTicket）
+- [x] Schema 新增 replacement_orders 表（ReplacementOrder）
+- [x] tRPC：发起售后工单（客户/业务员 → 品质部审核）
+- [x] tRPC：审核通过后一键生成 0 元补发单 + 库存扣减
+- [x] 补发单不计入应收账款和当月营收
+
+### Epic 3：单客盈利模型与移动报销 (Customer P&L & Expense)
+- [x] Schema 新增 expense_claims 表（ExpenseClaim，含 associated_customer_id）
+- [x] tRPC：移动端报销提交（差旅/招待/物流补贴 + 发票图片上传）
+- [x] 真实毛利核算接口改造：单客利润 = 订单毛利 - 售后赔款 - 归属费用
+
+### Epic 4：销售铁军 KPI 实时看板 (Sales Performance CRM)
+- [x] Schema 新增 sales_targets 表（SalesTarget，月度任务）
+- [x] tRPC：KPI 看板数据聚合（实时营收进度/回款完成率/新客数）
+- [x] PC 端 /admin/sales-performance 页面（Gauge 仪表盘 + 进度条）
+
+### 强制沙箱自动化 E2E 验收
+- [x] E2E 脚本 1：商贩免密 Token 复购成功验证
+- [x] E2E 脚本 2：货损工单 → 审核 → 0 元补发单 + 库存扣减验证
+- [x] E2E 脚本 3：500 元招待费绑定客户 A → 毛利精确扣减验证
+- [x] 全部 3 个 E2E 脚本 100% PASS
+- [x] 推送到 GitHub main 分支
+- [x] 输出详细测试结果报告

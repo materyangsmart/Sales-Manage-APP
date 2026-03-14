@@ -420,3 +420,101 @@ export const creditOverrideApprovals = mysqlTable("credit_override_approvals", {
 });
 export type CreditOverrideApproval = typeof creditOverrideApprovals.$inferSelect;
 export type InsertCreditOverrideApproval = typeof creditOverrideApprovals.$inferInsert;
+
+// ============================================================
+// Mega-Sprint 7 新增表
+// ============================================================
+
+// MS7 Epic 2: 售后工单表 (after_sales_tickets)
+export const afterSalesTickets = mysqlTable("after_sales_tickets", {
+  id: int("id").autoincrement().primaryKey(),
+  ticketNo: varchar("ticket_no", { length: 50 }).notNull().unique(),
+  orderId: int("order_id").notNull(),
+  orderNo: varchar("order_no", { length: 50 }).notNull(),
+  customerId: int("customer_id").notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  reportedBy: int("reported_by"),
+  reportedByName: varchar("reported_by_name", { length: 255 }),
+  issueType: mysqlEnum("issue_type", ["DAMAGE", "QUALITY", "SHORT_DELIVERY", "WRONG_ITEM", "OTHER"]).notNull(),
+  description: text("description").notNull(),
+  evidenceImages: text("evidence_images"),
+  claimAmount: decimal("claim_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  status: mysqlEnum("status", ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "REPLACEMENT_ISSUED"]).default("PENDING").notNull(),
+  reviewedBy: int("reviewed_by"),
+  reviewedByName: varchar("reviewed_by_name", { length: 255 }),
+  reviewRemark: text("review_remark"),
+  reviewedAt: timestamp("reviewed_at"),
+  replacementOrderId: int("replacement_order_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type AfterSalesTicket = typeof afterSalesTickets.$inferSelect;
+export type InsertAfterSalesTicket = typeof afterSalesTickets.$inferInsert;
+
+// MS7 Epic 2: 补发订单表 (replacement_orders)
+export const replacementOrders = mysqlTable("replacement_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  replacementNo: varchar("replacement_no", { length: 50 }).notNull().unique(),
+  originalOrderId: int("original_order_id").notNull(),
+  originalOrderNo: varchar("original_order_no", { length: 50 }).notNull(),
+  afterSalesTicketId: int("after_sales_ticket_id").notNull(),
+  customerId: int("customer_id").notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  productId: int("product_id").notNull(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unitPrice: decimal("unit_price", { precision: 15, scale: 2 }).default("0").notNull(),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).default("0").notNull(),
+  isCountedInRevenue: boolean("is_counted_in_revenue").default(false).notNull(),
+  isCountedInAR: boolean("is_counted_in_ar").default(false).notNull(),
+  status: mysqlEnum("status", ["PENDING", "SHIPPED", "COMPLETED"]).default("PENDING").notNull(),
+  shippedAt: timestamp("shipped_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type ReplacementOrder = typeof replacementOrders.$inferSelect;
+export type InsertReplacementOrder = typeof replacementOrders.$inferInsert;
+
+// MS7 Epic 3: 费用报销单表 (expense_claims)
+export const expenseClaims = mysqlTable("expense_claims", {
+  id: int("id").autoincrement().primaryKey(),
+  claimNo: varchar("claim_no", { length: 50 }).notNull().unique(),
+  submittedBy: int("submitted_by").notNull(),
+  submittedByName: varchar("submitted_by_name", { length: 255 }).notNull(),
+  associatedCustomerId: int("associated_customer_id"),
+  associatedCustomerName: varchar("associated_customer_name", { length: 255 }),
+  expenseType: mysqlEnum("expense_type", ["TRAVEL", "ENTERTAINMENT", "LOGISTICS_SUBSIDY", "OTHER"]).notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  invoiceImageUrl: varchar("invoice_image_url", { length: 1024 }),
+  invoiceImageKey: varchar("invoice_image_key", { length: 512 }),
+  expenseDate: date("expense_date").notNull(),
+  status: mysqlEnum("status", ["PENDING", "APPROVED", "REJECTED"]).default("PENDING").notNull(),
+  approvedBy: int("approved_by"),
+  approvedByName: varchar("approved_by_name", { length: 255 }),
+  approvalRemark: text("approval_remark"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type ExpenseClaim = typeof expenseClaims.$inferSelect;
+export type InsertExpenseClaim = typeof expenseClaims.$inferInsert;
+
+// MS7 Epic 4: 月度销售目标表 (sales_targets)
+export const salesTargets = mysqlTable("sales_targets", {
+  id: int("id").autoincrement().primaryKey(),
+  salesRepId: int("sales_rep_id").notNull(),
+  salesRepName: varchar("sales_rep_name", { length: 255 }).notNull(),
+  regionName: varchar("region_name", { length: 100 }),
+  period: varchar("period", { length: 7 }).notNull(),
+  revenueTarget: decimal("revenue_target", { precision: 15, scale: 2 }).notNull(),
+  collectionTarget: decimal("collection_target", { precision: 15, scale: 2 }).notNull(),
+  newCustomerTarget: int("new_customer_target").notNull(),
+  revenueActual: decimal("revenue_actual", { precision: 15, scale: 2 }).default("0"),
+  collectionActual: decimal("collection_actual", { precision: 15, scale: 2 }).default("0"),
+  newCustomerActual: int("new_customer_actual").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type SalesTarget = typeof salesTargets.$inferSelect;
+export type InsertSalesTarget = typeof salesTargets.$inferInsert;
