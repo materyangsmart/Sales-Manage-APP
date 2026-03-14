@@ -2144,6 +2144,131 @@ export const appRouter = router({
         return generateArAgingReport(input?.asOfDate);
       }),
   }),
+
+  /** MS10 Epic 1: 自助下单激励引擎路由 */
+  growthIncentive: router({
+    calculate: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        orderNo: z.string(),
+        source: z.enum(['WECHAT_H5', 'PORTAL', 'SALES_PORTAL', 'WEBSITE', 'MANUAL']),
+        salesId: z.number().optional(),
+        customerId: z.number().optional(),
+        totalAmount: z.number().positive(),
+        grossProfit: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { calculateIncentive } = await import('./services/growth-incentive-service');
+        return calculateIncentive(input);
+      }),
+    save: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        orderNo: z.string(),
+        source: z.enum(['WECHAT_H5', 'PORTAL', 'SALES_PORTAL', 'WEBSITE', 'MANUAL']),
+        salesId: z.number().optional(),
+        customerId: z.number().optional(),
+        totalAmount: z.number().positive(),
+        grossProfit: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { saveOrderIncentive } = await import('./services/growth-incentive-service');
+        return saveOrderIncentive(input);
+      }),
+    getByOrder: protectedProcedure
+      .input(z.object({ orderId: z.number() }))
+      .query(async ({ input }) => {
+        const { getOrderIncentive } = await import('./services/growth-incentive-service');
+        return getOrderIncentive(input.orderId);
+      }),
+    getStats: protectedProcedure
+      .query(async () => {
+        const { getOrderSourceStats } = await import('./services/growth-incentive-service');
+        return getOrderSourceStats();
+      }),
+  }),
+
+  /** MS10 Epic 2: B2B 裂变推荐系统路由 */
+  referral: router({
+    getOrCreateCode: protectedProcedure
+      .input(z.object({ referrerId: z.number(), referrerName: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getOrCreateReferralCode } = await import('./services/referral-service');
+        const code = await getOrCreateReferralCode(input.referrerId, input.referrerName);
+        return { code };
+      }),
+    accept: protectedProcedure
+      .input(z.object({
+        referralCode: z.string(),
+        refereeId: z.number(),
+        refereeName: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { acceptReferral } = await import('./services/referral-service');
+        return acceptReferral(input.referralCode, input.refereeId, input.refereeName);
+      }),
+    triggerReward: protectedProcedure
+      .input(z.object({ refereeId: z.number(), firstOrderId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { triggerReferralReward } = await import('./services/referral-service');
+        return triggerReferralReward(input.refereeId, input.firstOrderId);
+      }),
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { listReferralRecords } = await import('./services/referral-service');
+        return listReferralRecords(input?.limit);
+      }),
+    getStats: protectedProcedure
+      .input(z.object({ referrerId: z.number() }))
+      .query(async ({ input }) => {
+        const { getReferralStats } = await import('./services/referral-service');
+        return getReferralStats(input.referrerId);
+      }),
+  }),
+
+  /** MS10 Epic 3: 智能流失预警雷达路由 */
+  churnRadar: router({
+    runScan: protectedProcedure
+      .mutation(async () => {
+        const { runChurnScan } = await import('./services/churn-prediction-service');
+        return runChurnScan();
+      }),
+    listAlerts: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { listChurnAlerts } = await import('./services/churn-prediction-service');
+        return listChurnAlerts(input?.limit);
+      }),
+    resolve: protectedProcedure
+      .input(z.object({ alertId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { resolveChurnAlert } = await import('./services/churn-prediction-service');
+        const success = await resolveChurnAlert(input.alertId);
+        return { success };
+      }),
+    updateProfile: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        customerName: z.string(),
+        newOrderAt: z.string(),
+        salesId: z.number().optional(),
+        salesName: z.string().optional(),
+        regionDirectorId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { updateCustomerRepurchaseProfile } = await import('./services/churn-prediction-service');
+        await updateCustomerRepurchaseProfile(
+          input.userId,
+          input.customerName,
+          new Date(input.newOrderAt),
+          input.salesId,
+          input.salesName,
+          input.regionDirectorId
+        );
+        return { success: true };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;
-// MS9 routes added above
+// MS10 routes added above

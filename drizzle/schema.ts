@@ -707,3 +707,96 @@ export const supplierPenalties = mysqlTable("supplier_penalties", {
 });
 export type SupplierPenalty = typeof supplierPenalties.$inferSelect;
 export type InsertSupplierPenalty = typeof supplierPenalties.$inferInsert;
+
+// ============================================================
+// Mega-Sprint 10 新增表 (GTM 增长引擎)
+// ============================================================
+
+// MS10 Epic 2: 推荐裂变记录表 (referral_records)
+export const referralRecords = mysqlTable("referral_records", {
+  id: int("id").autoincrement().primaryKey(),
+  referrerId: int("referrer_id").notNull(),
+  referrerName: varchar("referrer_name", { length: 255 }).notNull(),
+  refereeId: int("referee_id").notNull(),
+  refereeName: varchar("referee_name", { length: 255 }).notNull(),
+  referralCode: varchar("referral_code", { length: 64 }).notNull().unique(),
+  status: mysqlEnum("status", ["PENDING", "REWARDED", "EXPIRED"]).default("PENDING").notNull(),
+  rewardAmount: decimal("reward_amount", { precision: 10, scale: 2 }).default("50.00").notNull(),
+  firstOrderId: int("first_order_id"),
+  rewardedAt: timestamp("rewarded_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type ReferralRecord = typeof referralRecords.$inferSelect;
+export type InsertReferralRecord = typeof referralRecords.$inferInsert;
+
+// MS10 Epic 2+3: 客户档案扩展表 (customer_profiles)
+export const customerProfiles = mysqlTable("customer_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().unique(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  salesId: int("sales_id"),
+  salesName: varchar("sales_name", { length: 255 }),
+  regionDirectorId: int("region_director_id"),
+  regionDirectorName: varchar("region_director_name", { length: 255 }),
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }).default("0").notNull(),
+  creditUsed: decimal("credit_used", { precision: 15, scale: 2 }).default("0").notNull(),
+  lastOrderAt: timestamp("last_order_at"),
+  avgRepurchaseDays: decimal("avg_repurchase_days", { precision: 6, scale: 2 }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type CustomerProfile = typeof customerProfiles.$inferSelect;
+export type InsertCustomerProfile = typeof customerProfiles.$inferInsert;
+
+// MS10 Epic 3: 流失预警记录表 (churn_alerts)
+export const churnAlerts = mysqlTable("churn_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customer_id").notNull(),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  salesId: int("sales_id"),
+  salesName: varchar("sales_name", { length: 255 }),
+  regionDirectorId: int("region_director_id"),
+  daysSinceLastOrder: decimal("days_since_last_order", { precision: 6, scale: 1 }).notNull(),
+  avgRepurchaseDays: decimal("avg_repurchase_days", { precision: 6, scale: 2 }).notNull(),
+  thresholdDays: decimal("threshold_days", { precision: 6, scale: 2 }).notNull(),
+  riskLevel: mysqlEnum("risk_level", ["HIGH", "MEDIUM", "LOW"]).default("HIGH").notNull(),
+  notificationSent: boolean("notification_sent").default(false).notNull(),
+  notificationContent: text("notification_content"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type ChurnAlert = typeof churnAlerts.$inferSelect;
+export type InsertChurnAlert = typeof churnAlerts.$inferInsert;
+
+// MS10 Epic 1: 订单来源补贴记录表 (order_discounts)
+export const orderDiscounts = mysqlTable("order_discounts", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("order_id").notNull(),
+  discountType: varchar("discount_type", { length: 64 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
+  discountReason: varchar("discount_reason", { length: 255 }).notNull(),
+  orderSource: varchar("order_source", { length: 50 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type OrderDiscount = typeof orderDiscounts.$inferSelect;
+export type InsertOrderDiscount = typeof orderDiscounts.$inferInsert;
+
+// MS10 Epic 1: 订单主表扩展 (order_source_log) - 记录订单来源和提成乘数
+export const orderSourceLog = mysqlTable("order_source_log", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("order_id").notNull().unique(),
+  orderNo: varchar("order_no", { length: 64 }).notNull(),
+  source: mysqlEnum("source", ["WECHAT_H5", "PORTAL", "SALES_PORTAL", "WEBSITE", "MANUAL"]).default("WEBSITE").notNull(),
+  commissionMultiplier: decimal("commission_multiplier", { precision: 4, scale: 2 }).default("1.00").notNull(),
+  discountApplied: boolean("discount_applied").default(false).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0").notNull(),
+  salesId: int("sales_id"),
+  customerId: int("customer_id"),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  grossProfit: decimal("gross_profit", { precision: 15, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type OrderSourceLog = typeof orderSourceLog.$inferSelect;
+export type InsertOrderSourceLog = typeof orderSourceLog.$inferInsert;

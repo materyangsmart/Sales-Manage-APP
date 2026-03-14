@@ -1138,3 +1138,12 @@
 - [ ] MS9 Epic 2: SRM 供应商穿透追溯 (Supplier/MaterialReceipt/SupplierPenalty + 客诉穿透)
 - [ ] MS9 Epic 3: AR 账龄分析与现金流预测 (账龄分桶算法 + 财务看板可视化)
 - [ ] MS9 强制沙箱 E2E 验收 (3 tests: MRP短缺计算、客诉扣款穿透、账龄分桶精确性)
+
+## Mega-Sprint 10 GTM 市场拓展与增长引擎
+
+- [x] Epic 1: 线上专属补贴拦截器（WECHAT_H5/PORTAL 订单自动减免）
+- [x] Epic 1: 提成差异化乘数引擎（代下×0.8，自助×1.2）
+- [x] Epic 2: ReferralRecord 表 + 推荐码生成 API
+- [x] Epic 2: 首单支付自动返佣 +50 元 creditLimit + IM 通知
+- [x] Epic 3: 流失预警 Cron Job（复购周期算法 + 1.5x 阈値 + IM 告警）
+- [x] MS10 E2E 验收测试（提成差异 1.5x、裂变返佣 +50、流失预警触发）

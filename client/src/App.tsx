@@ -33,6 +33,7 @@ import ExpenseClaim from './pages/ExpenseClaim';
 import SalesPerformance from './pages/SalesPerformance';
 import FinanceExpenses from './pages/FinanceExpenses';
 import ArAging from './pages/ArAging';
+import GrowthEngine from './pages/GrowthEngine';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -70,6 +71,8 @@ function Router() {
       <Route path={"/finance/expenses"} component={FinanceExpenses} />
       {/* MS9: AR Aging Analysis */}
       <Route path={"/finance/ar-aging"} component={ArAging} />
+      {/* MS10: Growth Engine */}
+      <Route path={"/growth/engine"} component={GrowthEngine} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />
