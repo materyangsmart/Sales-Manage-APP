@@ -1,0 +1,89 @@
+##############################################################
+# Prometheus ServiceMonitor for ops-frontend
+# 需要安装 prometheus-operator (kube-prometheus-stack)
+##############################################################
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ops-frontend
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+    release: prometheus  # 匹配 kube-prometheus-stack 的 label selector
+spec:
+  selector:
+    matchLabels:
+      app: ops-frontend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - qianzhang-prod
+---
+##############################################################
+# PrometheusRule（告警规则）
+##############################################################
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ops-frontend-alerts
+  namespace: qianzhang-prod
+  labels:
+    app: ops-frontend
+    release: prometheus
+spec:
+  groups:
+    - name: ops-frontend.rules
+      rules:
+        # 高错误率告警
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="ops-frontend",status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{job="ops-frontend"}[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            team: ops
+          annotations:
+            summary: "ops-frontend 5xx 错误率超过 5%"
+            description: "当前 5xx 错误率: {{ $value | humanizePercentage }}"
+
+        # 高延迟告警
+        - alert: HighLatencyP95
+          expr: |
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="ops-frontend"}[5m])) by (le)) > 2
+          for: 5m
+          labels:
+            severity: warning
+            team: ops
+          annotations:
+            summary: "ops-frontend P95 延迟超过 2 秒"
+            description: "当前 P95 延迟: {{ $value | humanizeDuration }}"
+
+        # Pod 不可用告警
+        - alert: PodUnavailable
+          expr: |
+            kube_deployment_status_replicas_available{deployment="ops-frontend",namespace="qianzhang-prod"}
+            < kube_deployment_spec_replicas{deployment="ops-frontend",namespace="qianzhang-prod"}
+          for: 5m
+          labels:
+            severity: warning
+            team: ops
+          annotations:
+            summary: "ops-frontend Pod 副本数不足"
+            description: "期望 {{ $value }} 个副本，但部分不可用"
+
+        # 内存使用过高
+        - alert: HighMemoryUsage
+          expr: |
+            nodejs_rss_bytes{job="ops-frontend"} > 450 * 1024 * 1024
+          for: 5m
+          labels:
+            severity: warning
+            team: ops
+          annotations:
+            summary: "ops-frontend 内存使用超过 450MB"
+            description: "当前 RSS: {{ $value | humanize1024 }}B"
