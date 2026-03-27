@@ -1156,3 +1156,8 @@
 - [x] Epic 2: 废弃首单即发，改为里程碑幂等奖励
 - [x] Epic 3: 流失挽回弹药库（85 折挽回券 + 48h 过期 + 自动解除预警）
 - [x] MS11 E2E 验收测试 18/18（反作弊 0.5×、ROI 550 触发、挽回券核销解除）
+
+## Dockerfile.nginx COPY 路径修复
+
+- [x] 修复 Dockerfile.nginx 中 COPY 路径：/app/dist/client → /app/dist
+- [ ] 提交推送到 GitHub main 分支
