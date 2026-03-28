@@ -217,3 +217,120 @@ export async function createLocalUser(params: {
   console.log(`[LocalAuth] ✓ Local user created: username=${params.username}, id=${insertId}`);
   return insertId;
 }
+
+/**
+ * 查询所有用户列表（管理员操作）
+ */
+export async function listUsers(): Promise<Array<{
+  id: number;
+  openId: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  loginMethod: string | null;
+  createdAt: Date;
+  lastSignedIn: Date;
+}>> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select({
+      id: users.id,
+      openId: users.openId,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      loginMethod: users.loginMethod,
+      createdAt: users.createdAt,
+      lastSignedIn: users.lastSignedIn,
+    })
+    .from(users)
+    .orderBy(users.id);
+
+  return rows.map((r) => ({
+    ...r,
+    // 从 openId 提取用户名用于显示
+    username: r.openId.startsWith('local:') ? r.openId.slice(6) : r.openId,
+  }));
+}
+
+/**
+ * 修改用户角色（管理员操作）
+ */
+export async function updateUserRole(
+  userId: number,
+  newRole: "admin" | "user"
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (rows.length === 0) throw new Error("用户不存在");
+
+  await db
+    .update(users)
+    .set({ role: newRole })
+    .where(eq(users.id, userId));
+
+  console.log(`[LocalAuth] ✓ Role updated: userId=${userId}, newRole=${newRole}`);
+  return true;
+}
+
+/**
+ * 管理员重置用户密码
+ */
+export async function resetUserPassword(
+  userId: number,
+  newPassword: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (rows.length === 0) throw new Error("用户不存在");
+
+  const newHash = await hashPassword(newPassword);
+  await db
+    .update(users)
+    .set({ imUnionid: newHash } as any)
+    .where(eq(users.id, userId));
+
+  console.log(`[LocalAuth] ✓ Password reset by admin for userId=${userId}`);
+  return true;
+}
+
+/**
+ * 删除用户（管理员操作，不允许删除自己）
+ */
+export async function deleteUser(
+  adminUserId: number,
+  targetUserId: number
+): Promise<boolean> {
+  if (adminUserId === targetUserId) {
+    throw new Error("不能删除自己的账户");
+  }
+
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, targetUserId))
+    .limit(1);
+  if (rows.length === 0) throw new Error("用户不存在");
+
+  await db.delete(users).where(eq(users.id, targetUserId));
+
+  console.log(`[LocalAuth] ✓ User deleted: userId=${targetUserId} by admin=${adminUserId}`);
+  return true;
+}

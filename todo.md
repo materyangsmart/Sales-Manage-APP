@@ -1185,3 +1185,14 @@
 - [x] 本地 Docker 模拟构建验证通过
 - [x] 生成技术交底文档
 - [x] 推送 GitHub main 分支
+
+## 用户管理页面
+
+- [x] 后端：用户列表查询 API（localAuth.listUsers）
+- [x] 后端：角色修改 API（localAuth.updateRole）
+- [x] 后端：重置密码 API（localAuth.resetPassword）
+- [x] 前端：/admin/users 用户管理页面（创建/查看/编辑/重置密码）
+- [x] 前端：DashboardLayout 侧边栏添加“用户管理”入口
+- [x] 前端：App.tsx 注册 /admin/users 路由
+- [x] E2E 测试（11/11 passed）
+- [x] 推送 GitHub main 分支

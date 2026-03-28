@@ -8,7 +8,7 @@ import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersA
 import { getBIDashboardData } from './bi-dashboard';
 import { imLogin } from "./im-sso";
 import { routeIMNotificationSync, getRecentPushLogs } from "./im-notification";
-import { localLogin, changePassword, createLocalUser, seedDefaultAdmin } from "./services/local-auth-service";
+import { localLogin, changePassword, createLocalUser, seedDefaultAdmin, listUsers, updateUserRole, resetUserPassword, deleteUser } from "./services/local-auth-service";
 
 // 启动时种子默认管理员
 seedDefaultAdmin().catch(e => console.error('[LocalAuth] Seed failed:', e.message));
@@ -2437,6 +2437,48 @@ export const appRouter = router({
         }
         const id = await createLocalUser(input);
         return { success: true, userId: id };
+      }),
+    listUsers: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user!.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可查看用户列表' });
+        }
+        return await listUsers();
+      }),
+    updateRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(['admin', 'user']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user!.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可修改角色' });
+        }
+        await updateUserRole(input.userId, input.role);
+        return { success: true };
+      }),
+    resetPassword: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        newPassword: z.string().min(6, '新密码至少6位'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user!.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可重置密码' });
+        }
+        await resetUserPassword(input.userId, input.newPassword);
+        return { success: true };
+      }),
+    deleteUser: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user!.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可删除用户' });
+        }
+        await deleteUser(ctx.user!.id, input.userId);
+        return { success: true };
       }),
   }),
 });

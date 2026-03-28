@@ -34,6 +34,7 @@ import SalesPerformance from './pages/SalesPerformance';
 import FinanceExpenses from './pages/FinanceExpenses';
 import ArAging from './pages/ArAging';
 import GrowthEngine from './pages/GrowthEngine';
+import UserManagement from './pages/UserManagement';
 import Login from './pages/Login';
 
 function Router() {
@@ -75,6 +76,8 @@ function Router() {
       <Route path={"/finance/ar-aging"} component={ArAging} />
       {/* MS10: Growth Engine */}
       <Route path={"/growth/engine"} component={GrowthEngine} />
+      {/* User Management */}
+      <Route path={"/admin/users"} component={UserManagement} />
       {/* Mobile H5 Routes */}
       <Route path={"/mobile"} component={MobileHome} />
       <Route path={"/mobile/quick-submit"} component={QuickSubmit} />

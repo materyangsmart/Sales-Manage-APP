@@ -22,7 +22,7 @@ import {
 // OAuth 开关：VITE_ENABLE_OAUTH=true 时使用 OAuth，否则使用本地登录
 const ENABLE_OAUTH = import.meta.env.VITE_ENABLE_OAUTH === 'true';
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings, ShoppingCart, Kanban, Warehouse, BadgeDollarSign, Trophy, BarChart3, ClipboardList } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ClipboardCheck, Package, FileText, CreditCard, Receipt, Search, TrendingUp, Settings, ShoppingCart, Kanban, Warehouse, BadgeDollarSign, Trophy, BarChart3, ClipboardList, UserCog } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -44,6 +44,7 @@ const menuItems = [
   { icon: Trophy, label: "销售KPI看板", path: "/admin/sales-performance" },
   { icon: ClipboardList, label: "财务审核台", path: "/finance/expenses" },
   { icon: BarChart3, label: "应收账龄", path: "/finance/ar-aging" },
+  { icon: UserCog, label: "用户管理", path: "/admin/users" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
