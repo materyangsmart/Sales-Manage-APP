@@ -8,6 +8,10 @@ import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersA
 import { getBIDashboardData } from './bi-dashboard';
 import { imLogin } from "./im-sso";
 import { routeIMNotificationSync, getRecentPushLogs } from "./im-notification";
+import { localLogin, changePassword, createLocalUser, seedDefaultAdmin } from "./services/local-auth-service";
+
+// 启动时种子默认管理员
+seedDefaultAdmin().catch(e => console.error('[LocalAuth] Seed failed:', e.message));
 import { reserveInventory, releaseInventory, getInventoryList, getInventoryLogs, adjustInventory, updateATPFields } from './inventory-service';
 import { checkCreditLimit, approveCreditOverride, rejectCreditOverride, getCreditOverrideList, generateMonthlyBillingStatements, getBillingStatements } from './credit-service';
 import { nl2sql } from './ai-copilot';
@@ -2390,6 +2394,51 @@ export const appRouter = router({
         return { expired: count };
       }),
   }),
+  /** 本地用户名/密码登录 */
+  localAuth: router({
+    login: publicProcedure
+      .input(z.object({
+        username: z.string().min(1, '用户名不能为空'),
+        password: z.string().min(1, '密码不能为空'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const result = await localLogin(input.username, input.password);
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, result.token, cookieOptions);
+          return { success: true, user: result.user };
+        } catch (err: any) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: err.message || '登录失败',
+          });
+        }
+      }),
+    changePassword: protectedProcedure
+      .input(z.object({
+        oldPassword: z.string().min(1),
+        newPassword: z.string().min(6, '新密码至少6位'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await changePassword(ctx.user!.id, input.oldPassword, input.newPassword);
+        return { success: true };
+      }),
+    createUser: protectedProcedure
+      .input(z.object({
+        username: z.string().min(1),
+        password: z.string().min(6),
+        name: z.string().min(1),
+        email: z.string().optional(),
+        role: z.enum(['admin', 'user']).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user!.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可创建用户' });
+        }
+        const id = await createLocalUser(input);
+        return { success: true, userId: id };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;
-// MS11 routes added above
+// Local auth routes added above

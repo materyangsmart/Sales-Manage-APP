@@ -34,12 +34,14 @@ import SalesPerformance from './pages/SalesPerformance';
 import FinanceExpenses from './pages/FinanceExpenses';
 import ArAging from './pages/ArAging';
 import GrowthEngine from './pages/GrowthEngine';
+import Login from './pages/Login';
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+        <Route path="/login" component={Login} />
+      <Route path="/" component={Home} />
       <Route path={"/orders/review"} component={OrderReview} />
       <Route path={"/orders/fulfill"} component={OrderFulfill} />
       <Route path={"/ar/invoices"} component={ARInvoices} />

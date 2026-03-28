@@ -1160,4 +1160,17 @@
 ## Dockerfile.nginx COPY 路径修复
 
 - [x] 修复 Dockerfile.nginx 中 COPY 路径：/app/dist/client → /app/dist
-- [ ] 提交推送到 GitHub main 分支
+- [x] 提交推送到 GitHub main 分支
+
+## 本地用户名/密码登录系统
+
+- [x] 后端：本地登录 API（/api/trpc/localAuth.login）
+- [x] 后端：密码哈希（bcrypt）+ JWT 签发
+- [x] 后端：超级管理员种子账号（admin / Admin@2026）
+- [x] 后端：.env 开关 ENABLE_LOCAL_AUTH=true
+- [x] 前端：/login 登录页面（用户名+密码表单）
+- [x] 前端：路由守卫改造（未登录跳 /login 而非 OAuth）
+- [x] 前端：DashboardLayout 登录拦截改造
+- [x] 前端：.env 开关 VITE_ENABLE_OAUTH=false
+- [x] E2E 测试：本地登录流程验证
+- [x] 推送 GitHub main 分支
