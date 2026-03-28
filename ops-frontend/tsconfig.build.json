@@ -1,0 +1,21 @@
+{
+  "$comment": "后端生产构建专用 tsconfig — 不继承根 tsconfig 的 allowImportingTsExtensions",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  },
+  "include": ["server/**/*", "shared/**/*", "drizzle/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

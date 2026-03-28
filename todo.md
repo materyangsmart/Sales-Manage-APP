@@ -1174,3 +1174,14 @@
 - [x] 前端：.env 开关 VITE_ENABLE_OAUTH=false
 - [x] E2E 测试：本地登录流程验证
 - [x] 推送 GitHub main 分支
+
+## 全栈构建架构致命修复
+
+- [x] 修复 TS5096 死锁：tsconfig allowImportingTsExtensions + tsc --outDir 冲突
+- [x] 后端构建改用 esbuild，不再依赖 tsc --outDir
+- [x] Dockerfile.backend：补齐 COPY patches/、client/、scripts/、drizzle/、shared/
+- [x] Dockerfile.nginx：补齐 COPY patches/
+- [x] 生产镜像包含 seed.ts + drizzle-kit push 能力
+- [x] 本地 Docker 模拟构建验证通过
+- [x] 生成技术交底文档
+- [x] 推送 GitHub main 分支

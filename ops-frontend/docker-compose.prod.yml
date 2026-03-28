@@ -80,6 +80,10 @@ services:
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       OWNER_OPEN_ID: ${OWNER_OPEN_ID}
       OWNER_NAME: ${OWNER_NAME}
+      RUN_DB_PUSH: ${RUN_DB_PUSH:-true}
+      RUN_SEED: ${RUN_SEED:-false}
+      ENABLE_LOCAL_AUTH: ${ENABLE_LOCAL_AUTH:-true}
+      VITE_ENABLE_OAUTH: ${VITE_ENABLE_OAUTH:-false}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     healthcheck:
