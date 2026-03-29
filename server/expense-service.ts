@@ -153,6 +153,55 @@ export async function listExpenseClaims(params?: {
 }
 
 // ============================================================
+// 重新提交被退回的报销单
+// ============================================================
+export async function resubmitExpenseClaim(params: {
+  claimId: number;
+  submittedBy: number;
+  amount?: number;
+  description?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [claim] = await db
+    .select()
+    .from(expenseClaims)
+    .where(eq(expenseClaims.id, params.claimId))
+    .limit(1);
+
+  if (!claim) throw new Error(`报销单 #${params.claimId} 不存在`);
+  if (claim.status !== "REJECTED") {
+    throw new Error(`报销单状态为 ${claim.status}，只有被退回的报销单才能重新提交`);
+  }
+  if (claim.submittedBy !== params.submittedBy) {
+    throw new Error("只能重新提交自己的报销单");
+  }
+
+  const updateData: any = {
+    status: "PENDING" as const,
+    approvedBy: null,
+    approvedByName: null,
+    approvalRemark: null,
+    approvedAt: null,
+  };
+  if (params.amount !== undefined) {
+    updateData.amount = String(params.amount);
+  }
+  if (params.description !== undefined) {
+    updateData.description = params.description;
+  }
+
+  await db
+    .update(expenseClaims)
+    .set(updateData)
+    .where(eq(expenseClaims.id, params.claimId));
+
+  console.log(`[Expense] 报销单 ${claim.claimNo} 重新提交，状态恢复为 PENDING`);
+  return { success: true, claimNo: claim.claimNo };
+}
+
+// ============================================================
 // 单客真实毛利核算
 // 公式：单客真实利润 = 订单总毛利 - 售后赔款 - 归属该客户的差旅招待费用
 // ============================================================

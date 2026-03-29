@@ -1,0 +1,22 @@
+{
+  "query": "SELECT status, COUNT(*) as cnt FROM expense_claims GROUP BY status;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT status, COUNT(*) as cnt FROM expense_claims GROUP BY status;",
+  "rows": [
+    {
+      "status": "PENDING",
+      "cnt": "14"
+    },
+    {
+      "status": "REJECTED",
+      "cnt": "7"
+    },
+    {
+      "status": "APPROVED",
+      "cnt": "7"
+    }
+  ],
+  "messages": [],
+  "stdout": "status\tcnt\nPENDING\t14\nREJECTED\t7\nAPPROVED\t7\n",
+  "stderr": "",
+  "execution_time_ms": 1521
+}

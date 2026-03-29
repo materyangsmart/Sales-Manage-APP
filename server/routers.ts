@@ -1946,8 +1946,8 @@ export const appRouter = router({
         });
       }),
 
-    /** 审批报销单 */
-    approve: roleProcedure(['admin', 'sales'])
+    /** 审批报销单（仅管理员） */
+    approve: roleProcedure(['admin'])
       .input(z.object({
         claimId: z.number(),
         approved: z.boolean(),
@@ -1961,6 +1961,23 @@ export const appRouter = router({
           approvedByName: ctx.user?.name || 'System',
           approved: input.approved,
           approvalRemark: input.approvalRemark,
+        });
+      }),
+
+    /** 重新提交被退回的报销单（销售员修改后重新提交） */
+    resubmit: roleProcedure(['admin', 'sales'])
+      .input(z.object({
+        claimId: z.number(),
+        amount: z.number().positive().optional(),
+        description: z.string().min(2).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { resubmitExpenseClaim } = await import('./expense-service');
+        return resubmitExpenseClaim({
+          claimId: input.claimId,
+          submittedBy: ctx.user?.id || 0,
+          amount: input.amount,
+          description: input.description,
         });
       }),
 

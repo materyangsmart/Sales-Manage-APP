@@ -20,6 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Receipt,
@@ -34,6 +41,8 @@ import {
   Clock,
   XCircle,
   ChevronRight,
+  RotateCcw,
+  MessageSquare,
 } from "lucide-react";
 
 // ─── 状态徽章 ─────────────────────────────────────────────────────────────────
@@ -268,13 +277,105 @@ function ExpenseList() {
   const utils = trpc.useUtils();
   const { user } = useAuth();
 
+  // 退回原因弹窗状态
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingClaimId, setRejectingClaimId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectReasonError, setRejectReasonError] = useState("");
+
+  // 重新提交编辑弹窗状态
+  const [resubmitDialogOpen, setResubmitDialogOpen] = useState(false);
+  const [resubmitItem, setResubmitItem] = useState<any>(null);
+  const [resubmitForm, setResubmitForm] = useState({
+    amount: "",
+    description: "",
+  });
+
   const approveMutation = trpc.expenses.approve.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
       utils.expenses.list.invalidate();
-      toast.success("审批成功");
+      if (result.status === "APPROVED") {
+        toast.success("审批通过", { description: `报销单 ${result.claimNo} 已通过` });
+      } else {
+        toast.success("已退回", { description: `报销单 ${result.claimNo} 已退回给申请人` });
+      }
+      setRejectDialogOpen(false);
+      setRejectReason("");
+      setRejectReasonError("");
+      setRejectingClaimId(null);
     },
     onError: (err) => toast.error("审批失败", { description: err.message }),
   });
+
+  const resubmitMutation = trpc.expenses.resubmit.useMutation({
+    onSuccess: () => {
+      utils.expenses.list.invalidate();
+      toast.success("重新提交成功", { description: "报销单已重新提交，等待审批" });
+      setResubmitDialogOpen(false);
+      setResubmitItem(null);
+    },
+    onError: (err: any) => toast.error("重新提交失败", { description: err.message }),
+  });
+
+  const handleRejectClick = (claimId: number) => {
+    setRejectingClaimId(claimId);
+    setRejectReason("");
+    setRejectReasonError("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleConfirmReject = () => {
+    if (!rejectReason.trim()) {
+      setRejectReasonError("请填写退回原因");
+      return;
+    }
+    if (rejectReason.trim().length < 5) {
+      setRejectReasonError("退回原因至少 5 个字");
+      return;
+    }
+    if (rejectingClaimId) {
+      approveMutation.mutate({
+        claimId: rejectingClaimId,
+        approved: false,
+        approvalRemark: rejectReason.trim(),
+      });
+    }
+  };
+
+  const handleResubmitClick = (item: any) => {
+    setResubmitItem(item);
+    setResubmitForm({
+      amount: String(parseFloat(item.amount || "0")),
+      description: item.description || "",
+    });
+    setResubmitDialogOpen(true);
+  };
+
+  const handleConfirmResubmit = () => {
+    if (!resubmitItem) return;
+    const amount = Number(resubmitForm.amount);
+    if (!amount || isNaN(amount) || amount <= 0) {
+      toast.error("请输入有效金额");
+      return;
+    }
+    if (!resubmitForm.description.trim()) {
+      toast.error("请填写费用说明");
+      return;
+    }
+    resubmitMutation.mutate({
+      claimId: resubmitItem.id,
+      amount,
+      description: resubmitForm.description.trim(),
+    });
+  };
+
+  // 格式化日期（防止 Date 对象直接渲染）
+  const formatDate = (d: any) => {
+    if (!d) return "-";
+    if (d instanceof Date) return d.toLocaleDateString("zh-CN");
+    if (typeof d === "string") return d;
+    try { return new Date(d).toLocaleDateString("zh-CN"); } catch { return String(d); }
+  };
 
   if (isLoading) {
     return (
@@ -297,63 +398,203 @@ function ExpenseList() {
   }
 
   return (
-    <div className="space-y-3">
-      {items.map((item: any) => (
-        <Card key={item.id} className="overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-base">¥{parseFloat(item.amount || "0").toFixed(2)}</span>
-                  <Badge variant="outline" className="text-xs">{EXPENSE_TYPE_LABELS[item.expenseType] || item.expenseType}</Badge>
+    <>
+      <div className="space-y-3">
+        {items.map((item: any) => (
+          <Card key={item.id} className={`overflow-hidden ${
+            item.status === "REJECTED" ? "border-red-200" : ""
+          }`}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-base">¥{parseFloat(item.amount || "0").toFixed(2)}</span>
+                    <Badge variant="outline" className="text-xs">{EXPENSE_TYPE_LABELS[item.expenseType] || item.expenseType}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
+                <StatusBadge status={item.status} />
               </div>
-              <StatusBadge status={item.status} />
-            </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>提交人：{item.submittedByName}</span>
-              {item.associatedCustomerName && (
-                <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {item.associatedCustomerName}
-                </span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>提交人：{item.submittedByName}</span>
+                {item.associatedCustomerName && (
+                  <span className="flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {item.associatedCustomerName}
+                  </span>
+                )}
+                <span>{formatDate(item.expenseDate)}</span>
+              </div>
+              {item.invoiceImageUrl && (
+                <a href={item.invoiceImageUrl} target="_blank" rel="noopener noreferrer"
+                  className="mt-2 flex items-center gap-1 text-xs text-blue-500 hover:underline">
+                  <Receipt className="w-3 h-3" />查看发票
+                </a>
               )}
-              <span>{item.expenseDate}</span>
+
+              {/* 退回原因展示（所有人可见） */}
+              {item.status === "REJECTED" && item.approvalRemark && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-red-700 mb-1">退回原因：</p>
+                      <p className="text-sm text-red-600">{item.approvalRemark}</p>
+                      {item.approvedByName && (
+                        <p className="text-xs text-red-400 mt-1">审批人：{item.approvedByName} · {formatDate(item.approvedAt)}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 审批通过信息展示 */}
+              {item.status === "APPROVED" && item.approvedByName && (
+                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  审批人：{item.approvedByName} · {formatDate(item.approvedAt)}
+                  {item.approvalRemark && ` · 备注：${item.approvalRemark}`}
+                </div>
+              )}
+
+              {/* 管理员审批按钮（仅 PENDING 状态） */}
+              {user?.role === "admin" && item.status === "PENDING" && (
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-green-600 border-green-300 hover:bg-green-50"
+                    onClick={() => approveMutation.mutate({ claimId: item.id, approved: true })}
+                    disabled={approveMutation.isPending}
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" />通过
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+                    onClick={() => handleRejectClick(item.id)}
+                    disabled={approveMutation.isPending}
+                  >
+                    <XCircle className="w-3 h-3 mr-1" />退回
+                  </Button>
+                </div>
+              )}
+
+              {/* 销售员重新提交按钮（仅 REJECTED 状态 + 本人提交的） */}
+              {item.status === "REJECTED" && user && item.submittedBy === user.id && (
+                <div className="mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-blue-600 border-blue-300 hover:bg-blue-50"
+                    onClick={() => handleResubmitClick(item)}
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" />修改并重新提交
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* 退回原因弹窗 */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>退回报销单</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+              退回后，申请人将看到退回原因，并可以修改后重新提交。
             </div>
-            {item.invoiceImageUrl && (
-              <a href={item.invoiceImageUrl} target="_blank" rel="noopener noreferrer"
-                className="mt-2 flex items-center gap-1 text-xs text-blue-500 hover:underline">
-                <Receipt className="w-3 h-3" />查看发票
-              </a>
-            )}
-            {/* 管理员审批按钮 */}
-            {user?.role === "admin" && item.status === "PENDING" && (
-              <div className="flex gap-2 mt-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 text-green-600 border-green-300 hover:bg-green-50"
-                  onClick={() => approveMutation.mutate({ claimId: item.id, approved: true })}
-                  disabled={approveMutation.isPending}
-                >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />通过
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
-                  onClick={() => approveMutation.mutate({ claimId: item.id, approved: false, approvalRemark: "不符合报销标准" })}
-                  disabled={approveMutation.isPending}
-                >
-                  <XCircle className="w-3 h-3 mr-1" />拒绝
-                </Button>
+            <div className="space-y-2">
+              <Label htmlFor="rejectReason" className="text-sm font-semibold">
+                退回原因 <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="rejectReason"
+                value={rejectReason}
+                onChange={(e) => {
+                  setRejectReason(e.target.value);
+                  if (e.target.value.trim()) setRejectReasonError("");
+                }}
+                placeholder="请详细说明退回原因，例如：发票金额与报销金额不符、缺少发票附件..."
+                rows={3}
+                className={rejectReasonError ? "border-red-500" : ""}
+              />
+              {rejectReasonError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />{rejectReasonError}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={approveMutation.isPending}
+            >
+              {approveMutation.isPending ? "处理中..." : "确认退回"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 重新提交弹窗 */}
+      <Dialog open={resubmitDialogOpen} onOpenChange={setResubmitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>修改并重新提交</DialogTitle>
+          </DialogHeader>
+          {resubmitItem && (
+            <div className="space-y-4">
+              {/* 显示上次退回原因 */}
+              {resubmitItem.approvalRemark && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-xs font-semibold text-red-700 mb-1">上次退回原因：</p>
+                  <p className="text-sm text-red-600">{resubmitItem.approvalRemark}</p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">报销金额（元）</Label>
+                <Input
+                  type="number"
+                  value={resubmitForm.amount}
+                  onChange={(e) => setResubmitForm(f => ({ ...f, amount: e.target.value }))}
+                  placeholder="0.00"
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">费用说明</Label>
+                <Textarea
+                  value={resubmitForm.description}
+                  onChange={(e) => setResubmitForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="费用说明"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResubmitDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmResubmit}
+              disabled={resubmitMutation.isPending}
+            >
+              {resubmitMutation.isPending ? "提交中..." : "重新提交"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
