@@ -890,3 +890,23 @@ export const winbackCoupons = mysqlTable("winback_coupons", {
 });
 export type WinbackCoupon = typeof winbackCoupons.$inferSelect;
 export type InsertWinbackCoupon = typeof winbackCoupons.$inferInsert;
+
+// ============================================================
+// 本地客户表 (local_customers) - 代客下单快捷新建客户
+// ============================================================
+
+export const localCustomers = mysqlTable("local_customers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  customerType: mysqlEnum("customer_type", ["RESTAURANT", "WHOLESALE", "RETAIL", "FACTORY", "OTHER"]).default("RESTAURANT").notNull(),
+  contactName: varchar("contact_name", { length: 128 }),
+  contactPhone: varchar("contact_phone", { length: 32 }),
+  address: text("address"),
+  orgId: int("org_id").default(1).notNull(),
+  createdBy: int("created_by"),
+  createdByName: varchar("created_by_name", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type LocalCustomer = typeof localCustomers.$inferSelect;
+export type InsertLocalCustomer = typeof localCustomers.$inferInsert;

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `local_customers` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `name` varchar(255) NOT NULL,\n  `customer_type` enum('RESTAURANT','WHOLESALE','RETAIL','FACTORY','OTHER') NOT NULL DEFAULT 'RESTAURANT',\n  `contact_name` varchar(128),\n  `contact_phone` varchar(32),\n  `address` text,\n  `org_id` int NOT NULL DEFAULT 1,\n  `created_by` int,\n  `created_by_name` varchar(255),\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute CREATE TABLE IF NOT EXISTS `local_customers` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `name` varchar(255) NOT NULL,\n  `customer_type` enum('RESTAURANT','WHOLESALE','RETAIL','FACTORY','OTHER') NOT NULL DEFAULT 'RESTAURANT',\n  `contact_name` varchar(128),\n  `contact_phone` varchar(32),\n  `address` text,\n  `org_id` int NOT NULL DEFAULT 1,\n  `created_by` int,\n  `created_by_name` varchar(255),\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1765
+}

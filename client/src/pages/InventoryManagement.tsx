@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import {
   Package, AlertTriangle, TrendingUp, ArrowDownUp, Search,
   Warehouse, Truck, Lock, Factory, Zap, Settings2,
-  ArrowUp, ArrowDown, History, RefreshCw
+  ArrowUp, ArrowDown, History, RefreshCw, Plus, Edit3
 } from "lucide-react";
 
 type ViewMode = "dashboard" | "table";
@@ -56,6 +56,26 @@ export default function InventoryManagement() {
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [logsProductId, setLogsProductId] = useState<number | undefined>();
 
+  // 新建 SKU Modal（仅管理员）
+  const [showCreateSkuModal, setShowCreateSkuModal] = useState(false);
+  const [newSkuProductId, setNewSkuProductId] = useState("");
+  const [newSkuProductName, setNewSkuProductName] = useState("");
+  const [newSkuCode, setNewSkuCode] = useState("");
+  const [newSkuUnit, setNewSkuUnit] = useState("包");
+  const [newSkuWarehouse, setNewSkuWarehouse] = useState("WH-001");
+  const [newSkuTotalStock, setNewSkuTotalStock] = useState("0");
+  const [newSkuThreshold, setNewSkuThreshold] = useState("10");
+  const [newSkuIdleCapacity, setNewSkuIdleCapacity] = useState("0");
+  const [newSkuLockedCapacity, setNewSkuLockedCapacity] = useState("0");
+
+  // 产能编辑 Modal（仅管理员）
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [capacityProduct, setCapacityProduct] = useState<any>(null);
+  const [editTotalStock, setEditTotalStock] = useState("");
+  const [editCapacityLocked, setEditCapacityLocked] = useState("");
+
+  const isAdmin = user?.role === 'admin';
+
   const { data: inventoryData, isLoading } = trpc.inventory.getList.useQuery(
     showLowStockOnly ? { lowStockOnly: true } : {}
   );
@@ -79,6 +99,25 @@ export default function InventoryManagement() {
     onSuccess: () => {
       toast.success("ATP 参数更新成功");
       setShowATPModal(false);
+      utils.inventory.getList.invalidate();
+    },
+    onError: (err: any) => toast.error(`更新失败: ${err.message}`),
+  });
+
+  const createSkuMutation = trpc.inventory.createSku.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(data.message || "SKU 创建成功");
+      setShowCreateSkuModal(false);
+      resetCreateSkuForm();
+      utils.inventory.getList.invalidate();
+    },
+    onError: (err: any) => toast.error(`创建失败: ${err.message}`),
+  });
+
+  const updateCapacityMutation = trpc.inventory.updateCapacity.useMutation({
+    onSuccess: () => {
+      toast.success("产能参数更新成功");
+      setShowCapacityModal(false);
       utils.inventory.getList.invalidate();
     },
     onError: (err: any) => toast.error(`更新失败: ${err.message}`),
@@ -150,6 +189,46 @@ export default function InventoryManagement() {
     setShowLogsModal(true);
   };
 
+  const resetCreateSkuForm = () => {
+    setNewSkuProductId(""); setNewSkuProductName(""); setNewSkuCode("");
+    setNewSkuUnit("包"); setNewSkuWarehouse("WH-001"); setNewSkuTotalStock("0");
+    setNewSkuThreshold("10"); setNewSkuIdleCapacity("0"); setNewSkuLockedCapacity("0");
+  };
+
+  const handleCreateSku = () => {
+    if (!newSkuProductId || !newSkuProductName.trim() || !newSkuCode.trim()) {
+      toast.error("请填写商品ID、商品名称和SKU编码");
+      return;
+    }
+    createSkuMutation.mutate({
+      productId: parseInt(newSkuProductId),
+      productName: newSkuProductName.trim(),
+      sku: newSkuCode.trim(),
+      unit: newSkuUnit || '包',
+      warehouseCode: newSkuWarehouse || 'WH-001',
+      totalStock: parseInt(newSkuTotalStock) || 0,
+      lowStockThreshold: parseInt(newSkuThreshold) || 10,
+      dailyIdleCapacity: parseInt(newSkuIdleCapacity) || 0,
+      lockedCapacity: parseInt(newSkuLockedCapacity) || 0,
+    });
+  };
+
+  const openCapacityEdit = (item: any) => {
+    setCapacityProduct(item);
+    setEditTotalStock(String(item.physicalStock || 0));
+    setEditCapacityLocked(String(item.lockedCapacity || 0));
+    setShowCapacityModal(true);
+  };
+
+  const handleCapacityUpdate = () => {
+    if (!capacityProduct) return;
+    updateCapacityMutation.mutate({
+      productId: capacityProduct.productId,
+      totalStock: parseInt(editTotalStock) || 0,
+      lockedCapacity: parseInt(editCapacityLocked) || 0,
+    });
+  };
+
   // ATP 进度条颜色
   const getATPColor = (item: any) => {
     if (item.atp <= 0) return "bg-red-500";
@@ -192,6 +271,12 @@ export default function InventoryManagement() {
             >
               表格视图
             </Button>
+            {isAdmin && (
+              <Button size="sm" onClick={() => setShowCreateSkuModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="w-4 h-4 mr-1" />
+                新建 SKU
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => openLogs()}>
               <History className="w-4 h-4 mr-1" />
               全部流水
@@ -367,9 +452,15 @@ export default function InventoryManagement() {
 
                     {/* 操作按钮 */}
                     <div className="flex gap-1.5 pt-1">
+                      {isAdmin && (
+                        <Button size="sm" variant="outline" className="flex-1 text-xs h-7 border-blue-300 text-blue-600 hover:bg-blue-50" onClick={() => openCapacityEdit(item)}>
+                          <Edit3 className="w-3 h-3 mr-1" />
+                          产能
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={() => openATPEdit(item)}>
                         <Settings2 className="w-3 h-3 mr-1" />
-                        ATP 参数
+                        ATP
                       </Button>
                       <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={() => openAdjust(item)}>
                         <ArrowDownUp className="w-3 h-3 mr-1" />
@@ -437,6 +528,11 @@ export default function InventoryManagement() {
                         <td className="p-3 text-center">{getATPBadge(item)}</td>
                         <td className="p-3 text-center">
                           <div className="flex gap-1 justify-center">
+                            {isAdmin && (
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600" onClick={() => openCapacityEdit(item)} title="编辑产能">
+                                <Edit3 className="w-3 h-3" />
+                              </Button>
+                            )}
                             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => openATPEdit(item)}>
                               <Settings2 className="w-3 h-3" />
                             </Button>
@@ -636,6 +732,133 @@ export default function InventoryManagement() {
               </tbody>
             </table>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ════════ 新建 SKU Modal（仅管理员） ════════ */}
+      <Dialog open={showCreateSkuModal} onOpenChange={setShowCreateSkuModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-blue-600" />
+              新建 SKU
+            </DialogTitle>
+            <DialogDescription>创建新的库存商品（SKU）并设置初始产能参数</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>商品 ID <span className="text-red-500">*</span></Label>
+                <Input type="number" min="1" value={newSkuProductId} onChange={e => setNewSkuProductId(e.target.value)} className="mt-1" placeholder="唯一商品编号" />
+              </div>
+              <div>
+                <Label>SKU 编码 <span className="text-red-500">*</span></Label>
+                <Input value={newSkuCode} onChange={e => setNewSkuCode(e.target.value)} className="mt-1" placeholder="如 QZ-500G-01" />
+              </div>
+            </div>
+            <div>
+              <Label>商品名称 <span className="text-red-500">*</span></Label>
+              <Input value={newSkuProductName} onChange={e => setNewSkuProductName(e.target.value)} className="mt-1" placeholder="商品名称" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>单位</Label>
+                <Input value={newSkuUnit} onChange={e => setNewSkuUnit(e.target.value)} className="mt-1" placeholder="包" />
+              </div>
+              <div>
+                <Label>仓库编码</Label>
+                <Input value={newSkuWarehouse} onChange={e => setNewSkuWarehouse(e.target.value)} className="mt-1" placeholder="WH-001" />
+              </div>
+            </div>
+            <Separator />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="flex items-center gap-1.5"><Warehouse className="w-3.5 h-3.5 text-blue-500" />初始总产能/库存</Label>
+                <Input type="number" min="0" value={newSkuTotalStock} onChange={e => setNewSkuTotalStock(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 text-amber-500" />低库存预警阈值</Label>
+                <Input type="number" min="0" value={newSkuThreshold} onChange={e => setNewSkuThreshold(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="flex items-center gap-1.5"><Factory className="w-3.5 h-3.5 text-purple-500" />闲置产能</Label>
+                <Input type="number" min="0" value={newSkuIdleCapacity} onChange={e => setNewSkuIdleCapacity(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-red-500" />锁定配额</Label>
+                <Input type="number" min="0" value={newSkuLockedCapacity} onChange={e => setNewSkuLockedCapacity(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCreateSkuModal(false); resetCreateSkuForm(); }}>取消</Button>
+            <Button onClick={handleCreateSku} disabled={createSkuMutation.isPending || !newSkuProductId || !newSkuProductName.trim() || !newSkuCode.trim()}>
+              {createSkuMutation.isPending ? "创建中..." : "创建 SKU"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ════════ 产能编辑 Modal（仅管理员） ════════ */}
+      <Dialog open={showCapacityModal} onOpenChange={setShowCapacityModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-blue-600" />
+              编辑总产能 & 锁定配额
+            </DialogTitle>
+            <DialogDescription>
+              {capacityProduct?.productName} ({capacityProduct?.sku})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-3 bg-muted/50 rounded-lg text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">当前总产能</span>
+                <span className="font-medium">{capacityProduct?.physicalStock ?? '-'}</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-muted-foreground">当前锁定配额</span>
+                <span className="font-medium">{capacityProduct?.lockedCapacity ?? '-'}</span>
+              </div>
+            </div>
+            <div>
+              <Label className="flex items-center gap-1.5 text-sm">
+                <Warehouse className="w-3.5 h-3.5 text-blue-500" />
+                总产能 (Total Stock / Capacity)
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                value={editTotalStock}
+                onChange={e => setEditTotalStock(e.target.value)}
+                className="mt-1"
+                placeholder="设置总产能数值"
+              />
+            </div>
+            <div>
+              <Label className="flex items-center gap-1.5 text-sm">
+                <Lock className="w-3.5 h-3.5 text-red-500" />
+                锁定产能/配额 (Locked Capacity)
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                value={editCapacityLocked}
+                onChange={e => setEditCapacityLocked(e.target.value)}
+                className="mt-1"
+                placeholder="为核心大客户预留的固定产能"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCapacityModal(false)}>取消</Button>
+            <Button onClick={handleCapacityUpdate} disabled={updateCapacityMutation.isPending}>
+              {updateCapacityMutation.isPending ? "更新中..." : "保存"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

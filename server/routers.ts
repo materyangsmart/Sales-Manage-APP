@@ -1346,11 +1346,42 @@ export const appRouter = router({
 
   // ─── RC3 Epic 2: 代客下单（销售员用） ──────────────────────────────────────
   salesOrder: router({
-    /** 获取客户列表（销售选择客户用） */
+    /** 获取客户列表（销售选择客户用）——合并后端 API + 本地新建客户 */
     getCustomers: roleProcedure(['admin', 'sales'])
       .input(z.object({ orgId: z.number().default(1) }))
       .query(async ({ input }) => {
-        return customersAPI.list({ orgId: input.orgId, page: 1, pageSize: 1000 });
+        // 1. 从后端 API 获取客户列表
+        let apiCustomers: any[] = [];
+        try {
+          const apiResult = await customersAPI.list({ orgId: input.orgId, page: 1, pageSize: 1000 });
+          apiCustomers = apiResult?.data || [];
+        } catch (e: any) {
+          console.warn('[salesOrder.getCustomers] Backend API failed:', e.message);
+        }
+        // 2. 从本地 local_customers 表获取新建客户
+        let localCustomers: any[] = [];
+        try {
+          const mysql2 = await import('mysql2/promise');
+          const conn = await mysql2.createConnection(process.env.DATABASE_URL!);
+          const [rows] = await conn.query(
+            'SELECT id, name, customer_type AS customerType, contact_name AS contactName, contact_phone AS contactPhone, address, org_id, created_at AS createdAt FROM local_customers WHERE org_id = ? ORDER BY id DESC',
+            [input.orgId]
+          ) as any;
+          await conn.end();
+          // 给本地客户 ID 加偏移避免和后端客户 ID 冲突（本地客户 ID 加 1000000 偏移）
+          localCustomers = (rows || []).map((r: any) => ({
+            ...r,
+            id: r.id + 1000000,
+            _isLocal: true,
+          }));
+        } catch (e: any) {
+          console.warn('[salesOrder.getCustomers] Local DB query failed:', e.message);
+        }
+        // 3. 合并并返回
+        return {
+          data: [...localCustomers, ...apiCustomers],
+          total: apiCustomers.length + localCustomers.length,
+        };
       }),
 
     /** 快捷新建客户（不中断下单心流） */
@@ -1364,44 +1395,52 @@ export const appRouter = router({
         orgId: z.number().default(1),
       }))
       .mutation(async ({ ctx, input }) => {
-        // 本地创建客户记录（后端 customersAPI 不提供 create 方法，使用本地数据库）
-        const { getDb } = await import('./db');
-        const db = await getDb();
-        if (!db) {
-          // 数据库不可用时返回临时 ID
-          return {
-            success: true,
-            id: Date.now(),
-            name: input.name,
-            customerType: input.customerType,
-            message: '客户创建成功（临时）',
-          };
-        }
+        // 写入 local_customers 表，确保 getCustomers 能查到
+        const mysql2 = await import('mysql2/promise');
+        let conn;
         try {
-          const mysql2 = await import('mysql2/promise');
-          const conn = await mysql2.createConnection(process.env.DATABASE_URL!);
+          conn = await mysql2.createConnection(process.env.DATABASE_URL!);
           const [result] = await conn.query(
-            `INSERT INTO customer_credit_scores (customer_id, customer_name, credit_score, credit_limit, used_credit, updated_at)
-             VALUES (?, ?, 80, 100000, 0, NOW())`,
-            [Date.now(), input.name]
+            `INSERT INTO local_customers (name, customer_type, contact_name, contact_phone, address, org_id, created_by, created_by_name)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              input.name,
+              input.customerType,
+              input.contactName || null,
+              input.contactPhone || null,
+              input.address || null,
+              input.orgId,
+              ctx.user?.id || null,
+              ctx.user?.name || null,
+            ]
           ) as any;
+          const newId = result.insertId;
+          // 同时写入 credit_scores 表
+          try {
+            await conn.query(
+              `INSERT INTO customer_credit_scores (customer_id, customer_name, credit_score, credit_limit, used_credit, updated_at)
+               VALUES (?, ?, 80, 100000, 0, NOW())`,
+              [newId, input.name]
+            );
+          } catch (e: any) {
+            console.warn('[salesOrder.createCustomer] credit_scores insert skipped:', e.message);
+          }
           await conn.end();
           return {
             success: true,
-            id: result.insertId || Date.now(),
+            id: newId,
             name: input.name,
             customerType: input.customerType,
+            contactPhone: input.contactPhone,
             message: '客户创建成功',
           };
         } catch (error: any) {
-          console.warn('[salesOrder.createCustomer] DB insert failed:', error.message);
-          return {
-            success: true,
-            id: Date.now(),
-            name: input.name,
-            customerType: input.customerType,
-            message: '客户创建成功（本地模式）',
-          };
+          if (conn) await conn.end().catch(() => {});
+          console.error('[salesOrder.createCustomer] DB insert failed:', error.message);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `创建客户失败: ${error.message}`,
+          });
         }
       }),
 
@@ -1608,6 +1647,122 @@ export const appRouter = router({
           input.remark || undefined,
           input.batchNo || undefined,
         );
+      }),
+
+    /** 新建 SKU（仅管理员） */
+    createSku: roleProcedure(['admin'])
+      .input(z.object({
+        productId: z.number(),
+        productName: z.string().min(1, '商品名称不能为空'),
+        sku: z.string().min(1, 'SKU 编码不能为空'),
+        unit: z.string().default('包'),
+        warehouseCode: z.string().default('WH-001'),
+        totalStock: z.number().min(0).default(0),
+        lowStockThreshold: z.number().min(0).default(10),
+        dailyIdleCapacity: z.number().min(0).default(0),
+        lockedCapacity: z.number().min(0).default(0),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql2 = await import('mysql2/promise');
+        const conn = await mysql2.createConnection(process.env.DATABASE_URL!);
+        try {
+          // 检查 productId 是否已存在
+          const [existing] = await conn.query(
+            'SELECT id FROM inventory WHERE product_id = ?',
+            [input.productId]
+          ) as any;
+          if (existing && existing.length > 0) {
+            throw new TRPCError({ code: 'CONFLICT', message: `商品 ID ${input.productId} 已存在库存系统中` });
+          }
+          await conn.query(
+            `INSERT INTO inventory (product_id, product_name, sku, unit, warehouse_code, total_stock, reserved_stock, available_stock, low_stock_threshold, daily_idle_capacity, locked_capacity, pending_delivery)
+             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 0)`,
+            [
+              input.productId,
+              input.productName,
+              input.sku,
+              input.unit,
+              input.warehouseCode,
+              input.totalStock,
+              input.totalStock, // available = total (no reserved yet)
+              input.lowStockThreshold,
+              input.dailyIdleCapacity,
+              input.lockedCapacity,
+            ]
+          );
+          await conn.end();
+          return { success: true, message: `SKU "${input.sku}" 创建成功` };
+        } catch (error: any) {
+          await conn.end().catch(() => {});
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+      }),
+
+    /** 更新总产能和锁定产能/配额（仅管理员） */
+    updateCapacity: roleProcedure(['admin'])
+      .input(z.object({
+        productId: z.number(),
+        totalStock: z.number().min(0).optional(),
+        lockedCapacity: z.number().min(0).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql2 = await import('mysql2/promise');
+        const conn = await mysql2.createConnection(process.env.DATABASE_URL!);
+        try {
+          // 获取当前库存行
+          const [rows] = await conn.query(
+            'SELECT id, total_stock, reserved_stock, available_stock, locked_capacity FROM inventory WHERE product_id = ? FOR UPDATE',
+            [input.productId]
+          ) as any;
+          if (!rows || rows.length === 0) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: '商品不在库存系统中' });
+          }
+          const inv = rows[0];
+          const setClauses: string[] = [];
+          const values: any[] = [];
+          if (input.totalStock !== undefined) {
+            setClauses.push('total_stock = ?');
+            values.push(input.totalStock);
+            // 重新计算 available_stock = newTotal - reserved
+            const newAvailable = input.totalStock - inv.reserved_stock;
+            setClauses.push('available_stock = ?');
+            values.push(Math.max(0, newAvailable));
+          }
+          if (input.lockedCapacity !== undefined) {
+            setClauses.push('locked_capacity = ?');
+            values.push(input.lockedCapacity);
+          }
+          if (setClauses.length === 0) {
+            return { success: false, message: '未指定更新字段' };
+          }
+          setClauses.push('updated_at = NOW()');
+          values.push(input.productId);
+          await conn.query(
+            `UPDATE inventory SET ${setClauses.join(', ')} WHERE product_id = ?`,
+            values
+          );
+          // 写入操作日志
+          await conn.query(
+            `INSERT INTO inventory_log (inventory_id, product_id, type, quantity, before_stock, after_stock, operator_id, operator_name, remark)
+             VALUES (?, ?, 'ADJUST', 0, ?, ?, ?, ?, ?)`,
+            [
+              inv.id,
+              input.productId,
+              inv.total_stock,
+              input.totalStock ?? inv.total_stock,
+              ctx.user?.id || null,
+              ctx.user?.name || 'Admin',
+              `管理员修改产能: 总产能=${input.totalStock ?? '未变'}, 锁定配额=${input.lockedCapacity ?? '未变'}`,
+            ]
+          );
+          await conn.end();
+          return { success: true, message: '产能参数更新成功' };
+        } catch (error: any) {
+          await conn.end().catch(() => {});
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
       }),
   }),
 

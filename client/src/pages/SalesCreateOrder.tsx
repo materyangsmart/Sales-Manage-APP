@@ -174,17 +174,18 @@ export default function SalesCreateOrder() {
   });
 
   const createCustomer = trpc.salesOrder.createCustomer.useMutation({
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       toast.success(`客户 "${data.name || newCustomerName}" 创建成功`);
-      // 修复：立即更新选中客户（RC6 状态同步 Bug 修复）
-      setSelectedCustomerId(data.id);
-      setSelectedCustomerType(newCustomerType);
       setShowNewCustomerModal(false);
       // 重置表单
       setNewCustomerName(""); setNewCustomerType("RESTAURANT");
       setNewContactName(""); setNewContactPhone(""); setNewAddress("");
-      // 刷新客户列表
-      utils.salesOrder.getCustomers.invalidate();
+      // 先刷新客户列表，等待完成后再设置选中客户
+      await utils.salesOrder.getCustomers.invalidate();
+      // 本地客户 ID 加了 1000000 偏移，需要用偏移后的 ID
+      const localId = data.id >= 1000000 ? data.id : data.id + 1000000;
+      setSelectedCustomerId(localId);
+      setSelectedCustomerType(data.customerType || newCustomerType);
     },
     onError: (err: any) => {
       toast.error(`创建客户失败: ${err.message}`);
@@ -398,6 +399,10 @@ export default function SalesCreateOrder() {
   // ── 新建客户 ──
   const handleCreateCustomer = () => {
     if (!newCustomerName.trim()) { toast.error("请输入客户名称"); return; }
+    if (!newContactPhone.trim()) { toast.error("请输入联系电话"); return; }
+    // 手机号格式校验（中国大陆手机号）
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    if (!phoneRegex.test(newContactPhone.trim())) { toast.error("请输入正确的手机号码（11位）"); return; }
     createCustomer.mutate({
       name: newCustomerName.trim(),
       customerType: newCustomerType as any,
@@ -1180,8 +1185,11 @@ export default function SalesCreateOrder() {
                 <Input placeholder="联系人姓名" value={newContactName} onChange={e => setNewContactName(e.target.value)} className="mt-1" />
               </div>
               <div>
-                <Label>联系电话</Label>
-                <Input placeholder="手机号码" value={newContactPhone} onChange={e => setNewContactPhone(e.target.value)} className="mt-1" />
+                <Label>联系电话 <span className="text-red-500">*</span></Label>
+                <Input placeholder="手机号码（11位）" value={newContactPhone} onChange={e => setNewContactPhone(e.target.value)} className={`mt-1 ${newContactPhone && !/^1[3-9]\d{9}$/.test(newContactPhone) ? 'border-red-400 focus-visible:ring-red-400' : ''}`} />
+                {newContactPhone && !/^1[3-9]\d{9}$/.test(newContactPhone) && (
+                  <p className="text-xs text-red-500 mt-1">请输入正确的11位手机号</p>
+                )}
               </div>
             </div>
             <div>
@@ -1191,7 +1199,7 @@ export default function SalesCreateOrder() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewCustomerModal(false)}>取消</Button>
-            <Button onClick={handleCreateCustomer} disabled={createCustomer.isPending || !newCustomerName.trim()}>
+            <Button onClick={handleCreateCustomer} disabled={createCustomer.isPending || !newCustomerName.trim() || !newContactPhone.trim() || !/^1[3-9]\d{9}$/.test(newContactPhone.trim())}>
               {createCustomer.isPending ? "创建中..." : "保存并选中"}
             </Button>
           </DialogFooter>
