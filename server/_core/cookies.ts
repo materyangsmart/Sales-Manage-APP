@@ -23,26 +23,19 @@ function isSecureRequest(req: Request) {
 
 export function getSessionCookieOptions(
   req: Request
-): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
+): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure" | "maxAge"> {
+  const secure = isSecureRequest(req);
 
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
+  // 关键修复：sameSite: "none" 必须搭配 secure: true（即 HTTPS）。
+  // 在 HTTP 环境下（如阿里云直连 IP），使用 "lax" 以确保浏览器正确保存 Cookie。
+  // "lax" 允许同站导航携带 Cookie，完全满足登录场景需求。
+  const sameSite: "none" | "lax" = secure ? "none" : "lax";
 
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite,
+    secure,
+    maxAge: 1000 * 60 * 60 * 24 * 365, // 1 年
   };
 }

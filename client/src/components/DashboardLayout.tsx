@@ -44,6 +44,10 @@ const menuItems = [
   { icon: Trophy, label: "销售KPI看板", path: "/admin/sales-performance" },
   { icon: ClipboardList, label: "财务审核台", path: "/finance/expenses" },
   { icon: BarChart3, label: "应收账龄", path: "/finance/ar-aging" },
+];
+
+// 管理员专属菜单（底部分组，仅 admin 角色可见）
+const adminMenuItems = [
   { icon: UserCog, label: "用户管理", path: "/admin/users" },
 ];
 
@@ -175,7 +179,7 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
+          <SidebarContent className="gap-0 overflow-y-auto">
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
@@ -196,6 +200,34 @@ function DashboardLayoutContent({
                 );
               })}
             </SidebarMenu>
+            {/* 管理员专属菜单 */}
+            {user?.role === 'admin' && (
+              <>
+                <div className="px-4 pt-4 pb-1">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">系统管理</span>
+                </div>
+                <SidebarMenu className="px-2 py-1">
+                  {adminMenuItems.map(item => {
+                    const isActive = location === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => setLocation(item.path)}
+                          tooltip={item.label}
+                          className={`h-10 transition-all font-normal`}
+                        >
+                          <item.icon
+                            className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                          />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </>
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-3">

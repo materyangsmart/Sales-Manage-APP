@@ -1196,3 +1196,11 @@
 - [x] 前端：App.tsx 注册 /admin/users 路由
 - [x] E2E 测试（11/11 passed）
 - [x] 推送 GitHub main 分支
+
+## Bug 修复：电脑端登录循环 + 手机端用户管理不可见
+
+- [x] 分析电脑端登录后立即弹回登录页的根因（Cookie SameSite/Secure/Path 设置）
+- [x] 修复 Cookie 设置：HTTP 环境下 sameSite 改为 lax（不再要求 secure）
+- [x] 修复手机端侧边栏：添加 overflow-y-auto + 用户管理移入“系统管理”分组（仅 admin 可见）
+- [x] TypeScript 0 错误验证
+- [x] 推送 GitHub main 分支
