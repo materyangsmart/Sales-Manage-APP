@@ -1204,3 +1204,15 @@
 - [x] 修复手机端侧边栏：添加 overflow-y-auto + 用户管理移入“系统管理”分组（仅 admin 可见）
 - [x] TypeScript 0 错误验证
 - [x] 推送 GitHub main 分支
+
+## RBAC 权限体系重构
+
+- [x] 后端：扩展 users 表 role 枚举（admin/sales/fulfillment/finance/auditor）
+- [x] 后端：创建角色权限映射表（shared/rbac.ts）
+- [x] 后端：API Guard 中间件（roleProcedure 拦截未授权请求返回 403）
+- [x] 后端：所有 125 个 tRPC 路由挂载角色校验
+- [x] 前端：用户管理表单补齐 5 大角色下拉选择框（创建+编辑）
+- [x] 前端：侧边栏菜单按登录用户角色动态过滤（按业务分组）
+- [x] 前端：路由级守卫（后端 API Guard 返回 403）
+- [x] E2E 测试：角色权限矩阵验证（18/18 passed）
+- [x] 推送 GitHub main 分支

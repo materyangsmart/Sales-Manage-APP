@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, roleProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { ordersAPI, invoicesAPI, paymentsAPI, applyAPI, auditLogsAPI, customersAPI, commissionRulesAPI, ceoRadarAPI, antiFraudAPI, creditAPI, governanceAPI, complaintAPI, employeeAPI, myPerformanceAPI, traceabilityAPI, feedbackAPI, rbacAPI, workflowAPI, notificationAPI, fileStorageAPI } from './backend-api';
@@ -42,7 +42,7 @@ export const appRouter = router({
 
   // CEO router - 经营异常雷达
   ceo: router({
-    getRadarData: protectedProcedure.query(async ({ ctx }) => {
+    getRadarData: roleProcedure(['admin', 'auditor']).query(async ({ ctx }) => {
       // 限制仅admin角色可访问
       if (ctx.user?.role !== 'admin') {
         throw new TRPCError({ code: 'FORBIDDEN', message: '仅CEO可访问此功能' });
@@ -88,7 +88,7 @@ export const appRouter = router({
   // INTERNAL_SERVICE_TOKEN只在server端使用，不会暴露到前端
   
   orders: router({
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         orgId: z.number(),
         status: z.string().optional(),
@@ -121,7 +121,7 @@ export const appRouter = router({
         }
       }),
     
-    approve: protectedProcedure
+    approve: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         orderId: z.number(),
         remark: z.string().optional(),
@@ -130,7 +130,7 @@ export const appRouter = router({
         return ordersAPI.approve(input.orderId, input.remark);
       }),
     
-    reject: protectedProcedure
+    reject: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         orderId: z.number(),
         remark: z.string().optional(),
@@ -139,7 +139,7 @@ export const appRouter = router({
         return ordersAPI.reject(input.orderId, input.remark);
       }),
     
-    fulfill: protectedProcedure
+    fulfill: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         orderId: z.number(),
         batchNo: z.string().optional(),
@@ -148,12 +148,12 @@ export const appRouter = router({
         return ordersAPI.fulfill(input.orderId, input.batchNo);
       }),
 
-    getAvailableBatches: protectedProcedure
+    getAvailableBatches: roleProcedure(['admin', 'sales', 'fulfillment'])
       .query(async () => {
         return ordersAPI.getAvailableBatches();
       }),
     
-    get: protectedProcedure
+    get: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         orderId: z.number(),
       }))
@@ -178,7 +178,7 @@ export const appRouter = router({
   }),
   
   invoices: router({
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'finance'])
       .input(z.object({
         orgId: z.number(),
         status: z.string().optional(),
@@ -189,7 +189,7 @@ export const appRouter = router({
         return invoicesAPI.list(input);
       }),
     
-    get: protectedProcedure
+    get: roleProcedure(['admin', 'finance'])
       .input(z.object({
         invoiceId: z.number(),
       }))
@@ -199,7 +199,7 @@ export const appRouter = router({
   }),
   
   payments: router({
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'finance'])
       .input(z.object({
         orgId: z.number(),
         appliedStatus: z.string().optional(),
@@ -210,7 +210,7 @@ export const appRouter = router({
         return paymentsAPI.list(input);
       }),
     
-    get: protectedProcedure
+    get: roleProcedure(['admin', 'finance'])
       .input(z.object({
         paymentId: z.number(),
       }))
@@ -219,7 +219,7 @@ export const appRouter = router({
       }),
 
     /** RC6 Epic 3: 核邀发票（创建收款并应用到发票） */
-    writeOff: protectedProcedure
+    writeOff: roleProcedure(['admin', 'finance'])
       .input(z.object({
         invoiceId: z.number(),
         amount: z.number().positive(),
@@ -239,7 +239,7 @@ export const appRouter = router({
   }),
   
   arApply: router({
-    create: protectedProcedure
+    create: roleProcedure(['admin', 'finance'])
       .input(z.object({
         paymentId: z.number(),
         invoiceId: z.number(),
@@ -262,7 +262,7 @@ export const appRouter = router({
      * @param input.endDate - 统计结束日期 (ISO 8601格式)
      * @param input.ruleVersion - 提成规则版本（默认使用2026-V1）
      */
-    getKpiStats: protectedProcedure
+    getKpiStats: roleProcedure(['admin', 'sales'])
       .input(z.object({
         orgId: z.number(),
         startDate: z.string(), // ISO 8601 date string
@@ -333,7 +333,7 @@ export const appRouter = router({
     /**
      * 获取订单详情列表（用于KPI钻取）
      */
-    getOrderDetails: protectedProcedure
+    getOrderDetails: roleProcedure(['admin', 'sales'])
       .input(z.object({
         orgId: z.number(),
         startDate: z.string(),
@@ -391,7 +391,7 @@ export const appRouter = router({
     /**
      * 获取新增客户详情列表（用于KPI钻取）
      */
-    getNewCustomerDetails: protectedProcedure
+    getNewCustomerDetails: roleProcedure(['admin', 'sales'])
       .input(z.object({
         orgId: z.number(),
         startDate: z.string(),
@@ -444,7 +444,7 @@ export const appRouter = router({
     /**
      * 获取当前用户的个人业绩数据（销售员专用）
      */
-    myPerformance: protectedProcedure
+    myPerformance: roleProcedure(['admin', 'sales'])
       .query(async ({ ctx }) => {
         // 通过backend API获取当前用户的业绩数据
         const userId = ctx.user?.id || 0;
@@ -452,7 +452,7 @@ export const appRouter = router({
       }),
 
     /** RC1 Epic 1: 手动触发月末提成结算（Cron Job 入口） */
-    triggerSettlement: protectedProcedure
+    triggerSettlement: roleProcedure(['admin', 'sales'])
       .input(z.object({ period: z.string().optional() }))
       .mutation(async ({ input }) => {
         const { runMonthlyCommissionSettlement } = await import('./commission-engine-v2');
@@ -460,7 +460,7 @@ export const appRouter = router({
       }),
 
     /** RC1 Epic 1: 查询某销售的提成明细列表 */
-    listBySales: protectedProcedure
+    listBySales: roleProcedure(['admin', 'sales'])
       .input(z.object({ salesId: z.number() }))
       .query(async ({ input }) => {
         const { getDb } = await import('./db');
@@ -472,7 +472,7 @@ export const appRouter = router({
       }),
 
     /** RC1 Epic 1: 查询某周期的全部提成记录 */
-    listByPeriod: protectedProcedure
+    listByPeriod: roleProcedure(['admin', 'sales'])
       .input(z.object({ period: z.string() }))
       .query(async ({ input }) => {
         const { getDb } = await import('./db');
@@ -486,7 +486,7 @@ export const appRouter = router({
 
   /** RC1 Epic 1: 打款凭证路由 */
   paymentReceipt: router({
-    submit: protectedProcedure
+    submit: roleProcedure(['admin', 'finance'])
       .input(z.object({
         orderId: z.number(),
         amount: z.number().positive(),
@@ -498,27 +498,27 @@ export const appRouter = router({
         const { paymentReceiptService } = await import('./commission-engine-v2');
         return paymentReceiptService.submit({
           ...input,
-          submittedBy: ctx.user.id,
-          submittedByName: ctx.user.name ?? 'Unknown',
+          submittedBy: ctx.user!.id,
+          submittedByName: ctx.user!.name ?? 'Unknown',
         });
       }),
-    listByOrder: protectedProcedure
+    listByOrder: roleProcedure(['admin', 'finance'])
       .input(z.object({ orderId: z.number() }))
       .query(async ({ input }) => {
         const { paymentReceiptService } = await import('./commission-engine-v2');
         return paymentReceiptService.listByOrder(input.orderId);
       }),
-    verify: protectedProcedure
+    verify: roleProcedure(['admin', 'finance'])
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const { paymentReceiptService } = await import('./commission-engine-v2');
-        return paymentReceiptService.verify(input.id, ctx.user.id, ctx.user.name ?? 'Unknown');
+        return paymentReceiptService.verify(input.id, ctx.user!.id, ctx.user!.name ?? 'Unknown');
       }),
-    reject: protectedProcedure
+    reject: roleProcedure(['admin', 'finance'])
       .input(z.object({ id: z.number(), rejectReason: z.string() }))
       .mutation(async ({ input, ctx }) => {
         const { paymentReceiptService } = await import('./commission-engine-v2');
-        return paymentReceiptService.reject(input.id, ctx.user.id, ctx.user.name ?? 'Unknown', input.rejectReason);
+        return paymentReceiptService.reject(input.id, ctx.user!.id, ctx.user!.name ?? 'Unknown', input.rejectReason);
       }),
   }),
 
@@ -671,7 +671,7 @@ export const appRouter = router({
   }),
 
   auditLogs: router({
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         userId: z.number().optional(),
         resourceType: z.string().optional(),
@@ -688,7 +688,7 @@ export const appRouter = router({
         return auditLogsAPI.list(input);
       }),
     
-    trace: protectedProcedure
+    trace: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         resourceType: z.string(),
         resourceId: z.number(),
@@ -750,7 +750,7 @@ export const appRouter = router({
 
   // P22: Anti-Fraud & Deviation Warning System - 真实backend API调用
   antiFraud: router({
-    getPriceAnomalies: protectedProcedure
+    getPriceAnomalies: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
       }))
@@ -766,7 +766,7 @@ export const appRouter = router({
         }
       }),
 
-    approvePriceAnomaly: protectedProcedure
+    approvePriceAnomaly: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         id: z.number(),
         specialReason: z.string().min(10),
@@ -784,7 +784,7 @@ export const appRouter = router({
         }
       }),
 
-    rejectPriceAnomaly: protectedProcedure
+    rejectPriceAnomaly: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         id: z.number(),
       }))
@@ -801,7 +801,7 @@ export const appRouter = router({
         }
       }),
 
-    getSettlementAudits: protectedProcedure
+    getSettlementAudits: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         suspiciousOnly: z.boolean().default(false),
       }))
@@ -820,7 +820,7 @@ export const appRouter = router({
 
   // P24: Governance - 职能隔离与账户自动化
   governance: router({
-    getEmployees: protectedProcedure
+    getEmployees: roleProcedure(['admin', 'auditor'])
       .input(z.object({ orgId: z.number().default(1) }))
       .query(async ({ ctx, input }) => {
         if (ctx.user?.role !== 'admin') {
@@ -834,7 +834,7 @@ export const appRouter = router({
         }
       }),
 
-    getEmployee: protectedProcedure
+    getEmployee: roleProcedure(['admin', 'auditor'])
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
         if (ctx.user?.role !== 'admin') {
@@ -848,7 +848,7 @@ export const appRouter = router({
         }
       }),
 
-    createEmployee: protectedProcedure
+    createEmployee: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         orgId: z.number().default(1),
         name: z.string().min(2),
@@ -867,7 +867,7 @@ export const appRouter = router({
         }
       }),
 
-    updateEmployeePosition: protectedProcedure
+    updateEmployeePosition: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         employeeId: z.number(),
         positionCode: z.string(),
@@ -884,7 +884,7 @@ export const appRouter = router({
         }
       }),
 
-    getPositionTemplates: protectedProcedure
+    getPositionTemplates: roleProcedure(['admin', 'auditor'])
       .query(async ({ ctx }) => {
         if (ctx.user?.role !== 'admin') {
           throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员可访问' });
@@ -897,7 +897,7 @@ export const appRouter = router({
         }
       }),
 
-    getCommissionRules: protectedProcedure
+    getCommissionRules: roleProcedure(['admin', 'auditor'])
       .query(async ({ ctx }) => {
         try {
           return await governanceAPI.getCommissionRulesDisplay();
@@ -910,7 +910,7 @@ export const appRouter = router({
   // ─── RBAC 权限管理 ──────────────────────────────────────────────────────────
   rbac: router({
     /** 获取所有角色列表 */
-    getRoles: protectedProcedure.query(async () => {
+    getRoles: roleProcedure(['admin']).query(async () => {
       try {
         return await rbacAPI.getRoles();
       } catch (e: any) {
@@ -918,7 +918,7 @@ export const appRouter = router({
       }
     }),
     /** 获取组织树 */
-    getOrgTree: protectedProcedure.query(async () => {
+    getOrgTree: roleProcedure(['admin']).query(async () => {
       try {
         return await rbacAPI.getOrgTree();
       } catch (e: any) {
@@ -926,7 +926,7 @@ export const appRouter = router({
       }
     }),
     /** 获取用户列表（含角色信息） */
-    getUsers: protectedProcedure
+    getUsers: roleProcedure(['admin'])
       .input(z.object({ orgId: z.number().optional(), page: z.number().optional(), pageSize: z.number().optional() }).optional())
       .query(async ({ input }) => {
         try {
@@ -936,7 +936,7 @@ export const appRouter = router({
         }
       }),
     /** 为用户分配角色 */
-    assignRole: protectedProcedure
+    assignRole: roleProcedure(['admin'])
       .input(z.object({ userId: z.number(), roleId: z.number(), orgId: z.number().optional() }))
       .mutation(async ({ input }) => {
         try {
@@ -947,7 +947,7 @@ export const appRouter = router({
         }
       }),
     /** 移除用户角色 */
-    removeUserRole: protectedProcedure
+    removeUserRole: roleProcedure(['admin'])
       .input(z.object({ userId: z.number(), roleId: z.number() }))
       .mutation(async ({ input }) => {
         try {
@@ -958,7 +958,7 @@ export const appRouter = router({
         }
       }),
     /** 更新用户所属部门 */
-    updateUserOrg: protectedProcedure
+    updateUserOrg: roleProcedure(['admin'])
       .input(z.object({ userId: z.number(), orgId: z.number() }))
       .mutation(async ({ input }) => {
         try {
@@ -969,7 +969,7 @@ export const appRouter = router({
         }
       }),
     /** 获取 WebSocket 专用 JWT Token */
-    getWsToken: protectedProcedure.query(async () => {
+    getWsToken: roleProcedure(['admin']).query(async () => {
       try {
         return await rbacAPI.getWsToken();
       } catch (e: any) {
@@ -981,7 +981,7 @@ export const appRouter = router({
   // ─── Workflow 审批工作台 ────────────────────────────────────────────────────
   workflow: router({
     /** 获取我的待办列表 */
-    getMyTodos: protectedProcedure
+    getMyTodos: roleProcedure(['admin'])
       .input(z.object({ page: z.number().optional(), pageSize: z.number().optional() }).optional())
       .query(async ({ input }) => {
         try {
@@ -991,7 +991,7 @@ export const appRouter = router({
         }
       }),
     /** 审批通过 */
-    approve: protectedProcedure
+    approve: roleProcedure(['admin'])
       .input(z.object({ instanceId: z.number(), comment: z.string().min(1, '审批意见不能为空') }))
       .mutation(async ({ input }) => {
         try {
@@ -1001,7 +1001,7 @@ export const appRouter = router({
         }
       }),
     /** 审批拒绝 */
-    reject: protectedProcedure
+    reject: roleProcedure(['admin'])
       .input(z.object({ instanceId: z.number(), comment: z.string().min(1, '拒绝原因不能为空') }))
       .mutation(async ({ input }) => {
         try {
@@ -1011,7 +1011,7 @@ export const appRouter = router({
         }
       }),
     /** 获取流程实例详情（含审批日志） */
-    getInstance: protectedProcedure
+    getInstance: roleProcedure(['admin'])
       .input(z.object({ instanceId: z.number() }))
       .query(async ({ input }) => {
         try {
@@ -1021,7 +1021,7 @@ export const appRouter = router({
         }
       }),
     /** 根据业务单据查询流程实例 */
-    getInstanceByBusiness: protectedProcedure
+    getInstanceByBusiness: roleProcedure(['admin'])
       .input(z.object({ businessType: z.string(), businessId: z.number() }))
       .query(async ({ input }) => {
         try {
@@ -1201,7 +1201,7 @@ export const appRouter = router({
   /** BI Dashboard — CEO 战情指挥室聚合 API */
   biDashboard: router({
     /** 获取完整的 BI 大屏数据（单次请求聚合） */
-    getData: protectedProcedure
+    getData: roleProcedure(['admin'])
       .input(z.object({
         startDate: z.string().optional(),
         endDate: z.string().optional(),
@@ -1347,14 +1347,14 @@ export const appRouter = router({
   // ─── RC3 Epic 2: 代客下单（销售员用） ──────────────────────────────────────
   salesOrder: router({
     /** 获取客户列表（销售选择客户用） */
-    getCustomers: protectedProcedure
+    getCustomers: roleProcedure(['admin', 'sales'])
       .input(z.object({ orgId: z.number().default(1) }))
       .query(async ({ input }) => {
         return customersAPI.list({ orgId: input.orgId, page: 1, pageSize: 1000 });
       }),
 
     /** 快捷新建客户（不中断下单心流） */
-    createCustomer: protectedProcedure
+    createCustomer: roleProcedure(['admin', 'sales'])
       .input(z.object({
         name: z.string().min(2, '客户名称至少2个字符'),
         customerType: z.enum(['RESTAURANT', 'WHOLESALE', 'RETAIL', 'FACTORY', 'OTHER']).default('RESTAURANT'),
@@ -1406,7 +1406,7 @@ export const appRouter = router({
       }),
 
     /** 代客下单（RC5 重构：支持完整物流信息） */
-    createForCustomer: protectedProcedure
+    createForCustomer: roleProcedure(['admin', 'sales'])
       .input(z.object({
         customerId: z.number(),
         items: z.array(z.object({
@@ -1467,7 +1467,7 @@ export const appRouter = router({
   // ─── RC3 Epic 3: 订单履约全链路 ───────────────────────────────────────────
   fulfillment: router({
     /** 获取履约看板数据（按状态分组） */
-    getDashboard: protectedProcedure
+    getDashboard: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({ orgId: z.number().default(1) }))
       .query(async ({ input }) => {
         const statuses = ['APPROVED', 'PRODUCTION', 'SHIPPED', 'COMPLETED'];
@@ -1484,7 +1484,7 @@ export const appRouter = router({
       }),
 
     /** 订单状态流转 */
-    updateStatus: protectedProcedure
+    updateStatus: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         orderId: z.number(),
         status: z.enum(['PRODUCTION', 'SHIPPED', 'COMPLETED']),
@@ -1507,7 +1507,7 @@ export const appRouter = router({
       }),
 
     /** 获取可用批次（用于发货时选择） */
-    getAvailableBatches: protectedProcedure.query(async () => {
+    getAvailableBatches: roleProcedure(['admin', 'fulfillment']).query(async () => {
       try {
         return await ordersAPI.getAvailableBatches();
       } catch {
@@ -1525,21 +1525,21 @@ export const appRouter = router({
   // ─── RC4 Epic 1: 智能仓储与防超卖 ────────────────────────────────────────
   inventory: router({
     /** 获取库存列表 */
-    getList: protectedProcedure
+    getList: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({ lowStockOnly: z.boolean().optional() }).optional())
       .query(async ({ input }) => {
         return getInventoryList(input || {});
       }),
 
     /** 获取出入库流水 */
-    getLogs: protectedProcedure
+    getLogs: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({ productId: z.number().optional(), limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         return getInventoryLogs(input?.productId, input?.limit);
       }),
 
     /** 库存预扣减（下单时调用） */
-    reserve: protectedProcedure
+    reserve: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         items: z.array(z.object({
           productId: z.number(),
@@ -1557,7 +1557,7 @@ export const appRouter = router({
       }),
 
     /** 释放库存预扣减 */
-    release: protectedProcedure
+    release: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         items: z.array(z.object({
           productId: z.number(),
@@ -1570,7 +1570,7 @@ export const appRouter = router({
       }),
 
     /** 更新 ATP 参数（待交付量、锁定配额、闲置产能） */
-    updateATP: protectedProcedure
+    updateATP: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         productId: z.number(),
         pendingDelivery: z.number().min(0).optional(),
@@ -1590,7 +1590,7 @@ export const appRouter = router({
       }),
 
     /** 手动调整库存（入库/出库/盘点） */
-    adjust: protectedProcedure
+    adjust: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         productId: z.number(),
         adjustType: z.enum(['INBOUND', 'OUTBOUND', 'ADJUST']),
@@ -1614,7 +1614,7 @@ export const appRouter = router({
   // ─── RC4 Epic 2: B2B 信用额度控制 ────────────────────────────────────────
   credit: router({
     /** 信用额度校验（下单前调用） */
-    check: protectedProcedure
+    check: roleProcedure(['admin', 'finance'])
       .input(z.object({
         customerId: z.number(),
         orderAmount: z.number(),
@@ -1629,14 +1629,14 @@ export const appRouter = router({
       }),
 
     /** 获取信用超限特批列表 */
-    getOverrideList: protectedProcedure
+    getOverrideList: roleProcedure(['admin', 'finance'])
       .input(z.object({ status: z.string().optional() }).optional())
       .query(async ({ input }) => {
         return getCreditOverrideList(input?.status);
       }),
 
     /** 审批信用超限特批 */
-    approveOverride: protectedProcedure
+    approveOverride: roleProcedure(['admin', 'finance'])
       .input(z.object({
         approvalId: z.number(),
         remark: z.string().optional(),
@@ -1651,7 +1651,7 @@ export const appRouter = router({
       }),
 
     /** 拒绝信用超限特批 */
-    rejectOverride: protectedProcedure
+    rejectOverride: roleProcedure(['admin', 'finance'])
       .input(z.object({
         approvalId: z.number(),
         remark: z.string().optional(),
@@ -1669,7 +1669,7 @@ export const appRouter = router({
   // ─── RC4 Epic 2: 月结账单 ─────────────────────────────────────────────────
   billing: router({
     /** 获取月结账单列表 */
-    getStatements: protectedProcedure
+    getStatements: roleProcedure(['admin', 'finance'])
       .input(z.object({
         customerId: z.number().optional(),
         period: z.string().optional(),
@@ -1679,7 +1679,7 @@ export const appRouter = router({
       }),
 
     /** 手动触发月结账单生成 */
-    generate: protectedProcedure.mutation(async () => {
+    generate: roleProcedure(['admin', 'finance']).mutation(async () => {
       return generateMonthlyBillingStatements();
     }),
   }),
@@ -1687,7 +1687,7 @@ export const appRouter = router({
   // ─── RC4 Epic 3: AI Copilot 智能助手 ──────────────────────────────────────
   aiCopilot: router({
     /** NL2SQL 自然语言查询 */
-    ask: protectedProcedure
+    ask: roleProcedure(['admin'])
       .input(z.object({
         question: z.string().min(2).max(500),
       }))
@@ -1699,7 +1699,7 @@ export const appRouter = router({
   // ─── MS7 Epic 2: 售后处理引擎 ─────────────────────────────────────────────────
   afterSales: router({
     /** 创建售后工单 */
-    createTicket: protectedProcedure
+    createTicket: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         orderId: z.number(),
         orderNo: z.string(),
@@ -1720,7 +1720,7 @@ export const appRouter = router({
       }),
 
     /** 品质部审核工单 */
-    reviewTicket: protectedProcedure
+    reviewTicket: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         ticketId: z.number(),
         approved: z.boolean(),
@@ -1744,7 +1744,7 @@ export const appRouter = router({
       }),
 
     /** 查询售后工单列表 */
-    listTickets: protectedProcedure
+    listTickets: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         customerId: z.number().optional(),
         status: z.string().optional(),
@@ -1757,7 +1757,7 @@ export const appRouter = router({
       }),
 
     /** 查询补发订单列表 */
-    listReplacements: protectedProcedure
+    listReplacements: roleProcedure(['admin', 'sales', 'fulfillment'])
       .input(z.object({
         customerId: z.number().optional(),
         afterSalesTicketId: z.number().optional(),
@@ -1771,7 +1771,7 @@ export const appRouter = router({
   // ─── MS7 Epic 3: 费用报销与单客P&L ────────────────────────────────────────────
   expenses: router({
     /** 提交报销单 */
-    submit: protectedProcedure
+    submit: roleProcedure(['admin', 'sales'])
       .input(z.object({
         associatedCustomerId: z.number().optional(),
         associatedCustomerName: z.string().optional(),
@@ -1792,7 +1792,7 @@ export const appRouter = router({
       }),
 
     /** 审批报销单 */
-    approve: protectedProcedure
+    approve: roleProcedure(['admin', 'sales'])
       .input(z.object({
         claimId: z.number(),
         approved: z.boolean(),
@@ -1810,7 +1810,7 @@ export const appRouter = router({
       }),
 
     /** 查询报销列表 */
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'sales'])
       .input(z.object({
         submittedBy: z.number().optional(),
         associatedCustomerId: z.number().optional(),
@@ -1824,7 +1824,7 @@ export const appRouter = router({
       }),
 
     /** 单客真实毛利核算（订单毛利 - 售后赔款 - 归属费用） */
-    getCustomerPnL: protectedProcedure
+    getCustomerPnL: roleProcedure(['admin', 'sales'])
       .input(z.object({
         customerId: z.number(),
         startDate: z.string().optional(),
@@ -1839,7 +1839,7 @@ export const appRouter = router({
   // ─── MS7 Epic 4: 销售KPI看板 ──────────────────────────────────────────────────
   salesKPI: router({
     /** 设置/更新月度销售目标 */
-    setTarget: protectedProcedure
+    setTarget: roleProcedure(['admin', 'sales'])
       .input(z.object({
         salesRepId: z.number(),
         salesRepName: z.string(),
@@ -1855,7 +1855,7 @@ export const appRouter = router({
       }),
 
     /** 查询销售KPI实时进度 */
-    getPerformance: protectedProcedure
+    getPerformance: roleProcedure(['admin', 'sales'])
       .input(z.object({
         period: z.string().optional(),
         salesRepId: z.number().optional(),
@@ -1867,7 +1867,7 @@ export const appRouter = router({
       }),
 
     /** 查询战区汇总数据 */
-    getRegionSummary: protectedProcedure
+    getRegionSummary: roleProcedure(['admin', 'sales'])
       .input(z.object({ period: z.string().optional() }).optional())
       .query(async ({ input }) => {
         const { getRegionSummary } = await import('./sales-kpi-service');
@@ -1880,7 +1880,7 @@ export const appRouter = router({
   // ============================================================
   businessTrips: router({
     /** 提交出差申请 */
-    submit: protectedProcedure
+    submit: roleProcedure(['admin', 'sales'])
       .input(z.object({
         destination: z.string().min(1),
         visitedCustomers: z.string().optional(),
@@ -1896,14 +1896,14 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const { submitBusinessTrip } = await import('./business-trip-service');
         return submitBusinessTrip({
-          applicantId: ctx.user.id,
-          applicantName: ctx.user.name ?? ctx.user.openId,
+          applicantId: ctx.user!.id,
+          applicantName: ctx.user!.name ?? ctx.user!.openId,
           ...input,
         });
       }),
 
     /** 审批出差申请 */
-    review: protectedProcedure
+    review: roleProcedure(['admin', 'sales'])
       .input(z.object({
         tripId: z.number(),
         approved: z.boolean(),
@@ -1913,15 +1913,15 @@ export const appRouter = router({
         const { reviewBusinessTrip } = await import('./business-trip-service');
         return reviewBusinessTrip({
           tripId: input.tripId,
-          approverId: ctx.user.id,
-          approverName: ctx.user.name ?? ctx.user.openId,
+          approverId: ctx.user!.id,
+          approverName: ctx.user!.name ?? ctx.user!.openId,
           approved: input.approved,
           approvalRemark: input.approvalRemark,
         });
       }),
 
     /** 查询出差申请列表 */
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'sales'])
       .input(z.object({
         status: z.enum(["PENDING", "APPROVED", "REJECTED", "COMPLETED"]).optional(),
         myOnly: z.boolean().optional(),
@@ -1929,13 +1929,13 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const { listBusinessTrips } = await import('./business-trip-service');
         return listBusinessTrips({
-          applicantId: input?.myOnly ? ctx.user.id : undefined,
+          applicantId: input?.myOnly ? ctx.user!.id : undefined,
           status: input?.status,
         });
       }),
 
     /** 提交差旅报销（带风控校验） */
-    submitTravelExpense: protectedProcedure
+    submitTravelExpense: roleProcedure(['admin', 'sales'])
       .input(z.object({
         associatedCustomerId: z.number().optional(),
         associatedCustomerName: z.string().optional(),
@@ -1950,8 +1950,8 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const { submitTravelExpenseClaim } = await import('./business-trip-service');
         return submitTravelExpenseClaim({
-          submittedBy: ctx.user.id,
-          submittedByName: ctx.user.name ?? ctx.user.openId,
+          submittedBy: ctx.user!.id,
+          submittedByName: ctx.user!.name ?? ctx.user!.openId,
           ...input,
         });
       }),
@@ -1959,7 +1959,7 @@ export const appRouter = router({
 
   financeExpenses: router({
     /** 财务审核通过（PAID 打款） */
-    financeApprove: protectedProcedure
+    financeApprove: roleProcedure(['admin', 'finance'])
       .input(z.object({
         claimId: z.number(),
         financeRemark: z.string().optional(),
@@ -1968,14 +1968,14 @@ export const appRouter = router({
         const { financeApproveClaim } = await import('./business-trip-service');
         return financeApproveClaim({
           claimId: input.claimId,
-          paidBy: ctx.user.id,
-          paidByName: ctx.user.name ?? ctx.user.openId,
+          paidBy: ctx.user!.id,
+          paidByName: ctx.user!.name ?? ctx.user!.openId,
           financeRemark: input.financeRemark,
         });
       }),
 
     /** 查询报销单列表（含出差申请详情） */
-    listWithTrip: protectedProcedure
+    listWithTrip: roleProcedure(['admin', 'finance'])
       .input(z.object({
         status: z.string().optional(),
         myOnly: z.boolean().optional(),
@@ -1984,14 +1984,14 @@ export const appRouter = router({
         const { listExpenseClaimsWithTrip } = await import('./business-trip-service');
         return listExpenseClaimsWithTrip({
           status: input?.status,
-          submittedBy: input?.myOnly ? ctx.user.id : undefined,
+          submittedBy: input?.myOnly ? ctx.user!.id : undefined,
         });
       }),
   }),
   /** MS8 Epic 3: 单客精细化成本核算路由 */
   customerPnL: router({
     /** 设置/更新客户成本配置（管理费率） */
-    setConfig: protectedProcedure
+    setConfig: roleProcedure(['admin', 'sales', 'finance'])
       .input(z.object({
         customerId: z.number(),
         customerName: z.string(),
@@ -2005,7 +2005,7 @@ export const appRouter = router({
         return setCustomerCostConfig(input);
       }),
     /** 查询单客精细化净利（含管理成本 + 逾期资金占用成本） */
-    getDetailedPnL: protectedProcedure
+    getDetailedPnL: roleProcedure(['admin', 'sales', 'finance'])
       .input(z.object({
         customerId: z.number(),
         startDate: z.string().optional(),
@@ -2016,7 +2016,7 @@ export const appRouter = router({
         return getCustomerDetailedPnL(input.customerId, input.startDate, input.endDate);
       }),
     /** 批量查询所有客户利润大盘 */
-    getDashboard: protectedProcedure
+    getDashboard: roleProcedure(['admin', 'sales', 'finance'])
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { getCustomerProfitabilityDashboard } = await import('./customer-pnl-service');
@@ -2026,7 +2026,7 @@ export const appRouter = router({
   /** MS9 Epic 1: MRP 物料需求引擎路由 */
   mrp: router({
     /** 运行 MRP 计算：BOM 展开 + 库存比对 + 自动生成采购建议 */
-    run: protectedProcedure
+    run: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         orderNo: z.string(),
         productCode: z.string(),
@@ -2038,7 +2038,7 @@ export const appRouter = router({
         return runMrp(input);
       }),
     /** 注册/更新原材料 */
-    upsertMaterial: protectedProcedure
+    upsertMaterial: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         materialCode: z.string(),
         materialName: z.string(),
@@ -2054,7 +2054,7 @@ export const appRouter = router({
         return { id };
       }),
     /** 注册 BOM 条目 */
-    upsertBomItem: protectedProcedure
+    upsertBomItem: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         productCode: z.string(),
         productName: z.string(),
@@ -2070,7 +2070,7 @@ export const appRouter = router({
         return { id };
       }),
     /** 查询 DRAFT 状态的采购建议单 */
-    getDraftPurchaseOrders: protectedProcedure
+    getDraftPurchaseOrders: roleProcedure(['admin', 'fulfillment'])
       .query(async () => {
         const { getDraftPurchaseOrders } = await import('./mrp-service');
         return getDraftPurchaseOrders();
@@ -2079,7 +2079,7 @@ export const appRouter = router({
   /** MS9 Epic 2: SRM 供应商闭环路由 */
   srm: router({
     /** 创建供应商 */
-    createSupplier: protectedProcedure
+    createSupplier: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         supplierCode: z.string(),
         supplierName: z.string(),
@@ -2093,7 +2093,7 @@ export const appRouter = router({
         return { id };
       }),
     /** 记录原料入库批次 */
-    recordReceipt: protectedProcedure
+    recordReceipt: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         supplierId: z.number(),
         supplierName: z.string(),
@@ -2111,7 +2111,7 @@ export const appRouter = router({
         return recordMaterialReceipt(input);
       }),
     /** 客诉穿透：确认原料责任 → 自动生成供应商扣款单 */
-    triggerPenalty: protectedProcedure
+    triggerPenalty: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({
         afterSalesTicketId: z.number(),
         rawMaterialBatchNo: z.string(),
@@ -2123,7 +2123,7 @@ export const appRouter = router({
         return triggerSupplierPenaltyFromAfterSales(input);
       }),
     /** 确认供应商扣款单 */
-    confirmPenalty: protectedProcedure
+    confirmPenalty: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({ penaltyId: z.number() }))
       .mutation(async ({ input }) => {
         const { confirmSupplierPenalty } = await import('./srm-service');
@@ -2131,7 +2131,7 @@ export const appRouter = router({
         return { success: true };
       }),
     /** 查询供应商扣款单列表 */
-    getPenalties: protectedProcedure
+    getPenalties: roleProcedure(['admin', 'fulfillment'])
       .input(z.object({ supplierId: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { getSupplierPenalties } = await import('./srm-service');
@@ -2141,7 +2141,7 @@ export const appRouter = router({
   /** MS9 Epic 3: AR 账龄分析路由 */
   arAging: router({
     /** 生成 AR 账龄分析报告 */
-    getReport: protectedProcedure
+    getReport: roleProcedure(['admin', 'finance'])
       .input(z.object({ asOfDate: z.string().optional() }).optional())
       .query(async ({ input }) => {
         const { generateArAgingReport } = await import('./ar-aging-service');
@@ -2151,7 +2151,7 @@ export const appRouter = router({
 
   /** MS10 Epic 1: 自助下单激励引擎路由 */
   growthIncentive: router({
-    calculate: protectedProcedure
+    calculate: roleProcedure(['admin', 'sales'])
       .input(z.object({
         orderId: z.number(),
         orderNo: z.string(),
@@ -2165,7 +2165,7 @@ export const appRouter = router({
         const { calculateIncentive } = await import('./services/growth-incentive-service');
         return calculateIncentive(input);
       }),
-    save: protectedProcedure
+    save: roleProcedure(['admin', 'sales'])
       .input(z.object({
         orderId: z.number(),
         orderNo: z.string(),
@@ -2179,13 +2179,13 @@ export const appRouter = router({
         const { saveOrderIncentive } = await import('./services/growth-incentive-service');
         return saveOrderIncentive(input);
       }),
-    getByOrder: protectedProcedure
+    getByOrder: roleProcedure(['admin', 'sales'])
       .input(z.object({ orderId: z.number() }))
       .query(async ({ input }) => {
         const { getOrderIncentive } = await import('./services/growth-incentive-service');
         return getOrderIncentive(input.orderId);
       }),
-    getStats: protectedProcedure
+    getStats: roleProcedure(['admin', 'sales'])
       .query(async () => {
         const { getOrderSourceStats } = await import('./services/growth-incentive-service');
         return getOrderSourceStats();
@@ -2194,14 +2194,14 @@ export const appRouter = router({
 
   /** MS10 Epic 2: B2B 裂变推荐系统路由 */
   referral: router({
-    getOrCreateCode: protectedProcedure
+    getOrCreateCode: roleProcedure(['admin', 'sales'])
       .input(z.object({ referrerId: z.number(), referrerName: z.string() }))
       .mutation(async ({ input }) => {
         const { getOrCreateReferralCode } = await import('./services/referral-service');
         const code = await getOrCreateReferralCode(input.referrerId, input.referrerName);
         return { code };
       }),
-    accept: protectedProcedure
+    accept: roleProcedure(['admin', 'sales'])
       .input(z.object({
         referralCode: z.string(),
         refereeId: z.number(),
@@ -2211,19 +2211,19 @@ export const appRouter = router({
         const { acceptReferral } = await import('./services/referral-service');
         return acceptReferral(input.referralCode, input.refereeId, input.refereeName);
       }),
-    triggerReward: protectedProcedure
+    triggerReward: roleProcedure(['admin', 'sales'])
       .input(z.object({ refereeId: z.number(), firstOrderId: z.number() }))
       .mutation(async ({ input }) => {
         const { triggerReferralReward } = await import('./services/referral-service');
         return triggerReferralReward(input.refereeId, input.firstOrderId);
       }),
-    list: protectedProcedure
+    list: roleProcedure(['admin', 'sales'])
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { listReferralRecords } = await import('./services/referral-service');
         return listReferralRecords(input?.limit);
       }),
-    getStats: protectedProcedure
+    getStats: roleProcedure(['admin', 'sales'])
       .input(z.object({ referrerId: z.number() }))
       .query(async ({ input }) => {
         const { getReferralStats } = await import('./services/referral-service');
@@ -2233,25 +2233,25 @@ export const appRouter = router({
 
   /** MS10 Epic 3: 智能流失预警雷达路由 */
   churnRadar: router({
-    runScan: protectedProcedure
+    runScan: roleProcedure(['admin', 'auditor', 'sales'])
       .mutation(async () => {
         const { runChurnScan } = await import('./services/churn-prediction-service');
         return runChurnScan();
       }),
-    listAlerts: protectedProcedure
+    listAlerts: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { listChurnAlerts } = await import('./services/churn-prediction-service');
         return listChurnAlerts(input?.limit);
       }),
-    resolve: protectedProcedure
+    resolve: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({ alertId: z.number() }))
       .mutation(async ({ input }) => {
         const { resolveChurnAlert } = await import('./services/churn-prediction-service');
         const success = await resolveChurnAlert(input.alertId);
         return { success };
       }),
-    updateProfile: protectedProcedure
+    updateProfile: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({
         userId: z.number(),
         customerName: z.string(),
@@ -2275,7 +2275,7 @@ export const appRouter = router({
   }),
   /** MS11 Epic 1: 反作弊引擎路由 */
   fraudEngine: router({
-    recordFingerprint: protectedProcedure
+    recordFingerprint: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         orderId: z.number(),
         orderNo: z.string(),
@@ -2291,14 +2291,14 @@ export const appRouter = router({
         await recordOrderFingerprint(input);
         return { success: true };
       }),
-    recordSalesIp: protectedProcedure
+    recordSalesIp: roleProcedure(['admin', 'auditor'])
       .input(z.object({ salesId: z.number(), ipAddress: z.string() }))
       .mutation(async ({ input }) => {
         const { recordSalesLoginIp } = await import('./services/anti-fraud-service');
         await recordSalesLoginIp(input.salesId, input.ipAddress);
         return { success: true };
       }),
-    detectFraud: protectedProcedure
+    detectFraud: roleProcedure(['admin', 'auditor'])
       .input(z.object({
         orderId: z.number(),
         orderNo: z.string(),
@@ -2313,7 +2313,7 @@ export const appRouter = router({
         const { detectFraud } = await import('./services/anti-fraud-service');
         return detectFraud(input);
       }),
-    listAlerts: protectedProcedure
+    listAlerts: roleProcedure(['admin', 'auditor'])
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { listFraudAlerts } = await import('./services/anti-fraud-service');
@@ -2323,25 +2323,25 @@ export const appRouter = router({
 
   /** MS11 Epic 2: ROI 里程碑裂变奖励路由 */
   roiReferral: router({
-    initMilestone: protectedProcedure
+    initMilestone: roleProcedure(['admin', 'auditor'])
       .input(z.object({ refereeId: z.number(), refereeName: z.string(), referrerId: z.number() }))
       .mutation(async ({ input }) => {
         const { initRefereeMilestone } = await import('./services/roi-referral-service');
         return initRefereeMilestone(input.refereeId, input.refereeName, input.referrerId);
       }),
-    onPaidOrder: protectedProcedure
+    onPaidOrder: roleProcedure(['admin', 'auditor'])
       .input(z.object({ refereeId: z.number(), paidAmount: z.number() }))
       .mutation(async ({ input }) => {
         const { onRefereePaidOrder } = await import('./services/roi-referral-service');
         return onRefereePaidOrder(input.refereeId, input.paidAmount);
       }),
-    getMilestone: protectedProcedure
+    getMilestone: roleProcedure(['admin', 'auditor'])
       .input(z.object({ refereeId: z.number() }))
       .query(async ({ input }) => {
         const { getRefereeMilestone } = await import('./services/roi-referral-service');
         return getRefereeMilestone(input.refereeId);
       }),
-    listMilestones: protectedProcedure
+    listMilestones: roleProcedure(['admin', 'auditor'])
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { listRefereeMilestones } = await import('./services/roi-referral-service');
@@ -2351,7 +2351,7 @@ export const appRouter = router({
 
   /** MS11 Epic 3: 流失挽回弹药库路由 */
   winback: router({
-    createCoupon: protectedProcedure
+    createCoupon: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({
         churnAlertId: z.number(),
         customerId: z.number(),
@@ -2362,32 +2362,32 @@ export const appRouter = router({
         const { createWinbackCoupon } = await import('./services/winback-service');
         return createWinbackCoupon(input);
       }),
-    redeemCoupon: protectedProcedure
+    redeemCoupon: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({ couponCode: z.string(), orderId: z.number() }))
       .mutation(async ({ input }) => {
         const { redeemWinbackCoupon } = await import('./services/winback-service');
         return redeemWinbackCoupon(input.couponCode, input.orderId);
       }),
-    resolveCustomerAlerts: protectedProcedure
+    resolveCustomerAlerts: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({ customerId: z.number() }))
       .mutation(async ({ input }) => {
         const { resolveCustomerChurnAlerts } = await import('./services/winback-service');
         const count = await resolveCustomerChurnAlerts(input.customerId);
         return { resolved: count };
       }),
-    getActiveCoupon: protectedProcedure
+    getActiveCoupon: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({ customerId: z.number() }))
       .query(async ({ input }) => {
         const { getActiveCouponForCustomer } = await import('./services/winback-service');
         return getActiveCouponForCustomer(input.customerId);
       }),
-    listCoupons: protectedProcedure
+    listCoupons: roleProcedure(['admin', 'auditor', 'sales'])
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { listWinbackCoupons } = await import('./services/winback-service');
         return listWinbackCoupons(input?.limit);
       }),
-    expireStale: protectedProcedure
+    expireStale: roleProcedure(['admin', 'auditor', 'sales'])
       .mutation(async () => {
         const { expireStaleWinbackCoupons } = await import('./services/winback-service');
         const count = await expireStaleWinbackCoupons();
@@ -2429,7 +2429,7 @@ export const appRouter = router({
         password: z.string().min(6),
         name: z.string().min(1),
         email: z.string().optional(),
-        role: z.enum(['admin', 'user']).optional(),
+        role: z.enum(['admin', 'user', 'sales', 'fulfillment', 'finance', 'auditor']).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user!.role !== 'admin') {
@@ -2448,7 +2448,7 @@ export const appRouter = router({
     updateRole: protectedProcedure
       .input(z.object({
         userId: z.number(),
-        role: z.enum(['admin', 'user']),
+        role: z.enum(['admin', 'user', 'sales', 'fulfillment', 'finance', 'auditor']),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user!.role !== 'admin') {

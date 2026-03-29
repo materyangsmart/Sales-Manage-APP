@@ -43,3 +43,25 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+/**
+ * RBAC 角色守卫中间件工厂
+ * 用法: roleProcedure(['admin', 'finance']) → 仅 admin 和 finance 角色可调用
+ */
+export function roleProcedure(allowedRoles: string[]) {
+  return protectedProcedure.use(
+    t.middleware(async opts => {
+      const { ctx, next } = opts;
+      const user = ctx.user!;
+      const userRole = user.role || 'user';
+      // admin 始终放行
+      if (userRole === 'admin' || allowedRoles.includes(userRole)) {
+        return next({ ctx: { ...ctx, user } });
+      }
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: `权限不足：您的角色 [${userRole}] 无权访问此功能（需要: ${allowedRoles.join('/')}）`,
+      });
+    }),
+  );
+}

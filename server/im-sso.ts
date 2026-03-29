@@ -39,7 +39,7 @@ export interface IMLoginResult {
     openId: string;
     name: string | null;
     email: string | null;
-    role: "user" | "admin";
+    role: "user" | "admin" | "sales" | "fulfillment" | "finance" | "auditor";
     imUnionid: string;
     imProvider: IMProvider;
     isNewUser: boolean;

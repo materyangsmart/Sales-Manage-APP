@@ -185,7 +185,7 @@ export async function createLocalUser(params: {
   password: string;
   name: string;
   email?: string;
-  role?: "admin" | "user";
+  role?: "admin" | "user" | "sales" | "fulfillment" | "finance" | "auditor";
 }): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -260,7 +260,7 @@ export async function listUsers(): Promise<Array<{
  */
 export async function updateUserRole(
   userId: number,
-  newRole: "admin" | "user"
+  newRole: "admin" | "user" | "sales" | "fulfillment" | "finance" | "auditor"
 ): Promise<boolean> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
