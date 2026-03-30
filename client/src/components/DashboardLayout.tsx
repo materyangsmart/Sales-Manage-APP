@@ -57,6 +57,7 @@ const ALL_MENU_ITEMS: MenuItemDef[] = [
   // 销售模块
   { icon: ClipboardCheck, label: "订单审核", path: "/orders/review", roles: ['admin', 'sales', 'fulfillment'], group: "销售" },
   { icon: ShoppingCart, label: "代客下单", path: "/orders/create", roles: ['admin', 'sales'], group: "销售" },
+  { icon: Users, label: "客户管理", path: "/customers", roles: ['admin', 'sales', 'finance'], group: "销售" },
   { icon: TrendingUp, label: "提成查询", path: "/commission/stats", roles: ['admin', 'sales'], group: "销售" },
   { icon: Settings, label: "提成规则", path: "/commission/rules", roles: ['admin', 'sales'], group: "销售" },
   { icon: BadgeDollarSign, label: "费用报销", path: "/expense/claim", roles: ['admin', 'sales'], group: "销售" },
