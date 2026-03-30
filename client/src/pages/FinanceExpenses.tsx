@@ -62,6 +62,12 @@ export default function FinanceExpenses() {
   const [isInvoicePreviewOpen, setIsInvoicePreviewOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState("");
 
+  // 审批状态
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedApprovalClaim, setSelectedApprovalClaim] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   // 权限检查
   if (user && user.role !== "admin" && (user as any).role !== "finance") {
     return (
@@ -80,6 +86,57 @@ export default function FinanceExpenses() {
   const { data: claims, isLoading, refetch } = trpc.financeExpenses.listWithTrip.useQuery({
     status: statusFilter || undefined,
   });
+
+  // 审批通过/退回 mutation
+  const expenseApproveMutation = trpc.expenses.approve.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        data.status === "APPROVED"
+          ? `✅ 报销单 ${data.claimNo} 已审批通过`
+          : `报销单 ${data.claimNo} 已退回`
+      );
+      setIsApproveDialogOpen(false);
+      setIsRejectDialogOpen(false);
+      setRejectReason("");
+      setSelectedApprovalClaim(null);
+      refetch();
+    },
+    onError: (err) => {
+      toast.error(`审批失败：${err.message}`);
+    },
+  });
+
+  const handleApproveClick = (claim: any) => {
+    setSelectedApprovalClaim(claim);
+    setIsApproveDialogOpen(true);
+  };
+
+  const handleRejectClick = (claim: any) => {
+    setSelectedApprovalClaim(claim);
+    setRejectReason("");
+    setIsRejectDialogOpen(true);
+  };
+
+  const handleConfirmApprove = () => {
+    if (!selectedApprovalClaim) return;
+    expenseApproveMutation.mutate({
+      claimId: selectedApprovalClaim.id,
+      approved: true,
+    });
+  };
+
+  const handleConfirmReject = () => {
+    if (!selectedApprovalClaim) return;
+    if (rejectReason.trim().length < 5) {
+      toast.error("退回原因至少 5 个字");
+      return;
+    }
+    expenseApproveMutation.mutate({
+      claimId: selectedApprovalClaim.id,
+      approved: false,
+      approvalRemark: rejectReason.trim(),
+    });
+  };
 
   const financeApproveMutation = trpc.financeExpenses.financeApprove.useMutation({
     onSuccess: (data) => {
@@ -307,6 +364,25 @@ export default function FinanceExpenses() {
                             💰 确认打款
                           </Button>
                         )}
+                        {claim.status === "PENDING" && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={() => handleApproveClick(claim)}
+                            >
+                              ✅ 审批通过
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                              onClick={() => handleRejectClick(claim)}
+                            >
+                              ❌ 退回
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -393,6 +469,104 @@ export default function FinanceExpenses() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsInvoicePreviewOpen(false)}>
               关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 审批确认 Dialog */}
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认审批通过</DialogTitle>
+          </DialogHeader>
+          {selectedApprovalClaim && (
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-lg text-sm space-y-1">
+                <div>
+                  <span className="text-gray-500">报销单号：</span>
+                  <span className="font-mono font-semibold">{selectedApprovalClaim.claimNo}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">申请人：</span>
+                  {selectedApprovalClaim.submittedByName}
+                </div>
+                <div>
+                  <span className="text-gray-500">金额：</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    ¥{Number(selectedApprovalClaim.amount).toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">说明：</span>
+                  {selectedApprovalClaim.description}
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                审批通过后，报销单将进入“待打款”状态。
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>取消</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleConfirmApprove}
+              disabled={expenseApproveMutation.isPending}
+            >
+              {expenseApproveMutation.isPending ? "处理中..." : "确认通过"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 退回 Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>退回报销单</DialogTitle>
+          </DialogHeader>
+          {selectedApprovalClaim && (
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-lg text-sm space-y-1">
+                <div>
+                  <span className="text-gray-500">报销单号：</span>
+                  <span className="font-mono font-semibold">{selectedApprovalClaim.claimNo}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">申请人：</span>
+                  {selectedApprovalClaim.submittedByName}
+                </div>
+                <div>
+                  <span className="text-gray-500">金额：</span>
+                  <span className="font-semibold">¥{Number(selectedApprovalClaim.amount).toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                退回后，申请人将看到退回原因，并可以修改后重新提交。
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="finRejectReason" className="text-sm font-semibold">
+                  退回原因 <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="finRejectReason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="请详细说明退回原因（至少 5 个字）"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>取消</Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={expenseApproveMutation.isPending}
+            >
+              {expenseApproveMutation.isPending ? "处理中..." : "确认退回"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name, category, specification, unit_price, unit, is_active FROM product_catalog LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT id, name, category, specification, unit_price, unit, is_active FROM product_catalog LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "薄千张 160g",
+      "category": "THIN",
+      "specification": "160g",
+      "unit_price": "3.50",
+      "unit": "包",
+      "is_active": "1"
+    },
+    {
+      "id": "2",
+      "name": "薄千张 500g",
+      "category": "THIN",
+      "specification": "500g",
+      "unit_price": "9.80",
+      "unit": "包",
+      "is_active": "1"
+    },
+    {
+      "id": "3",
+      "name": "薄千张 2500g",
+      "category": "THIN",
+      "specification": "2500g",
+      "unit_price": "42.00",
+      "unit": "包",
+      "is_active": "1"
+    },
+    {
+      "id": "4",
+      "name": "中厚千张 160g",
+      "category": "MEDIUM",
+      "specification": "160g",
+      "unit_price": "3.80",
+      "unit": "包",
+      "is_active": "1"
+    },
+    {
+      "id": "5",
+      "name": "中厚千张 500g",
+      "category": "MEDIUM",
+      "specification": "500g",
+      "unit_price": "10.50",
+      "unit": "包",
+      "is_active": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcategory\tspecification\tunit_price\tunit\tis_active\n1\t薄千张 160g\tTHIN\t160g\t3.50\t包\t1\n2\t薄千张 500g\tTHIN\t500g\t9.80\t包\t1\n3\t薄千张 2500g\tTHIN\t2500g\t42.00\t包\t1\n4\t中厚千张 160g\tMEDIUM\t160g\t3.80\t包\t1\n5\t中厚千张 500g\tMEDIUM\t500g\t10.50\t包\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1591
+}

@@ -466,8 +466,8 @@ function ExpenseList() {
                 </div>
               )}
 
-              {/* 管理员审批按钮（仅 PENDING 状态） */}
-              {user?.role === "admin" && item.status === "PENDING" && (
+              {/* 管理员/财务审批按钮（仅 PENDING 状态） */}
+              {(user?.role === "admin" || user?.role === "finance") && item.status === "PENDING" && (
                 <div className="flex gap-2 mt-3">
                   <Button
                     size="sm"

@@ -577,7 +577,7 @@ export const appRouter = router({
         }
       }),
     
-    create: protectedProcedure
+    create: roleProcedure(['admin'])
       .input(z.object({
         ruleVersion: z.string(),
         category: z.string(),
@@ -598,7 +598,7 @@ export const appRouter = router({
         }
       }),
     
-    update: protectedProcedure
+    update: roleProcedure(['admin'])
       .input(z.object({
         id: z.number(),
         ruleVersion: z.string().optional(),
@@ -621,7 +621,7 @@ export const appRouter = router({
         }
       }),
     
-    delete: protectedProcedure
+    delete: roleProcedure(['admin'])
       .input(z.object({
         id: z.number(),
       }))
@@ -1215,7 +1215,7 @@ export const appRouter = router({
 
   // ─── RC3 Epic 2: B2B 客户门户 + 代客下单 ─────────────────────────────────
   portal: router({
-    /** 获取商品列表（客户门户用，复用 product_catalog 本地表） */
+    /** 获取商品列表（从 product_catalog + inventory 合并去重） */
     getProducts: protectedProcedure
       .input(z.object({
         category: z.string().optional(),
@@ -1230,6 +1230,7 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) return { items: [] };
 
+        // 1. 从 product_catalog 获取商品
         const conditions: any[] = [eq(productCatalog.isActive, true)];
         if (input.category && ['THIN', 'MEDIUM', 'THICK'].includes(input.category)) {
           conditions.push(eq(productCatalog.category, input.category as any));
@@ -1238,18 +1239,57 @@ export const appRouter = router({
           conditions.push(dLike(productCatalog.name, `%${input.keyword}%`));
         }
         const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
-        const items = await db.select().from(productCatalog).where(whereClause).orderBy(productCatalog.category, productCatalog.unitPrice);
+        const catalogItems = await db.select().from(productCatalog).where(whereClause).orderBy(productCatalog.category, productCatalog.unitPrice);
+
+        // 2. 从 inventory 获取额外的 SKU（Admin 新建的 SKU 可能只在 inventory 表）
+        let inventoryItems: any[] = [];
+        try {
+          const mysql2 = await import('mysql2/promise');
+          const conn = await mysql2.createConnection(process.env.DATABASE_URL!);
+          let invQuery = 'SELECT product_id, product_name, sku, unit, total_stock, available_stock FROM inventory WHERE 1=1';
+          const params: any[] = [];
+          if (input.keyword) {
+            invQuery += ' AND (product_name LIKE ? OR sku LIKE ?)';
+            params.push(`%${input.keyword}%`, `%${input.keyword}%`);
+          }
+          invQuery += ' ORDER BY product_name';
+          const [rows] = await conn.query(invQuery, params) as any;
+          await conn.end();
+          inventoryItems = rows || [];
+        } catch (e: any) {
+          console.warn('[portal.getProducts] Inventory query failed:', e.message);
+        }
+
+        // 3. 合并去重：以 product_catalog 为主，补充 inventory 中独有的商品
+        const catalogProductIds = new Set(catalogItems.map((p: any) => p.id));
+        const extraFromInventory = inventoryItems
+          .filter((inv: any) => !catalogProductIds.has(inv.product_id))
+          .map((inv: any) => ({
+            id: inv.product_id + 100000, // 偏移避免 ID 冲突
+            name: inv.product_name,
+            category: 'MEDIUM' as const, // 默认分类
+            specification: inv.sku,
+            unitPrice: 0, // 库存表没有价格，需要单独设置
+            unit: inv.unit || '包',
+            description: `库存: ${inv.available_stock}/${inv.total_stock}`,
+            minOrderQuantity: 1,
+            _fromInventory: true,
+          }));
+
         return {
-          items: items.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            specification: p.specification,
-            unitPrice: parseFloat(p.unitPrice),
-            unit: p.unit,
-            description: p.description,
-            minOrderQuantity: p.minOrderQuantity,
-          })),
+          items: [
+            ...catalogItems.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              specification: p.specification,
+              unitPrice: parseFloat(p.unitPrice),
+              unit: p.unit,
+              description: p.description,
+              minOrderQuantity: p.minOrderQuantity,
+            })),
+            ...extraFromInventory,
+          ],
         };
       }),
 
@@ -1674,6 +1714,26 @@ export const appRouter = router({
           if (existing && existing.length > 0) {
             throw new TRPCError({ code: 'CONFLICT', message: `商品 ID ${input.productId} 已存在库存系统中` });
           }
+          // 先写入 product_catalog 表（确保代客下单能查到商品）
+          const [catExisting] = await conn.query(
+            'SELECT id FROM product_catalog WHERE id = ?',
+            [input.productId]
+          ) as any;
+          if (!catExisting || catExisting.length === 0) {
+            // 自动插入 product_catalog
+            await conn.query(
+              `INSERT INTO product_catalog (id, name, category, specification, unit_price, unit, description, is_active, min_order_quantity)
+               VALUES (?, ?, 'MEDIUM', ?, '0.00', ?, ?, 1, 1)`,
+              [
+                input.productId,
+                input.productName,
+                input.sku,
+                input.unit,
+                `库存管理新建 SKU: ${input.sku}`,
+              ]
+            );
+          }
+          // 再写入 inventory 表
           await conn.query(
             `INSERT INTO inventory (product_id, product_name, sku, unit, warehouse_code, total_stock, reserved_stock, available_stock, low_stock_threshold, daily_idle_capacity, locked_capacity, pending_delivery)
              VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 0)`,
@@ -1946,8 +2006,8 @@ export const appRouter = router({
         });
       }),
 
-    /** 审批报销单（仅管理员） */
-    approve: roleProcedure(['admin'])
+    /** 审批报销单（管理员和财务） */
+    approve: roleProcedure(['admin', 'finance'])
       .input(z.object({
         claimId: z.number(),
         approved: z.boolean(),
@@ -2661,7 +2721,7 @@ export const appRouter = router({
 
   // ─── MS14: 客户管理模块 CRUD ──────────────────────────────────────────────
   customerMgmt: router({
-    /** 查询客户列表（支持搜索、分页） */
+    /** 查询客户列表（支持搜索、分页）- 数据隔离：sales 只看自己创建的客户 */
     list: roleProcedure(['admin', 'sales', 'finance'])
       .input(z.object({
         keyword: z.string().optional(),
@@ -2670,9 +2730,12 @@ export const appRouter = router({
         page: z.number().default(1),
         pageSize: z.number().default(20),
       }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const { listCustomers } = await import('./customer-service');
-        return listCustomers(input);
+        const role = ctx.user?.role;
+        // 数据隔离：admin/finance 看全量，sales 只看自己创建的
+        const createdBy = (role === 'admin' || role === 'finance') ? undefined : ctx.user?.id;
+        return listCustomers({ ...input, createdBy });
       }),
 
     /** 获取单个客户详情 */

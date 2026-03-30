@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 // 规则类型定义
 type CommissionRule = {
@@ -86,6 +87,9 @@ export default function CommissionRules() {
     paymentDueDays: '30',
     effectiveFrom: new Date().toISOString().split('T')[0],
   });
+
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // 查询规则列表
   const { data: rules, isLoading, refetch } = trpc.commissionRules.list.useQuery();
@@ -254,10 +258,12 @@ export default function CommissionRules() {
             管理不同客户类型的提成计算规则
           </p>
         </div>
+{isAdmin && (
         <Button onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
           创建规则
         </Button>
+        )}
       </div>
 
       {/* 规则列表 */}
@@ -292,7 +298,7 @@ export default function CommissionRules() {
                     <TableHead>回款权重</TableHead>
                     <TableHead>账期天数</TableHead>
                     <TableHead>生效日期</TableHead>
-                    <TableHead>操作</TableHead>
+{isAdmin && <TableHead>操作</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -322,6 +328,7 @@ export default function CommissionRules() {
                           {ruleJson.paymentDueDays ? `${ruleJson.paymentDueDays}天` : '-'}
                         </TableCell>
                         <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
+                        {isAdmin && (
                         <TableCell>
                           <div className="flex gap-2">
                             <Button
@@ -340,6 +347,7 @@ export default function CommissionRules() {
                             </Button>
                           </div>
                         </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}

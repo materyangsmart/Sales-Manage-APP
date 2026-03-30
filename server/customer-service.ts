@@ -172,6 +172,7 @@ export async function listCustomers(params?: {
   status?: string;
   page?: number;
   pageSize?: number;
+  createdBy?: number; // 用于数据隔离：销售只看自己创建的客户
 }) {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };
@@ -181,6 +182,10 @@ export async function listCustomers(params?: {
   const offset = (page - 1) * pageSize;
 
   const conditions: any[] = [];
+  // 数据隔离：如果传入 createdBy，则只返回该用户创建的客户
+  if (params?.createdBy) {
+    conditions.push(eq(customers.createdBy, params.createdBy));
+  }
   if (params?.keyword) {
     conditions.push(
       sql`(${customers.name} LIKE ${`%${params.keyword}%`} OR ${customers.customerCode} LIKE ${`%${params.keyword}%`} OR ${customers.contactPhone} LIKE ${`%${params.keyword}%`})`

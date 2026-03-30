@@ -1270,3 +1270,24 @@
 - [x] 检查 RBAC 权限配置是否阻止了客户管理菜单显示
 - [x] 检查 App.tsx 路由注册是否正确
 - [x] 修复并验证客户管理菜单项正常显示（在 ALL_MENU_ITEMS 中添加客户管理菜单项）
+
+## MS16 五个核心业务 Bug 修复
+
+### 一、客户管理数据隔离
+- [x] 后端 customerMgmt.list：Admin/Finance 返回全量，Sales 仅返回 created_by 为自己的
+- [x] 前端统计信息隔离：Sales 只看自己的统计，Admin 看全盘
+
+### 二、报销审批按钮丢失
+- [x] 找回 Admin/Finance 对待审核报销单的审批/退回操作按钮（ExpenseClaim.tsx + FinanceExpenses.tsx）
+- [x] 确保审批和退回功能正常工作
+
+### 三、代客下单 SKU 联动
+- [x] 修复代客下单页面商品列表加载（portal.getProducts 同时从 product_catalog 和 inventory 获取）
+- [x] createSku 时同步写入 product_catalog 表
+
+### 四、提成规则权限控制
+- [x] 前端：仅 Admin 可见新建/编辑/删除规则按钮（useAuth + isAdmin）
+- [x] 后端：commissionRules.create/update/delete 改为 roleProcedure(['admin'])
+
+### 五、测试与验证
+- [x] 编写 vitest 测试覆盖以上修复（11 个测试全部通过）
