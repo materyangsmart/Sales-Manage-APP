@@ -2,7 +2,7 @@
  * 客户管理服务 (Customer Management Service)
  * MS14 - 全新独立 CRUD + 编号自动生成 + 字段级权限
  */
-import { eq, desc, and, like, sql, count } from "drizzle-orm";
+import { eq, desc, and, like, sql, count, gt } from "drizzle-orm";
 import { getDb } from "./db";
 import { customers, type InsertCustomer } from "../drizzle/schema";
 
@@ -256,4 +256,44 @@ export async function deactivateCustomer(id: number) {
 
   await db.update(customers).set({ status: "INACTIVE" }).where(eq(customers.id, id));
   return { success: true, customerCode: existing.customerCode };
+}
+
+// ============================================================
+// 代客下单专用：获取可下单客户列表
+// 仅返回 status=ACTIVE 且 creditLimit > 0（已授信）的客户
+// ============================================================
+export async function listCustomersForOrder(params?: {
+  keyword?: string;
+  createdBy?: number; // 数据隔离
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions: any[] = [
+    eq(customers.status, "ACTIVE" as any),
+    sql`CAST(${customers.creditLimit} AS DECIMAL(12,2)) > 0`,
+  ];
+
+  // 数据隔离
+  if (params?.createdBy) {
+    conditions.push(eq(customers.createdBy, params.createdBy));
+  }
+
+  // 关键词搜索
+  if (params?.keyword) {
+    conditions.push(
+      sql`(${customers.name} LIKE ${`%${params.keyword}%`} OR ${customers.customerCode} LIKE ${`%${params.keyword}%`} OR ${customers.contactPhone} LIKE ${`%${params.keyword}%`})`
+    );
+  }
+
+  const whereClause = and(...conditions);
+
+  const items = await db
+    .select()
+    .from(customers)
+    .where(whereClause)
+    .orderBy(desc(customers.createdAt))
+    .limit(100);
+
+  return items;
 }

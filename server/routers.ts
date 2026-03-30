@@ -2733,8 +2733,10 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const { listCustomers } = await import('./customer-service');
         const role = ctx.user?.role;
-        // 数据隔离：admin/finance 看全量，sales 只看自己创建的
-        const createdBy = (role === 'admin' || role === 'finance') ? undefined : ctx.user?.id;
+        const userId = ctx.user?.id;
+        // 数据隔离：admin/finance 看全量，其他角色只看自己创建的
+        const createdBy = (role === 'admin' || role === 'finance') ? undefined : userId;
+        console.log(`[CustomerMgmt.list] role=${role}, userId=${userId}, createdBy=${createdBy}`);
         return listCustomers({ ...input, createdBy });
       }),
 
@@ -2795,6 +2797,21 @@ export const appRouter = router({
         }
         const { updateCustomerFinance } = await import('./customer-service');
         return updateCustomerFinance(input);
+      }),
+
+    /** 代客下单专用：获取可下单客户列表（已授信 + 活跃状态） */
+    listForOrder: roleProcedure(['admin', 'sales', 'finance'])
+      .input(z.object({
+        keyword: z.string().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        const { listCustomersForOrder } = await import('./customer-service');
+        const role = ctx.user?.role;
+        const userId = ctx.user?.id;
+        // 数据隔离：admin/finance 看全量，其他角色只看自己创建的
+        const createdBy = (role === 'admin' || role === 'finance') ? undefined : userId;
+        console.log(`[CustomerMgmt.listForOrder] role=${role}, userId=${userId}, createdBy=${createdBy}`);
+        return listCustomersForOrder({ keyword: input?.keyword, createdBy });
       }),
 
     /** 停用客户（软删除） */

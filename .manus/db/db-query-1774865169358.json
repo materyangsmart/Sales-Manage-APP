@@ -1,0 +1,90 @@
+{
+  "query": "SELECT c.id, c.customer_code, c.name, c.created_by, c.status, c.credit_limit FROM customers c LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT c.id, c.customer_code, c.name, c.created_by, c.status, c.credit_limit FROM customers c LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "customer_code": "ENT-0001",
+      "name": "测试企业客户",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "2",
+      "customer_code": "CH-0001",
+      "name": "渠道客户A",
+      "created_by": "2",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "3",
+      "customer_code": "IND-0001",
+      "name": "财务测试客户",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "50000.00"
+    },
+    {
+      "id": "4",
+      "customer_code": "RST-0001",
+      "name": "权限测试客户",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "5",
+      "customer_code": "WS-0001",
+      "name": "财务角色测试",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "30000.00"
+    },
+    {
+      "id": "6",
+      "customer_code": "OTH-0001",
+      "name": "待停用客户",
+      "created_by": "1",
+      "status": "INACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "7",
+      "customer_code": "ENT-0002",
+      "name": "编号测试-ENTERPRISE",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "8",
+      "customer_code": "IND-0002",
+      "name": "编号测试-INDIVIDUAL",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "9",
+      "customer_code": "CH-0002",
+      "name": "编号测试-CHANNEL",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    },
+    {
+      "id": "10",
+      "customer_code": "RST-0002",
+      "name": "编号测试-RESTAURANT",
+      "created_by": "1",
+      "status": "ACTIVE",
+      "credit_limit": "0.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcustomer_code\tname\tcreated_by\tstatus\tcredit_limit\n1\tENT-0001\t测试企业客户\t1\tACTIVE\t0.00\n2\tCH-0001\t渠道客户A\t2\tACTIVE\t0.00\n3\tIND-0001\t财务测试客户\t1\tACTIVE\t50000.00\n4\tRST-0001\t权限测试客户\t1\tACTIVE\t0.00\n5\tWS-0001\t财务角色测试\t1\tACTIVE\t30000.00\n6\tOTH-0001\t待停用客户\t1\tINACTIVE\t0.00\n7\tENT-0002\t编号测试-ENTERPRISE\t1\tACTIVE\t0.00\n8\tIND-0002\t编号测试-INDIVIDUAL\t1\tACTIVE\t0.00\n9\tCH-0002\t编号测试-CHANNEL\t1\tACTIVE\t0.00\n10\tRST-0002\t编号测试-RESTAURANT\t1\tACTIVE\t0.00\n",
+  "stderr": "",
+  "execution_time_ms": 1754
+}

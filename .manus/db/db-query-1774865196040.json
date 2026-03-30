@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, name, role FROM users LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT id, name, role FROM users LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "materyangsmart",
+      "role": "admin"
+    },
+    {
+      "id": "2220001",
+      "name": "张三（外勤销售）",
+      "role": "sales"
+    },
+    {
+      "id": "2220002",
+      "name": "新销售员工",
+      "role": "fulfillment"
+    },
+    {
+      "id": "2220003",
+      "name": "新钉钉员工",
+      "role": "user"
+    },
+    {
+      "id": "2820079",
+      "name": "张老板-菜市场",
+      "role": "user"
+    },
+    {
+      "id": "2820080",
+      "name": "李老板-菜市场",
+      "role": "user"
+    },
+    {
+      "id": "2820081",
+      "name": "测试客户-货损",
+      "role": "user"
+    },
+    {
+      "id": "2820082",
+      "name": "测试业务员-RMA",
+      "role": "user"
+    },
+    {
+      "id": "2820083",
+      "name": "客户A-P&L测试",
+      "role": "user"
+    },
+    {
+      "id": "2820084",
+      "name": "业务员-P&L测试",
+      "role": "user"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\n1\tmateryangsmart\tadmin\n2220001\t张三（外勤销售）\tsales\n2220002\t新销售员工\tfulfillment\n2220003\t新钉钉员工\tuser\n2820079\t张老板-菜市场\tuser\n2820080\t李老板-菜市场\tuser\n2820081\t测试客户-货损\tuser\n2820082\t测试业务员-RMA\tuser\n2820083\t客户A-P&L测试\tuser\n2820084\t业务员-P&L测试\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 1614
+}

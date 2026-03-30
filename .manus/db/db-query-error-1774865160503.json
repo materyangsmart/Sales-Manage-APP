@@ -1,0 +1,19 @@
+{
+  "query": "SELECT c.id, c.customer_code, c.name, c.created_by, c.status, c.credit_limit FROM customers c LIMIT 10; SELECT id, name, role FROM user LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 45bMcCwxMseth2N.16417d1fde85 --database 8QpTLEs6K9fws4ZFuDGLC4 --execute SELECT c.id, c.customer_code, c.name, c.created_by, c.status, c.credit_limit FROM customers c LIMIT 10; SELECT id, name, role FROM user LIMIT 10;",
+  "returncode": 1,
+  "logs": [
+    "id\tcustomer_code\tname\tcreated_by\tstatus\tcredit_limit",
+    "1\tENT-0001\t测试企业客户\t1\tACTIVE\t0.00",
+    "2\tCH-0001\t渠道客户A\t2\tACTIVE\t0.00",
+    "3\tIND-0001\t财务测试客户\t1\tACTIVE\t50000.00",
+    "4\tRST-0001\t权限测试客户\t1\tACTIVE\t0.00",
+    "5\tWS-0001\t财务角色测试\t1\tACTIVE\t30000.00",
+    "6\tOTH-0001\t待停用客户\t1\tINACTIVE\t0.00",
+    "7\tENT-0002\t编号测试-ENTERPRISE\t1\tACTIVE\t0.00",
+    "8\tIND-0002\t编号测试-INDIVIDUAL\t1\tACTIVE\t0.00",
+    "9\tCH-0002\t编号测试-CHANNEL\t1\tACTIVE\t0.00",
+    "10\tRST-0002\t编号测试-RESTAURANT\t1\tACTIVE\t0.00",
+    "ERROR 1146 (42S02) at line 1: Table '8qptles6k9fws4zfudglc4.user' doesn't exist"
+  ]
+}

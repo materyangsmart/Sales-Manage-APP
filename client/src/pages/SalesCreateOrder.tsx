@@ -137,13 +137,7 @@ export default function SalesCreateOrder() {
   const [smsCountdown, setSmsCountdown] = useState(0);
   const [authVerified, setAuthVerified] = useState(false);
 
-  // ── 快捷新建客户 Modal ──
-  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
-  const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerType, setNewCustomerType] = useState<string>("RESTAURANT");
-  const [newContactName, setNewContactName] = useState("");
-  const [newContactPhone, setNewContactPhone] = useState("");
-  const [newAddress, setNewAddress] = useState("");
+  // ── 快捷新建客户已移除，客户必须在客户管理模块中正规创建 ──
 
   // ── 批量导入 Modal ──
   const [showBatchImport, setShowBatchImport] = useState(false);
@@ -153,7 +147,7 @@ export default function SalesCreateOrder() {
   const [creditInfo, setCreditInfo] = useState<{ limit: number; used: number } | null>(null);
 
   // ── API 调用 ──
-  const { data: customersData, isLoading: customersLoading } = trpc.salesOrder.getCustomers.useQuery({ orgId: 1 });
+  const { data: customersData, isLoading: customersLoading } = trpc.customerMgmt.listForOrder.useQuery({});
   const { data: productsData } = trpc.portal.getProducts.useQuery({});
 
   const createOrder = trpc.salesOrder.createForCustomer.useMutation({
@@ -173,26 +167,9 @@ export default function SalesCreateOrder() {
     },
   });
 
-  const createCustomer = trpc.salesOrder.createCustomer.useMutation({
-    onSuccess: async (data: any) => {
-      toast.success(`客户 "${data.name || newCustomerName}" 创建成功`);
-      setShowNewCustomerModal(false);
-      // 重置表单
-      setNewCustomerName(""); setNewCustomerType("RESTAURANT");
-      setNewContactName(""); setNewContactPhone(""); setNewAddress("");
-      // 先刷新客户列表，等待完成后再设置选中客户
-      await utils.salesOrder.getCustomers.invalidate();
-      // 本地客户 ID 加了 1000000 偏移，需要用偏移后的 ID
-      const localId = data.id >= 1000000 ? data.id : data.id + 1000000;
-      setSelectedCustomerId(localId);
-      setSelectedCustomerType(data.customerType || newCustomerType);
-    },
-    onError: (err: any) => {
-      toast.error(`创建客户失败: ${err.message}`);
-    },
-  });
+  // createCustomer 已移除，客户必须在客户管理模块中正规创建
 
-  const customers = useMemo(() => customersData?.data || [], [customersData]);
+  const customers = useMemo(() => customersData || [], [customersData]);
   const products = productsData?.items || [];
 
   const selectedCustomer = useMemo(
@@ -396,21 +373,6 @@ export default function SalesCreateOrder() {
     setShowAuthModal(true);
   };
 
-  // ── 新建客户 ──
-  const handleCreateCustomer = () => {
-    if (!newCustomerName.trim()) { toast.error("请输入客户名称"); return; }
-    if (!newContactPhone.trim()) { toast.error("请输入联系电话"); return; }
-    // 手机号格式校验（中国大陆手机号）
-    const phoneRegex = /^1[3-9]\d{9}$/;
-    if (!phoneRegex.test(newContactPhone.trim())) { toast.error("请输入正确的手机号码（11位）"); return; }
-    createCustomer.mutate({
-      name: newCustomerName.trim(),
-      customerType: newCustomerType as any,
-      contactName: newContactName || undefined,
-      contactPhone: newContactPhone || undefined,
-      address: newAddress || undefined,
-    });
-  };
 
   // ── 订单成功页 ──
   if (orderSubmitted) {
@@ -500,6 +462,7 @@ export default function SalesCreateOrder() {
                       {customers.map((c: any) => (
                         <SelectItem key={c.id} value={c.id.toString()}>
                           <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs text-muted-foreground">{c.customerCode}</span>
                             <span>{c.name}</span>
                             <span className="text-xs text-muted-foreground">
                               {CUSTOMER_TYPE_LABELS[c.customerType] || c.customerType}
@@ -509,15 +472,17 @@ export default function SalesCreateOrder() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowNewCustomerModal(true)}
-                    title="快捷新建客户"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
                 </div>
+                {!customersLoading && customers.length === 0 && (
+                  <Alert>
+                    <Info className="w-4 h-4" />
+                    <AlertDescription>
+                      暂无可下单客户。请先在{" "}
+                      <a href="/customers" className="text-blue-600 underline font-medium">客户管理</a>
+                      {" "}中创建客户，并由管理员完成授信后方可下单。
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {selectedCustomer && (
                   <div className="flex flex-wrap items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
@@ -1151,60 +1116,7 @@ export default function SalesCreateOrder() {
         </DialogContent>
       </Dialog>
 
-      {/* ════════ 快捷新建客户 Modal ════════ */}
-      <Dialog open={showNewCustomerModal} onOpenChange={setShowNewCustomerModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-blue-600" />
-              快捷新建客户
-            </DialogTitle>
-            <DialogDescription>
-              填写基础信息后保存，将自动选中该客户继续下单
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>客户名称 <span className="text-red-500">*</span></Label>
-              <Input placeholder="例如：华东食品有限公司" value={newCustomerName} onChange={e => setNewCustomerName(e.target.value)} className="mt-1" autoFocus />
-            </div>
-            <div>
-              <Label>客户类型</Label>
-              <Select value={newCustomerType} onValueChange={setNewCustomerType}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CUSTOMER_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>联系人</Label>
-                <Input placeholder="联系人姓名" value={newContactName} onChange={e => setNewContactName(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label>联系电话 <span className="text-red-500">*</span></Label>
-                <Input placeholder="手机号码（11位）" value={newContactPhone} onChange={e => setNewContactPhone(e.target.value)} className={`mt-1 ${newContactPhone && !/^1[3-9]\d{9}$/.test(newContactPhone) ? 'border-red-400 focus-visible:ring-red-400' : ''}`} />
-                {newContactPhone && !/^1[3-9]\d{9}$/.test(newContactPhone) && (
-                  <p className="text-xs text-red-500 mt-1">请输入正确的11位手机号</p>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label>地址</Label>
-              <Input placeholder="客户地址（选填）" value={newAddress} onChange={e => setNewAddress(e.target.value)} className="mt-1" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewCustomerModal(false)}>取消</Button>
-            <Button onClick={handleCreateCustomer} disabled={createCustomer.isPending || !newCustomerName.trim() || !newContactPhone.trim() || !/^1[3-9]\d{9}$/.test(newContactPhone.trim())}>
-              {createCustomer.isPending ? "创建中..." : "保存并选中"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 快捷新建客户 Modal 已彻底移除，客户必须在客户管理模块中正规创建 */}
 
       {/* ════════ 批量导入 Modal ════════ */}
       <Dialog open={showBatchImport} onOpenChange={setShowBatchImport}>

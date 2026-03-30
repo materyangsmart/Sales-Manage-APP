@@ -1291,3 +1291,18 @@
 
 ### 五、测试与验证
 - [x] 编写 vitest 测试覆盖以上修复（11 个测试全部通过）
+
+## MS17 代客下单数据联动 + 客户管理数据隔离加固
+
+### 一、代客下单页面修复
+- [x] 彻底移除“快捷创建客户”按钮及关联逻辑（state/mutation/handler/button/modal 全部清除）
+- [x] 客户下拉框对接统一 customerMgmt.listForOrder 接口
+- [x] 仅已授信（creditLimit > 0）且已激活的客户才出现在下单下拉框
+
+### 二、客户管理数据隔离加固
+- [x] 后端 customerMgmt.list 强制 WHERE created_by = current_user_id（Sales 角色）（含调试日志）
+- [x] Admin/Finance 角色返回全量数据
+- [x] listForOrder 同样包含数据隔离逻辑
+
+### 三、测试与验证
+- [x] 编写 vitest 测试覆盖修复（9 个测试全部通过）
