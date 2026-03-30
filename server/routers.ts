@@ -1929,7 +1929,7 @@ export const appRouter = router({
     submit: roleProcedure(['admin', 'sales'])
       .input(z.object({
         associatedCustomerId: z.number().optional(),
-        associatedCustomerName: z.string().optional(),
+        associatedCustomerName: z.string().min(1, '客户名称不能为空'),
         expenseType: z.enum(["TRAVEL", "ENTERTAINMENT", "LOGISTICS_SUBSIDY", "OTHER"]),
         amount: z.number().positive(),
         description: z.string().min(2),
@@ -1981,7 +1981,7 @@ export const appRouter = router({
         });
       }),
 
-    /** 查询报销列表 */
+    /** 查询报销列表（销售员只看自己的，管理员看全部） */
     list: roleProcedure(['admin', 'sales'])
       .input(z.object({
         submittedBy: z.number().optional(),
@@ -1990,9 +1990,14 @@ export const appRouter = router({
         page: z.number().default(1),
         pageSize: z.number().default(20),
       }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const { listExpenseClaims } = await import('./expense-service');
-        return listExpenseClaims(input);
+        // 销售员只能看自己提交的报销单，管理员看全部
+        const effectiveInput = { ...input };
+        if (ctx.user?.role !== 'admin' && ctx.user?.role !== 'finance') {
+          effectiveInput.submittedBy = ctx.user?.id;
+        }
+        return listExpenseClaims(effectiveInput);
       }),
 
     /** 单客真实毛利核算（订单毛利 - 售后赔款 - 归属费用） */
@@ -2651,6 +2656,90 @@ export const appRouter = router({
         }
         await deleteUser(ctx.user!.id, input.userId);
         return { success: true };
+      }),
+  }),
+
+  // ─── MS14: 客户管理模块 CRUD ──────────────────────────────────────────────
+  customerMgmt: router({
+    /** 查询客户列表（支持搜索、分页） */
+    list: roleProcedure(['admin', 'sales', 'finance'])
+      .input(z.object({
+        keyword: z.string().optional(),
+        customerType: z.string().optional(),
+        status: z.string().optional(),
+        page: z.number().default(1),
+        pageSize: z.number().default(20),
+      }).optional())
+      .query(async ({ input }) => {
+        const { listCustomers } = await import('./customer-service');
+        return listCustomers(input);
+      }),
+
+    /** 获取单个客户详情 */
+    get: roleProcedure(['admin', 'sales', 'finance'])
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const { getCustomerById } = await import('./customer-service');
+        return getCustomerById(input.id);
+      }),
+
+    /** 新建客户（销售可调用，不含财务字段） */
+    create: roleProcedure(['admin', 'sales'])
+      .input(z.object({
+        name: z.string().min(2, '客户名称至少2个字符'),
+        customerType: z.enum(['ENTERPRISE', 'INDIVIDUAL', 'CHANNEL', 'RESTAURANT', 'WHOLESALE', 'RETAIL', 'FACTORY', 'OTHER']),
+        contactName: z.string().optional(),
+        contactPhone: z.string().optional(),
+        address: z.string().optional(),
+        remark: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { createCustomer } = await import('./customer-service');
+        return createCustomer({
+          ...input,
+          createdBy: ctx.user?.id,
+          createdByName: ctx.user?.name || 'Unknown',
+        });
+      }),
+
+    /** 更新客户基本信息（销售可调用） */
+    updateBasic: roleProcedure(['admin', 'sales'])
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(2).optional(),
+        contactName: z.string().optional(),
+        contactPhone: z.string().optional(),
+        address: z.string().optional(),
+        remark: z.string().optional(),
+        status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { updateCustomerBasic } = await import('./customer-service');
+        return updateCustomerBasic(input);
+      }),
+
+    /** 更新客户财务信息（仅 admin/finance 可调用） */
+    updateFinance: roleProcedure(['admin', 'finance'])
+      .input(z.object({
+        id: z.number(),
+        creditLimit: z.number().min(0).optional(),
+        discountRate: z.number().min(0).max(1).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // 双重校验：仅 admin 或 finance 角色
+        if (ctx.user?.role !== 'admin' && ctx.user?.role !== 'finance') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '仅管理员或财务可修改客户财务信息' });
+        }
+        const { updateCustomerFinance } = await import('./customer-service');
+        return updateCustomerFinance(input);
+      }),
+
+    /** 停用客户（软删除） */
+    deactivate: roleProcedure(['admin'])
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deactivateCustomer } = await import('./customer-service');
+        return deactivateCustomer(input.id);
       }),
   }),
 });

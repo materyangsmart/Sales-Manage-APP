@@ -65,7 +65,7 @@ const EXPENSE_TYPE_LABELS: Record<string, string> = {
 };
 
 // ─── 提交报销表单 ─────────────────────────────────────────────────────────────
-function SubmitExpenseForm() {
+function SubmitExpenseForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,6 +86,7 @@ function SubmitExpenseForm() {
     onSuccess: () => {
       toast.success("报销单提交成功", { description: "等待审批中..." });
       utils.expenses.list.invalidate();
+      onSuccess?.();
       setForm({
         expenseType: "ENTERTAINMENT",
         amount: "",
@@ -140,12 +141,16 @@ function SubmitExpenseForm() {
       toast.error("请填写费用说明");
       return;
     }
+    if (!form.associatedCustomerName.trim()) {
+      toast.error("请填写客户名称");
+      return;
+    }
     submitMutation.mutate({
       expenseType: form.expenseType,
       amount: Number(form.amount),
       description: form.description,
       associatedCustomerId: form.associatedCustomerId ? Number(form.associatedCustomerId) : undefined,
-      associatedCustomerName: form.associatedCustomerName || undefined,
+      associatedCustomerName: form.associatedCustomerName,
       expenseDate: form.expenseDate,
       invoiceImageUrl: form.invoiceImageUrl || undefined,
       invoiceImageKey: form.invoiceImageKey || undefined,
@@ -209,12 +214,16 @@ function SubmitExpenseForm() {
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-sm font-medium">客户名称（选填）</Label>
+          <Label className="text-sm font-medium">客户名称 <span className="text-red-500">*</span></Label>
           <Input
-            placeholder="客户名称"
+            placeholder="请输入客户名称"
             value={form.associatedCustomerName}
             onChange={(e) => setForm((f) => ({ ...f, associatedCustomerName: e.target.value }))}
+            className={!form.associatedCustomerName.trim() && form.amount ? "border-red-300" : ""}
           />
+          {!form.associatedCustomerName.trim() && form.amount && (
+            <p className="text-xs text-red-500">客户名称为必填项</p>
+          )}
         </div>
       </div>
 
@@ -705,34 +714,38 @@ function CustomerPnL() {
   );
 }
 
-// ─── 主页面 ───────────────────────────────────────────────────────────────────
+// ─── 主页面（重构为“列表 + 新建”经典结构）──────────────────────────────────────────
 export default function ExpenseClaimPage() {
+  const [activeTab, setActiveTab] = useState("list");
+
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
+    <div className="max-w-2xl mx-auto px-4 py-6">
       {/* 页头 */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-          <Receipt className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold">费用报销</h1>
-          <p className="text-sm text-muted-foreground">随手记账 · 发票直传 · 单客P&L</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Receipt className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">费用报销</h1>
+            <p className="text-sm text-muted-foreground">我的报销申请 · 历史记录</p>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="submit">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-3 w-full mb-4">
-          <TabsTrigger value="submit">提交报销</TabsTrigger>
           <TabsTrigger value="list">报销记录</TabsTrigger>
+          <TabsTrigger value="submit">新建报销</TabsTrigger>
           <TabsTrigger value="pnl">单客P&L</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="submit">
-          <SubmitExpenseForm />
-        </TabsContent>
-
         <TabsContent value="list">
           <ExpenseList />
+        </TabsContent>
+
+        <TabsContent value="submit">
+          <SubmitExpenseForm onSuccess={() => setActiveTab("list")} />
         </TabsContent>
 
         <TabsContent value="pnl">

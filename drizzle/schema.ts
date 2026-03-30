@@ -910,3 +910,41 @@ export const localCustomers = mysqlTable("local_customers", {
 });
 export type LocalCustomer = typeof localCustomers.$inferSelect;
 export type InsertLocalCustomer = typeof localCustomers.$inferInsert;
+
+// ============================================================
+// MS14: 客户管理模块 (customers)
+// ============================================================
+
+export const customers = mysqlTable("customers", {
+  id: int("id").autoincrement().primaryKey(),
+  /** 客户编号，按类型自动生成：ENT-0001, IND-0001, CH-0001 等 */
+  customerCode: varchar("customer_code", { length: 32 }).notNull().unique(),
+  /** 客户名称 */
+  name: varchar("name", { length: 255 }).notNull(),
+  /** 客户类型 */
+  customerType: mysqlEnum("customer_type", ["ENTERPRISE", "INDIVIDUAL", "CHANNEL", "RESTAURANT", "WHOLESALE", "RETAIL", "FACTORY", "OTHER"]).notNull(),
+  /** 联系人 */
+  contactName: varchar("contact_name", { length: 128 }),
+  /** 联系电话 */
+  contactPhone: varchar("contact_phone", { length: 32 }),
+  /** 地址 */
+  address: text("address"),
+  /** 信用额度（仅 admin/finance 可设置） */
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }).default("0"),
+  /** 已用信用额度 */
+  usedCredit: decimal("used_credit", { precision: 15, scale: 2 }).default("0"),
+  /** 折扣率（仅 admin/finance 可设置），如 0.95 表示 95 折 */
+  discountRate: decimal("discount_rate", { precision: 5, scale: 4 }).default("1.0000"),
+  /** 备注 */
+  remark: text("remark"),
+  /** 创建人 ID */
+  createdBy: int("created_by"),
+  /** 创建人姓名 */
+  createdByName: varchar("created_by_name", { length: 255 }),
+  /** 状态 */
+  status: mysqlEnum("status", ["ACTIVE", "INACTIVE"]).default("ACTIVE").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = typeof customers.$inferInsert;

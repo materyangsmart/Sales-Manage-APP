@@ -55,6 +55,7 @@ export const ROUTE_PERMISSIONS: Record<string, AppRole[]> = {
   // === 销售模块 ===
   orders: ['admin', 'sales', 'fulfillment'],           // 销售+履约都需要看订单
   salesOrder: ['admin', 'sales'],                       // 代客下单仅销售
+  customerMgmt: ['admin', 'sales', 'finance'],           // 客户管理 CRUD
   commission: ['admin', 'sales'],                       // 提成查询/规则
   salesKPI: ['admin', 'sales'],                         // 销售KPI看板
   expenses: ['admin', 'sales'],                         // 费用报销（销售提交）
@@ -125,6 +126,7 @@ export interface MenuItem {
 export const SIDEBAR_MENU_CONFIG: MenuItem[] = [
   { icon: 'ClipboardCheck', label: '订单审核', path: '/orders/review', roles: ['admin', 'sales', 'fulfillment'] },
   { icon: 'ShoppingCart', label: '代客下单', path: '/orders/create', roles: ['admin', 'sales'] },
+  { icon: 'Users', label: '客户管理', path: '/customers', roles: ['admin', 'sales', 'finance'] },
   { icon: 'Package', label: '订单履行', path: '/orders/fulfill', roles: ['admin', 'fulfillment'] },
   { icon: 'Kanban', label: '履约看板', path: '/orders/fulfillment', roles: ['admin', 'fulfillment'] },
   { icon: 'Warehouse', label: '库存管理', path: '/admin/inventory', roles: ['admin', 'fulfillment'] },
